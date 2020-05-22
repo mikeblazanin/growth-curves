@@ -1445,3 +1445,378 @@ youtS_plot <- pivot_longer(youtS, c(I, P, B), names_to = "Population", values_to
 ggplot(data = youtS_plot, aes(x = time, y = Density, color = Population)) +
   geom_line(lwd = 1.5) +
   scale_y_continuous(trans = "log10")
+
+## I'll try to plot the results with Density +10 and the wished colors
+#
+#Run simulation with "Density + 10"
+yinit <- c(S = 10**6,
+           I = 0,
+           P = 10**4)
+params <- c(r = 0.04, 
+            a = 10**-10, 
+            b = 50, 
+            tau = 10,
+            K = 10**9,
+            c = 1,
+            warnings = 0, 
+            thresh_min_dens = 10**-100)
+times <- seq(from = 0, to = 250, by = 1)
+youtD <- as.data.frame(
+  dede(y = yinit, times = times, func = derivs, parms = params))
+
+##Plot results with "Density + 10"
+library(tidyr)
+youtD$B <- youtD$S+youtD$I
+youtD_plot <- pivot_longer(youtD, c(S, I, P, B), names_to = "Population", values_to = "Density")
+
+ggplot(data = youtD_plot, aes(x = time, y = Density + 10, color = Population)) +
+  geom_line(lwd = 1.5) +
+  scale_y_continuous(trans = "log10")
+
+## Now, I'l try to change the colors to the colorblind-friendly scale
+#
+#Run simulation with different colors
+yinit <- c(S = 10**6,
+           I = 0,
+           P = 10**4)
+params <- c(r = 0.04, 
+            a = 10**-10, 
+            b = 50, 
+            tau = 10,
+            K = 10**9,
+            c = 1,
+            warnings = 0, 
+            thresh_min_dens = 10**-100)
+times <- seq(from = 0, to = 250, by = 1)
+youtC <- as.data.frame(
+  dede(y = yinit, times = times, func = derivs, parms = params))
+
+##Plot results with different colors
+library(tidyr)
+youtC$B <- youtC$S+youtC$I
+youtC_plot <- pivot_longer(youtC, c(S, I, P, B), names_to = "Population", values_to = "Density")
+
+ggplot(data = youtC_plot, aes(x = time, y = Density + 10, color = Population)) +
+  geom_line(lwd = 1.5, alpha = 1/2) +  
+  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
+  scale_y_continuous(trans = "log10")
+
+##Learn to use dplyr and try to find the MAXIMUM DENSITY F B.
+#Run simulation with different colors, Density + 10, and K = 10**9
+yinit <- c(S = 10**6,
+           I = 0,
+           P = 10**4)
+params <- c(r = 0.04, 
+            a = 10**-10, 
+            b = 50, 
+            tau = 10,
+            K = 10**9,
+            c = 1,
+            warnings = 0, 
+            thresh_min_dens = 10**-100)
+times <- seq(from = 0, to = 250, by = 1)
+youtK <- as.data.frame(
+  dede(y = yinit, times = times, func = derivs, parms = params))
+
+##Plot results with different colors, Density + 10, and K = 10**9
+library(tidyr)
+youtK$B <- youtK$S+youtK$I
+youtK_plot <- pivot_longer(youtK, c(S, I, P, B), names_to = "Population", values_to = "Density")
+
+ggplot(data = youtK_plot, aes(x = time, y = Density + 10, color = Population)) +
+  geom_line(lwd = 1.5, alpha = 1/2) +  
+  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
+  scale_y_continuous(trans = "log10")
+
+##Find the maximum density of B in this plot
+summarise(youtK_plot, maximum_B = max(youtK$B, na.rm = T))
+
+#Run simulation with different colors, Density + 10, and K = 10**8
+yinit <- c(S = 10**6,
+           I = 0,
+           P = 10**4)
+params <- c(r = 0.04, 
+            a = 10**-10, 
+            b = 50, 
+            tau = 10,
+            K = 10**8,
+            c = 1,
+            warnings = 0, 
+            thresh_min_dens = 10**-100)
+times <- seq(from = 0, to = 250, by = 1)
+youtK2 <- as.data.frame(
+  dede(y = yinit, times = times, func = derivs, parms = params))
+
+##Plot results with different colors, Density + 10, and K = 10**8
+library(tidyr)
+youtK2$B <- youtK2$S+youtK2$I
+youtK2_plot <- pivot_longer(youtK2, c(S, I, P, B), names_to = "Population", values_to = "Density")
+
+ggplot(data = youtK2_plot, aes(x = time, y = Density + 10, color = Population)) +
+  geom_line(lwd = 1.5, alpha = 1/2) +  
+  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
+  scale_y_continuous(trans = "log10")
+
+##Find the maximum density of B in this plot
+summarise(youtK2_plot, maximum_B = max(youtK2$B, na.rm = T))
+
+#Run simulation with different colors, Density + 10, and r = 0.03
+yinit <- c(S = 10**6,
+           I = 0,
+           P = 10**4)
+params <- c(r = 0.03, 
+            a = 10**-10, 
+            b = 50, 
+            tau = 10,
+            K = 10**9,
+            c = 1,
+            warnings = 0, 
+            thresh_min_dens = 10**-100)
+times <- seq(from = 0, to = 250, by = 1)
+youtR <- as.data.frame(
+  dede(y = yinit, times = times, func = derivs, parms = params))
+
+##Plot results with different colors, Density + 10, and r = 0.03
+library(tidyr)
+youtR$B <- youtR$S+youtR$I
+youtR_plot <- pivot_longer(youtR, c(S, I, P, B), names_to = "Population", values_to = "Density")
+
+ggplot(data = youtR_plot, aes(x = time, y = Density + 10, color = Population)) +
+  geom_line(lwd = 1.5, alpha = 1/2) +  
+  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
+  scale_y_continuous(trans = "log10")
+
+##Find the maximum density of B in this plot
+summarise(youtR_plot, maximum_B = max(youtR$B, na.rm = T))
+
+#Run simulation with different colors, Density + 10, and r = 0.007
+yinit <- c(S = 10**6,
+           I = 0,
+           P = 10**4)
+params <- c(r = 0.007, 
+            a = 10**-10, 
+            b = 50, 
+            tau = 10,
+            K = 10**9,
+            c = 1,
+            warnings = 0, 
+            thresh_min_dens = 10**-100)
+times <- seq(from = 0, to = 800, by = 1)
+youtR2 <- as.data.frame(
+  dede(y = yinit, times = times, func = derivs, parms = params))
+
+##Plot results with different colors, Density + 10, and r = 0.007
+library(tidyr)
+youtR2$B <- youtR2$S+youtR2$I
+youtR2_plot <- pivot_longer(youtR2, c(S, I, P, B), names_to = "Population", values_to = "Density")
+
+ggplot(data = youtR2_plot, aes(x = time, y = Density + 10, color = Population)) +
+  geom_line(lwd = 1.5, alpha = 1/2) +  
+  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
+  scale_y_continuous(trans = "log10")
+
+##Find the maximum density of B in this plot
+summarise(youtR2_plot, maximum_B = max(youtR2$B, na.rm = T))
+
+#Run simulation with different colors, Density + 10, and a = 10**-13
+yinit <- c(S = 10**6,
+           I = 0,
+           P = 10**4)
+params <- c(r = 0.04, 
+            a = 10**-13, 
+            b = 50, 
+            tau = 10,
+            K = 10**9,
+            c = 1,
+            warnings = 0, 
+            thresh_min_dens = 10**-100)
+times <- seq(from = 0, to = 11000, by = 1)
+youtA <- as.data.frame(
+  dede(y = yinit, times = times, func = derivs, parms = params))
+
+##Plot results with different colors, Density + 10, and a = 10**-13
+library(tidyr)
+youtA$B <- youtA$S+youtA$I
+youtA_plot <- pivot_longer(youtA, c(S, I, P, B), names_to = "Population", values_to = "Density")
+
+ggplot(data = youtA_plot, aes(x = time, y = Density + 10, color = Population)) +
+  geom_line(lwd = 1.5, alpha = 1/2) +  
+  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
+  scale_y_continuous(trans = "log10")
+
+##Find the maximum density of B in this plot
+summarise(youtA_plot, maximum_B = max(youtA$B, na.rm = T))
+
+#Run simulation with different colors, Density + 10, and a = 10**-8
+yinit <- c(S = 10**6,
+           I = 0,
+           P = 10**4)
+params <- c(r = 0.04, 
+            a = 10**-8, 
+            b = 50, 
+            tau = 10,
+            K = 10**9,
+            c = 1,
+            warnings = 0, 
+            thresh_min_dens = 10**-100)
+times <- seq(from = 0, to = 250, by = 1)
+youtA2 <- as.data.frame(
+  dede(y = yinit, times = times, func = derivs, parms = params))
+
+##Plot results with different colors, Density + 10, and a = 10**-8
+library(tidyr)
+youtA2$B <- youtA2$S+youtA2$I
+youtA2_plot <- pivot_longer(youtA2, c(S, I, P, B), names_to = "Population", values_to = "Density")
+
+ggplot(data = youtA2_plot, aes(x = time, y = Density + 10, color = Population)) +
+  geom_line(lwd = 1.5, alpha = 1/2) +  
+  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
+  scale_y_continuous(trans = "log10")
+
+##Find the maximum density of B in this plot
+summarise(youtA2_plot, maximum_B = max(youtA2$B, na.rm = T))
+
+#Run simulation with different colors, Density + 10, and tau = 65
+yinit <- c(S = 10**6,
+           I = 0,
+           P = 10**4)
+params <- c(r = 0.04, 
+            a = 10**-10, 
+            b = 50, 
+            tau = 65,
+            K = 10**9,
+            c = 1,
+            warnings = 0, 
+            thresh_min_dens = 10**-100)
+times <- seq(from = 0, to = 600, by = 1)
+youtT <- as.data.frame(
+  dede(y = yinit, times = times, func = derivs, parms = params))
+
+##Plot results with different colors, Density + 10, and tau = 65
+library(tidyr)
+youtT$B <- youtT$S+youtT$I
+youtT_plot <- pivot_longer(youtT, c(S, I, P, B), names_to = "Population", values_to = "Density")
+
+ggplot(data = youtT_plot, aes(x = time, y = Density + 10, color = Population)) +
+  geom_line(lwd = 1.5, alpha = 1/2) +  
+  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
+  scale_y_continuous(trans = "log10")
+
+##Find the maximum density of B in this plot
+summarise(youtT_plot, maximum_B = max(youtT$B, na.rm = T))
+
+#Run simulation with different colors, Density + 10, and tau = 120
+yinit <- c(S = 10**6,
+           I = 0,
+           P = 10**4)
+params <- c(r = 0.04, 
+            a = 10**-10, 
+            b = 50, 
+            tau = 120,
+            K = 10**9,
+            c = 1,
+            warnings = 0, 
+            thresh_min_dens = 10**-100)
+times <- seq(from = 0, to = 800, by = 1)
+youtT2 <- as.data.frame(
+  dede(y = yinit, times = times, func = derivs, parms = params))
+
+##Plot results with different colors, Density + 10, and tau = 120
+library(tidyr)
+youtT2$B <- youtT2$S+youtT2$I
+youtT2_plot <- pivot_longer(youtT2, c(S, I, P, B), names_to = "Population", values_to = "Density")
+
+ggplot(data = youtT2_plot, aes(x = time, y = Density + 10, color = Population)) +
+  geom_line(lwd = 1.5, alpha = 1/2) +  
+  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
+  scale_y_continuous(trans = "log10")
+
+##Find the maximum density of B in this plot
+summarise(youtT2_plot, maximum_B = max(youtT2$B, na.rm = T))
+
+#Run simulation with different colors, Density + 10, and b = 20
+yinit <- c(S = 10**6,
+           I = 0,
+           P = 10**4)
+params <- c(r = 0.04, 
+            a = 10**-10, 
+            b = 20, 
+            tau = 10,
+            K = 10**9,
+            c = 1,
+            warnings = 0, 
+            thresh_min_dens = 10**-100)
+times <- seq(from = 0, to = 250, by = 1)
+youtB1 <- as.data.frame(
+  dede(y = yinit, times = times, func = derivs, parms = params))
+
+##Plot results with different colors, Density + 10, and b = 20
+library(tidyr)
+youtB1$B <- youtB1$S+youtB1$I
+youtB1_plot <- pivot_longer(youtB1, c(S, I, P, B), names_to = "Population", values_to = "Density")
+
+ggplot(data = youtB1_plot, aes(x = time, y = Density + 10, color = Population)) +
+  geom_line(lwd = 1.5, alpha = 1/2) +  
+  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
+  scale_y_continuous(trans = "log10")
+
+##Find the maximum density of B in this plot
+summarise(youtB1_plot, maximum_B = max(youtB1$B, na.rm = T))
+
+#Run simulation with different colors, Density + 10, and b = 500
+yinit <- c(S = 10**6,
+           I = 0,
+           P = 10**4)
+params <- c(r = 0.04, 
+            a = 10**-10, 
+            b = 500, 
+            tau = 10,
+            K = 10**9,
+            c = 1,
+            warnings = 0, 
+            thresh_min_dens = 10**-100)
+times <- seq(from = 0, to = 250, by = 1)
+youtB2 <- as.data.frame(
+  dede(y = yinit, times = times, func = derivs, parms = params))
+
+##Plot results with different colors, Density + 10, and b = 500
+library(tidyr)
+youtB2$B <- youtB2$S+youtB2$I
+youtB2_plot <- pivot_longer(youtB2, c(S, I, P, B), names_to = "Population", values_to = "Density")
+
+ggplot(data = youtB2_plot, aes(x = time, y = Density + 10, color = Population)) +
+  geom_line(lwd = 1.5, alpha = 1/2) +  
+  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
+  scale_y_continuous(trans = "log10")
+
+##Find the maximum density of B in this plot
+summarise(youtB2_plot, maximum_B = max(youtB2$B, na.rm = T))
+
+#Run simulation with different colors, Density + 10, and b = 850
+yinit <- c(S = 10**6,
+           I = 0,
+           P = 10**4)
+params <- c(r = 0.04, 
+            a = 10**-10, 
+            b = 850, 
+            tau = 10,
+            K = 10**9,
+            c = 1,
+            warnings = 0, 
+            thresh_min_dens = 10**-100)
+times <- seq(from = 0, to = 250, by = 1)
+youtB3 <- as.data.frame(
+  dede(y = yinit, times = times, func = derivs, parms = params))
+
+##Plot results with different colors, Density + 10, and b = 850
+library(tidyr)
+youtB3$B <- youtB3$S+youtB3$I
+youtB3_plot <- pivot_longer(youtB3, c(S, I, P, B), names_to = "Population", values_to = "Density")
+
+ggplot(data = youtB3_plot, aes(x = time, y = Density + 10, color = Population)) +
+  geom_line(lwd = 1.5, alpha = 1/2) +  
+  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
+  scale_y_continuous(trans = "log10")
+
+##Find the maximum density of B in this plot
+summarise(youtB3_plot, maximum_B = max(youtB3$B, na.rm = T))
