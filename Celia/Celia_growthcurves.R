@@ -1501,7 +1501,9 @@ ggplot(data = youtC_plot, aes(x = time, y = Density + 10, color = Population)) +
   scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
   scale_y_continuous(trans = "log10")
 
-##Learn to use dplyr and try to find the MAXIMUM DENSITY F B.
+##Learn to use dplyr and try to find the MAXIMUM DENSITY OF B.
+library(dplyr)
+library(plyr)
 #Run simulation with different colors, Density + 10, and K = 10**9
 yinit <- c(S = 10**6,
            I = 0,
@@ -1518,9 +1520,20 @@ times <- seq(from = 0, to = 250, by = 1)
 youtK <- as.data.frame(
   dede(y = yinit, times = times, func = derivs, parms = params))
 
+head(youtK)
+
+## We'll add new rows for each parameter here
+youtK$r <- 0.04
+youtK$a <- 10**-10
+youtK$b <- 50
+youtK$tau <- 10
+youtK$K <- 10**9
+youtK$c <- 1
+
 ##Plot results with different colors, Density + 10, and K = 10**9
 library(tidyr)
 youtK$B <- youtK$S+youtK$I
+head(youtK)
 youtK_plot <- pivot_longer(youtK, c(S, I, P, B), names_to = "Population", values_to = "Density")
 
 ggplot(data = youtK_plot, aes(x = time, y = Density + 10, color = Population)) +
@@ -1547,9 +1560,20 @@ times <- seq(from = 0, to = 250, by = 1)
 youtK2 <- as.data.frame(
   dede(y = yinit, times = times, func = derivs, parms = params))
 
+head(youtK2)
+
+## We'll add new rows for each parameter here
+youtK2$r <- 0.04
+youtK2$a <- 10**-10
+youtK2$b <- 50
+youtK2$tau <- 10
+youtK2$K <- 10**8
+youtK2$c <- 1
+
 ##Plot results with different colors, Density + 10, and K = 10**8
 library(tidyr)
 youtK2$B <- youtK2$S+youtK2$I
+head(youtK2)
 youtK2_plot <- pivot_longer(youtK2, c(S, I, P, B), names_to = "Population", values_to = "Density")
 
 ggplot(data = youtK2_plot, aes(x = time, y = Density + 10, color = Population)) +
@@ -1576,9 +1600,20 @@ times <- seq(from = 0, to = 250, by = 1)
 youtR <- as.data.frame(
   dede(y = yinit, times = times, func = derivs, parms = params))
 
+head(youtR)
+
+## We'll add new rows for each parameter here
+youtR$r <- 0.03
+youtR$a <- 10**-10
+youtR$b <- 50
+youtR$tau <- 10
+youtR$K <- 10**9
+youtR$c <- 1
+
 ##Plot results with different colors, Density + 10, and r = 0.03
 library(tidyr)
 youtR$B <- youtR$S+youtR$I
+head(youtR)
 youtR_plot <- pivot_longer(youtR, c(S, I, P, B), names_to = "Population", values_to = "Density")
 
 ggplot(data = youtR_plot, aes(x = time, y = Density + 10, color = Population)) +
@@ -1605,9 +1640,20 @@ times <- seq(from = 0, to = 800, by = 1)
 youtR2 <- as.data.frame(
   dede(y = yinit, times = times, func = derivs, parms = params))
 
+head(youtR2)
+
+## We'll add new rows for each parameter here
+youtR2$r <- 0.007
+youtR2$a <- 10**-10
+youtR2$b <- 50
+youtR2$tau <- 10
+youtR2$K <- 10**9
+youtR2$c <- 1
+
 ##Plot results with different colors, Density + 10, and r = 0.007
 library(tidyr)
 youtR2$B <- youtR2$S+youtR2$I
+head(youtR2)
 youtR2_plot <- pivot_longer(youtR2, c(S, I, P, B), names_to = "Population", values_to = "Density")
 
 ggplot(data = youtR2_plot, aes(x = time, y = Density + 10, color = Population)) +
@@ -1634,9 +1680,20 @@ times <- seq(from = 0, to = 11000, by = 1)
 youtA <- as.data.frame(
   dede(y = yinit, times = times, func = derivs, parms = params))
 
+head(youtA)
+
+## We'll add new rows for each parameter here
+youtA$r <- 0.04
+youtA$a <- 10**-13
+youtA$b <- 50
+youtA$tau <- 10
+youtA$K <- 10**9
+youtA$c <- 1
+
 ##Plot results with different colors, Density + 10, and a = 10**-13
 library(tidyr)
 youtA$B <- youtA$S+youtA$I
+head(youtA)
 youtA_plot <- pivot_longer(youtA, c(S, I, P, B), names_to = "Population", values_to = "Density")
 
 ggplot(data = youtA_plot, aes(x = time, y = Density + 10, color = Population)) +
@@ -1663,9 +1720,20 @@ times <- seq(from = 0, to = 250, by = 1)
 youtA2 <- as.data.frame(
   dede(y = yinit, times = times, func = derivs, parms = params))
 
+head(youtA2)
+
+## We'll add new rows for each parameter here
+youtA2$r <- 0.04
+youtA2$a <- 10**-8
+youtA2$b <- 50
+youtA2$tau <- 10
+youtA2$K <- 10**9
+youtA2$c <- 1
+
 ##Plot results with different colors, Density + 10, and a = 10**-8
 library(tidyr)
 youtA2$B <- youtA2$S+youtA2$I
+head(youtA2)
 youtA2_plot <- pivot_longer(youtA2, c(S, I, P, B), names_to = "Population", values_to = "Density")
 
 ggplot(data = youtA2_plot, aes(x = time, y = Density + 10, color = Population)) +
@@ -1692,9 +1760,20 @@ times <- seq(from = 0, to = 600, by = 1)
 youtT <- as.data.frame(
   dede(y = yinit, times = times, func = derivs, parms = params))
 
+head(youtT)
+
+## We'll add new rows for each parameter here
+youtT$r <- 0.04
+youtT$a <- 10**-10
+youtT$b <- 50
+youtT$tau <- 65
+youtT$K <- 10**9
+youtT$c <- 1
+
 ##Plot results with different colors, Density + 10, and tau = 65
 library(tidyr)
 youtT$B <- youtT$S+youtT$I
+head(youtT)
 youtT_plot <- pivot_longer(youtT, c(S, I, P, B), names_to = "Population", values_to = "Density")
 
 ggplot(data = youtT_plot, aes(x = time, y = Density + 10, color = Population)) +
@@ -1721,9 +1800,20 @@ times <- seq(from = 0, to = 800, by = 1)
 youtT2 <- as.data.frame(
   dede(y = yinit, times = times, func = derivs, parms = params))
 
+head(youtT2)
+
+## We'll add new rows for each parameter here
+youtT2$r <- 0.04
+youtT2$a <- 10**-10
+youtT2$b <- 50
+youtT2$tau <- 120
+youtT2$K <- 10**9
+youtT2$c <- 1
+
 ##Plot results with different colors, Density + 10, and tau = 120
 library(tidyr)
 youtT2$B <- youtT2$S+youtT2$I
+head(youtT2)
 youtT2_plot <- pivot_longer(youtT2, c(S, I, P, B), names_to = "Population", values_to = "Density")
 
 ggplot(data = youtT2_plot, aes(x = time, y = Density + 10, color = Population)) +
@@ -1749,6 +1839,13 @@ params <- c(r = 0.04,
 times <- seq(from = 0, to = 250, by = 1)
 youtB1 <- as.data.frame(
   dede(y = yinit, times = times, func = derivs, parms = params))
+
+## Now, we'll add the new columns for each parameter
+youtB1$r <- 0.04
+youtB1$a <- 10**-10
+youtB1$K <- 10**9
+youtB1$c <- 1
+head(youtB1)
 
 ##Plot results with different colors, Density + 10, and b = 20
 library(tidyr)
@@ -1779,6 +1876,17 @@ times <- seq(from = 0, to = 250, by = 1)
 youtB2 <- as.data.frame(
   dede(y = yinit, times = times, func = derivs, parms = params))
 
+head(youtB2)
+
+## We'll add the new columns for each parameter
+youtB2$r <- 0.04
+youtB2$a <- 10**-10
+youtB2$b <- 500
+youtB2$tau <- 10
+youtB2$K <- 10**9
+youtB2$c <- 1
+head(youtB2)
+
 ##Plot results with different colors, Density + 10, and b = 500
 library(tidyr)
 youtB2$B <- youtB2$S+youtB2$I
@@ -1808,15 +1916,95 @@ times <- seq(from = 0, to = 250, by = 1)
 youtB3 <- as.data.frame(
   dede(y = yinit, times = times, func = derivs, parms = params))
 
+head(youtB3)
+
+## We'll add new columns for each parameter
+youtB3$r <- 0.04
+youtB3$a <- 10**-10
+youtB3$b <- 850
+youtB3$tau <- 10
+youtB3$K <- 10**9
+youtB3$c <- 1
+head(youtB3)
+
 ##Plot results with different colors, Density + 10, and b = 850
 library(tidyr)
 youtB3$B <- youtB3$S+youtB3$I
 youtB3_plot <- pivot_longer(youtB3, c(S, I, P, B), names_to = "Population", values_to = "Density")
 
+tiff("plot.tiff")
 ggplot(data = youtB3_plot, aes(x = time, y = Density + 10, color = Population)) +
   geom_line(lwd = 1.5, alpha = 1/2) +  
   scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
   scale_y_continuous(trans = "log10")
+dev.off()
+
+## Tiff is the function that converts our graph in an image document, which is
+## a ".tiff" one. This is because we saw the legend disrupted here (some problem
+## with the code of ggplot). Therefore, I can use this function and close i with
+## de.off() to have an imagewhere I CAN clearly see the legend of the plot.
 
 ##Find the maximum density of B in this plot
 summarise(youtB3_plot, maximum_B = max(youtB3$B, na.rm = T))
+
+## Here, we paste the simulations youtB2 + youtB3
+head(youtB3)
+head(youtB2)
+big1 <- rbind(youtB2, youtB3)
+big1
+
+## We plot ONLY the part of big1 where b = 500
+big1plot <- pivot_longer(big1, c(S, I, P, B), names_to = "Population", values_to = "Density")
+ggplot(data = big1plot[big1plot$b == 500,], aes(x = time, y = Density + 10, color = Population)) +
+ geom_point() + scale_y_continuous(trans = "log10")
+
+## Now, we want to combien what we already had with another data frame. The one
+## where tau = 120.
+head(youtT2)
+## We have to make sure we also run the command for B!! Since it was introduced
+## later than S, I, and P
+
+big2 <- rbind(big1, youtT2)
+big2
+
+## Therefore, the layout to paste different data frames is the following one:
+rbind(youtB3, #Name of the other simulation (+ b + tau)
+)
+
+## And, to add new columns to a data frame in a quick way, we'd use the following
+## command:
+youtB1 <- cbind(data.frame(b = 20, tau = 10), youtB1)
+head(youtB1)
+
+big3 <- rbind(big2, youtB1)
+big3
+
+## Now, we'd like to use all the simulations I've run and combine them into one
+## big data frame. Then, summarize them.
+
+## First, I'll try it by adding the simulations for different values of b
+bigB <- rbind(youtB1, youtB2, youtB3)
+bigB
+
+## Now, I'll do it for ALL the simulations I had run
+bigFINAL <- rbind(bigB, youtK, youtK2, youtR, youtR2, youtA, youtA2, youtT, youtT2)
+bigFINAL
+
+## Now, I'll try to summarizw the data in "bigFINAL"
+bigFINAL_plot <- pivot_longer(bigFINAL, c(S, I, P, B), names_to = "Population", values_to = "Density")
+ggplot(data = bigFINAL_plot, aes(x = time, y = Density + 10, color = Population)) +
+  geom_point(lwd = 1) + scale_y_continuous(trans = "log10")
+## I pivot_longer'd because I remembered that "summarize" works better after doing so
+summarise(bigFINAL, maximum_B = max(youtB1$B, na.rm = T), max(youtB2$B, na.rm = T),
+         max(youtB3$B, na.rm = T), max(youtK$B, na.rm = T), max(youtK2$B, na.rm = T),
+         max(youtR$B, na.rm = T), max(youtR2$B, na.rm = T), max(youtA$B, na.rm = T),
+         max(youtA2$B, na.rm = T), max(youtT$B, na.rm = T), max(youtT2$B, na.rm = T))
+## Here, I achived to summarize every maximum of each of the simulations included
+## in the big data frame
+
+## Now, I'll try to find the maximum of the maximums
+BIG <- summarise(bigFINAL, maximum_B = max(youtB1$B, na.rm = T), max(youtB2$B, na.rm = T),
+                 max(youtB3$B, na.rm = T), max(youtK$B, na.rm = T), max(youtK2$B, na.rm = T),
+                 max(youtR$B, na.rm = T), max(youtR2$B, na.rm = T), max(youtA$B, na.rm = T),
+                 max(youtA2$B, na.rm = T), max(youtT$B, na.rm = T), max(youtT2$B, na.rm = T))
+summarize(BIG, maximum_B = max(BIG, na.rm = T))
