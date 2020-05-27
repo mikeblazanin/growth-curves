@@ -1999,6 +1999,20 @@ summarise(bigFINAL, maximum_B = max(youtB1$B, na.rm = T), max(youtB2$B, na.rm = 
          max(youtB3$B, na.rm = T), max(youtK$B, na.rm = T), max(youtK2$B, na.rm = T),
          max(youtR$B, na.rm = T), max(youtR2$B, na.rm = T), max(youtA$B, na.rm = T),
          max(youtA2$B, na.rm = T), max(youtT$B, na.rm = T), max(youtT2$B, na.rm = T))
+
+head(bigFINAL)
+
+bigFINAL <- group_by(bigFINAL, "b", "tau", "a", "r", "K", "c")
+FINAL <- summarise(bigFINAL, maximum_B = max(B))
+FINAL
+
+head(bigFINAL)
+class(bigFINAL)
+table(bigFINAL$a)
+
+bigFINAL <- group_by_at(bigFINAL, vars(b, tau, K, a, r, c))
+head(bigFINAL)
+table(bigFINAL$b)
 ## Here, I achived to summarize every maximum of each of the simulations included
 ## in the big data frame
 
@@ -2008,3 +2022,71 @@ BIG <- summarise(bigFINAL, maximum_B = max(youtB1$B, na.rm = T), max(youtB2$B, n
                  max(youtR$B, na.rm = T), max(youtR2$B, na.rm = T), max(youtA$B, na.rm = T),
                  max(youtA2$B, na.rm = T), max(youtT$B, na.rm = T), max(youtT2$B, na.rm = T))
 summarize(BIG, maximum_B = max(BIG, na.rm = T))
+
+
+## Let's try find the SLOPE of some simulations
+## I'll try to find the slope for a = 10**-8
+## Run simulation
+yinit <- c(S = 10**6,
+           I = 0,
+           P = 10**4)
+params <- c(r = 0.04, 
+            a = 10**-8, 
+            b = 50, 
+            tau = 10,
+            K = 10**9,
+            c = 1,
+            warnings = 0, 
+            thresh_min_dens = 10**-100)
+times <- seq(from = 0, to = 250, by = 1)
+youtA2S <- as.data.frame(
+  dede(y = yinit, times = times, func = derivs, parms = params))
+
+head(youtA2S)
+
+##Plot results
+library(tidyr)
+youtA2S$B <- youtA2$S+youtA2$I
+head(youtA2S)
+youtA2S_plot <- pivot_longer(youtA2S, c(S, I, P, B), names_to = "Population", values_to = "Density")
+
+ggplot(data = youtA2S_plot, aes(x = time, y = Density + 10, color = Population)) +
+  geom_line(lwd = 1.5, alpha = 1/2) +  
+  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
+  scale_y_continuous(trans = "log10")
+
+## Find the SLOPE of B in this plot
+## Packages I've found that could be useful
+library(dplyr)
+library(plyr)
+install.packages("lubridate")
+library(lubridate)
+install.packages("SLOPE")
+library(SLOPE)
+
+## Attempts to do something
+summarise(youtA2S_plot, slope_B = slope(youtB3$B, na.rm = T))
+BestSlope(time, Density +10, adm = "youtA2S$B", TOL = 1e-4)
+## These two didn't work (I might be doing omething worng)
+
+## THIRD TRY
+x <- 0:250
+y <- youtA2S$B
+
+plot(x, y)
+mod <- lm(y~x)
+summary(lm(formula = y ~ x))
+
+lm(formula = y ~ x) # Is the slope for x -14166?
+
+cor(x, y)
+## Negative association between x and y
+
+attributes(mod)
+## To pull up some the attributes we can use the $ sign
+## For example, we extract the coefficients
+mod$coefficients
+
+plot(x, y)
+abline(mod, col = 2) #To include the regression line
+
