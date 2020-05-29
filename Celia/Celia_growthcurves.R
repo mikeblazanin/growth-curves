@@ -549,6 +549,7 @@ ggplot(data = bigFINAL_plot, aes(x = time, y = Density + 10, color = Population)
 ## I pivot_longer'd because I remembered that "summarize" works better after doing so
 summarise(bigFINAL, maximum_B = max(youtB1$B, na.rm = T), max(youtB2$B, na.rm = T), max(youtB3$B, na.rm = T), max(youtK$B, na.rm = T), max(youtK2$B, na.rm = T), max(youtR$B, na.rm = T), max(youtR2$B, na.rm = T), max(youtA$B, na.rm = T), max(youtA2$B, na.rm = T), max(youtT$B, na.rm = T), max(youtT2$B, na.rm = T))
 
+
 head(bigFINAL)
 
 ## Here, I achived to summarize every maximum of each of the simulations included
@@ -560,7 +561,7 @@ summarize(BIG, maximum_B = max(BIG, na.rm = T))
 
 ## There's an easier way to do this!!!
 
-bigFINAL <- group_by(bigFINAL, "b", "tau", "a", "r", "K", "c")
+bigFINAL_plot <- group_by(bigFINAL, "b", "tau", "a", "r", "K", "c")
 FINAL <- dplyr::summarise(bigFINAL, maximum_B = max(B), maxtime = time[B == maximum_B])
 FINAL
 
@@ -587,8 +588,8 @@ youtA2S_plot <- pivot_longer(youtA2S, c(S, I, P, B), names_to = "Population", va
 ggplot(data = youtA2S_plot, aes(x = time, y = Density + 10, color = Population)) + geom_line(lwd = 1.5, alpha = 1/2) + scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +scale_y_continuous(trans = "log10")
 
 ## Find the SLOPE of B in this plot
-x <- 51:250
-y <- youtA2S$B[51:250]
+x <- 1:50
+y <- youtA2S$B[1:50]
 
 plot(x, log10(y))
 mod <- lm(log10(y)~x) #this can be combined with mod$coefficients[2] within summarize
@@ -603,3 +604,7 @@ attributes(mod)
 plot(x, log10(y))
 abline(mod, col = 4) #To include the regression line
 mod$coefficients[2]
+
+## Finding the slope with summarize.
+FINAL <- dplyr::summarise(bigFINAL, maximum_B = max(B), maxtime = time[B == maximum_B], slope = mod$coefficients[2])
+FINAL
