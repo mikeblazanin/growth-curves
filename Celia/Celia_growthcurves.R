@@ -607,5 +607,29 @@ abline(mod, col = 4) #To include the regression line
 mod$coefficients[2]
 
 ## Finding the slope with summarize.
-FINAL <- dplyr::summarise(bigFINAL, maximum_B = max(B), maxtime = time[B == maximum_B], slope = mod$coefficients[2])
+FINAL <- dplyr::summarise(bigFINAL, maximum_B = max(B), 
+                          maxtime = time[B == maximum_B],
+                          slope = lm(log10(B[time < maxtime & B < 0.1*K]) ~ 
+                                       time[time < maxtime & B < 0.1*K])$coefficients[2],
+                          intercept = lm(log10(B[time < maxtime & B < 0.1*K]) ~ 
+                                           time[time < maxtime & B < 0.1*K])$coefficients[1])
 FINAL
+
+for (row in 1:nrow(FINAL)) {
+  bigfinal_rows <- which(FINAL$b[row] == bigFINAL$b & 
+                           FINAL$tau[row] == bigFINAL$tau &
+                           FINAL$a[row] == bigFINAL$a &
+                           FINAL$r[row] == bigFINAL$r &
+                           FINAL$K[row] == bigFINAL$K &
+                           FINAL$c[row] == bigFINAL$c)
+  print(ggplot(data = bigFINAL[bigfinal_rows, ],
+               aes(x = time, y = B)) +
+          geom_line() +
+          scale_y_continuous(trans = "log10") +
+          geom_abline(slope = FINAL$slope[row], intercept = FINAL$intercept[row],
+                      color = "red") +
+          geom_point(data = FINAL[row, ], aes(x = maxtime, y = maximum_B), 
+                     col = "blue", size = 3) +
+          NULL
+  )
+}    
