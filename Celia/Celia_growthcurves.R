@@ -560,7 +560,7 @@ summarize(BIG, maximum_B = max(BIG, na.rm = T))
 
 ## There's an easier way to do this!!!
 
-bigFINAL <- group_by(bigFINAL, "b", "tau", "a", "r", "K", "c")
+bigFINAL <- dplyr::group_by(bigFINAL, b, tau, a, r, K, c)
 FINAL <- dplyr::summarise(bigFINAL, maximum_B = max(B), maxtime = time[B == maximum_B])
 FINAL
 
