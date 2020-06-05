@@ -821,8 +821,11 @@ for (row in 1:nrow(BIG)) {
 ## To see all the values in BIG:
 View(BIG)
 
-## Plotting all the parameters with maxtime to see how they affect it
+## Plotting all the parameters with maxtime in the 32 simulations to see how
+## they affect it
 ggplot(data = BIG, aes(x = log10(burst), y = maxtime, color = as.factor(K),
                        shape = as.factor(infec))) +
   geom_point(size = 3, alpha = 1/2) +
   facet_grid(tau ~ r)
+
+
