@@ -828,6 +828,7 @@ ggplot(data = BIG, aes(x = log10(burst), y = maxtime, color = as.factor(K),
   geom_point(size = 3, alpha = 1/2) +
   facet_grid(tau ~ r)
 
+## MIKE'S CODE
 ## Define function for running simulations across many parameter values ----
 run_sims <- function(rvals,
                      kvals,
@@ -1116,3 +1117,88 @@ run_sims <- function(rvals,
   }
 }
 
+sims1 <- run_sims(bvals = c(75, 480, 760), avals = c(10**-10.5, 10**-9, 10**-8.25),
+                  kvals = c(10**7.75, 10**8.8), tauvals = c(33, 57, 95),
+                  rvals = c(0.009, 0.018, 0.025))
+length(sims1)
+# When we use [] means that the output will be a list, while when we use [[]], means
+# that it'll be a dataframe (explanation with trains and their cars).
+class(sims1[[1]])
+sims1[1]
+sims1[[1]]
+table(sims1[[1]]$Pop)
+
+# By chencking group 2 and 3 we see if there has been any error: simulations that 
+# didn'r reach the equilibrium (2), and simulations that failed (3).
+sims1[[2]]
+sims1[[3]]
+
+## Notice that the summarize will be slightly different since the data has been
+## pivot_longer'd. So, we have to use the density column and make a subset where 
+## "Pop" = B
+
+sub_sims1 <- subset(sims1[[1]], Pop == "B")
+class(sub_sims1)
+
+## Now, we want to find the maximum_B, the maxtime, and the slope of each simulation
+group_sims1 <- dplyr::group_by(sub_sims1, uniq_run, b, tau, a, r, K, c)
+group_sims1
+class(group_sims1)
+
+sum_sims1 <- dplyr::summarise(group_sims1, maximum_B = max(Density),                
+                              maxtime = time[Density == maximum_B],
+                              slope = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
+                                           time[time < maxtime & Density < 0.1*K])$coefficients[2],
+                              intercept = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
+                                               time[time < maxtime & Density < 0.1*K])$coefficients[1])
+
+for (row in 1:nrow(sum_sims1)) {
+  bigfinal_rows <- which(sum_sims1$b[row] == group_sims1$b & 
+                           sum_sims1$tau[row] == group_sims1$tau &
+                           sum_sims1$a[row] == group_sims1$a &
+                           sum_sims1$r[row] == group_sims1$r &
+                           sum_sims1$K[row] == group_sims1$K &
+                           sum_sims1$c[row] == group_sims1$c)
+  tiff(paste("./Celia/Sims1_plots/", sum_sims1[row, "uniq_run"], ".tiff", sep = ""),
+       width = 6, height = 6, units = "cm", res = 150)
+  
+  
+  print(ggplot(data = group_sims1[bigfinal_rows, ],
+               aes(x = time, y = Density)) +
+          geom_line() +
+          scale_y_continuous(trans = "log10") +
+          geom_abline(slope = sum_sims1$slope[row], intercept = sum_sims1$intercept[row],
+                      color = "red") +
+          geom_point(data = sum_sims1[row, ], aes(x = maxtime, y = maximum_B), 
+                     col = "blue", size = 3) +
+          NULL
+  )
+  
+  dev.off()
+}
+
+group_sims1
+sum_sims1
+View(sum_sims1)
+
+## Now, we want to make a gglpot that represents all the simulations with the
+## summarized data
+# We start by analyzing how the paramters affcet maxtime
+ggplot(data = sum_sims1, aes(x = log10(b), y = maxtime, color = as.factor(K),
+                       shape = as.factor(a))) +
+  geom_point(size = 3, alpha = 1/2) +
+  facet_grid(tau ~ r)
+
+# What about maximum_B?
+ggplot(data = sum_sims1, aes(x = log10(b), y = maximum_B, color = as.factor(K),
+                             shape = as.factor(a))) +
+  geom_point(size = 3, alpha = 1/2) +
+  facet_grid(tau ~ r) +
+  scale_y_continuous(trans = "log10")
+
+# PLotting maxtime and maximum_B with r and K
+ggplot(data = sum_sims1, aes(x = maxtime, y = maximum_B,
+                             )) +
+  geom_point(size = 3, alpha = 1/2) +
+  facet_grid(K ~ r) +
+  scale_y_continuous(trans = "log10")
