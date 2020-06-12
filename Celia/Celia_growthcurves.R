@@ -152,6 +152,8 @@ library(tidyr)
 library(ggplot2)
 library(dplyr)
 library(plyr)
+library(tidyverse)
+library(caret)
 
 ## Define derivatives function ----
 derivs <- function(t, y, parms) {
@@ -1187,7 +1189,52 @@ View(sum_sims1)
 ggplot(data = sum_sims1, aes(x = log10(b), y = maxtime, color = as.factor(K),
                        shape = as.factor(a))) +
   geom_point(size = 3, alpha = 1/2) +
-  facet_grid(tau ~ r)
+  facet_grid(tau ~ r) +
+  scale_y_continuous(trans = "log10") +
+  geom_smooth(method = "lm")
+
+## lm function on our data
+# How to see how tau and b affect maxtime as if they were INDEPENDENT from 
+# each other?
+reg_sims1 <- lm(maxtime ~ tau + b + a + r, data = sum_sims1)
+summary(reg_sims1)
+
+confint(reg_sims1)
+# Calulate the RSE
+sigma(reg_sims1)/mean(sum_sims1$maxtime) # The lower the RSE, the more accurate the model.
+# The RSE estimate gives a measure of error of prediction.
+
+# Analyzing the data as if the parameters were CORRELATED
+# Split the data into training and test set
+set.seed(123)
+training.samples <- sum_sims1$maxtime %>%
+  createDataPartition(p = 0.8, list = FALSE)
+train.data <- sum_sims1[training.samples, ]
+test.data <- sum_sims1[-training.samples, ]
+
+# The standard linear regression model can be computed as follow:
+# Buil the model
+reg_sims1 <- lm(maxtime ~ tau + b + a + r, data = train.data)
+# Summarize the model
+summary(reg_sims1)
+# Make predictions
+predictions <- reg_sims1 %>% predict(test.data)
+# Make performance. (a) Prediction error, RMSE
+RMSE(predictions, test.data$maxtime)
+# (b) R2
+R2(predictions, test.data$maxtime)
+
+# INTERACTION EFFECTS
+# Build the model
+reg2_sims1 <- lm(maxtime ~ b + tau + a + r + b:a + a:r, data = sum_sims1)
+summary(reg2_sims1)
+# Make predictions
+predictions <- reg2_sims1 %>% predict(test.data)
+# Model performance (a) Prediction error, RMSE
+RMSE(predictions, test.data$maxtime)
+# (b) R2
+R2(predictions, test.data$maxtime)
+
 
 # What about maximum_B?
 ggplot(data = sum_sims1, aes(x = log10(b), y = maximum_B, color = as.factor(K),
@@ -1202,3 +1249,420 @@ ggplot(data = sum_sims1, aes(x = maxtime, y = maximum_B,
   geom_point(size = 3, alpha = 1/2) +
   facet_grid(K ~ r) +
   scale_y_continuous(trans = "log10")
+
+
+
+## Let's run sims2, where we'll have c, K, and r constant, and we'll be changing
+## between 5 different values of a, b, and tau
+sims2 <- run_sims(bvals = c(50, 100, 200, 400, 800),
+                  avals = c(10**-12, 10**-11, 10**-10, 10**-9, 10**-8),
+                  kvals = c(10**9), rvals = c(0.04),
+                  tauvals = c(15, 22.5, 33.75, 50.625, 75.9375))
+length(sims2)                  
+sims2[[1]]
+sims2[[2]]
+sims2[[3]]
+table(sims2[[1]]$Pop)
+
+## Now that we're sure that everything went well, we'll strat summarizing the data
+sub_sims2 <- subset(sims2[[1]], Pop == "B")
+class(sub_sims2)
+group_sims2 <- dplyr::group_by(sub_sims2, uniq_run, a, b, c, K, tau, r)
+group_sims2
+
+sum_sims2 <- dplyr::summarise(group_sims2, maximum_B = max(Density),                
+                              maxtime = time[Density == maximum_B],
+                              slope = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
+                                           time[time < maxtime & Density < 0.1*K])$coefficients[2],
+                              intercept = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
+                                               time[time < maxtime & Density < 0.1*K])$coefficients[1])
+
+for (row in 1:nrow(sum_sims2)) {
+  bigfinal_rows <- which(sum_sims2$b[row] == group_sims2$b & 
+                           sum_sims2$tau[row] == group_sims2$tau &
+                           sum_sims2$a[row] == group_sims2$a &
+                           sum_sims2$r[row] == group_sims2$r &
+                           sum_sims2$K[row] == group_sims2$K &
+                           sum_sims2$c[row] == group_sims2$c)
+  
+  print(ggplot(data = group_sims2[bigfinal_rows, ],
+               aes(x = time, y = Density)) +
+          geom_line() +
+          scale_y_continuous(trans = "log10") +
+          geom_abline(slope = sum_sims2$slope[row], intercept = sum_sims2$intercept[row],
+                      color = "red") +
+          geom_point(data = sum_sims2[row, ], aes(x = maxtime, y = maximum_B), 
+                     col = "blue", size = 3) +
+          NULL
+  )
+}
+
+sum_sims2
+
+## Let's make the ggplot for this data
+ggplot(data = sum_sims2, aes(x = log10(b), y = maxtime, color = as.factor(a),
+                             shape = as.factor(K))) +
+  geom_point(size = 3, alpha = 1/2) +
+  facet_grid(tau ~ r)
+
+
+
+## Let's run sims3, where we'll have c, K, a, and r constant, and we'll be 
+## changing between different values of b, and tau
+
+## We'll strat by the 9 fisrt calues of b. We'll run 5 groups of 9 values of b,
+## and, finally, we'll run them all together
+# 3.1
+sims3.1 <- run_sims(bvals = c(21.436, 19.55, 16.445, 13.048, 11.9, 10.01, 6.524, 5.95,
+                            5.005),
+                  avals = c(10**-10), kvals = c(10**9), rvals = c(0.04),
+                  tauvals = c(30))
+length(sims3.1)
+sims3.1[[1]]
+sims3.1[[2]]
+sims3.1[[3]]
+
+## Let's group_by these simulations
+sub_sims3.1 <- subset(sims3.1[[1]], Pop == "B")
+class(sub_sims3.1)
+
+group_sims3.1 <- dplyr::group_by(sub_sims3.1, uniq_run, a, b, c, K, tau, r)
+group_sims3.1
+
+sum_sims3.1 <- dplyr::summarise(group_sims3.1, maximum_B = max(Density),
+                                maxtime = time[Density == maximum_B],
+                                slope = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
+                                             time[time < maxtime & Density < 0.1*K])$coefficients[2],
+                                intercept = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
+                                                 time[time < maxtime & Density < 0.1*K])$coefficients[1])
+sum_sims3.1
+
+for (row in 1:nrow(sum_sims3.1)) {
+  bigfinal_rows <- which(sum_sims3.1$b[row] == group_sims3.1$b & 
+                           sum_sims3.1$tau[row] == group_sims3.1$tau &
+                           sum_sims3.1$a[row] == group_sims3.1$a &
+                           sum_sims3.1$r[row] == group_sims3.1$r &
+                           sum_sims3.1$K[row] == group_sims3.1$K &
+                           sum_sims3.1$c[row] == group_sims3.1$c)
+  
+  print(ggplot(data = group_sims3.1[bigfinal_rows, ],
+               aes(x = time, y = Density)) +
+          geom_line() +
+          scale_y_continuous(trans = "log10") +
+          geom_abline(slope = sum_sims3.1$slope[row], intercept = sum_sims3.1$intercept[row],
+                      color = "red") +
+          geom_point(data = sum_sims3.1[row, ], aes(x = maxtime, y = maximum_B), 
+                     col = "blue", size = 3) +
+          NULL
+  )
+}
+
+## Let's make the ggplot for this data
+ggplot(data = sum_sims3.1, aes(x = log10(b), y = maxtime, color = as.factor(a),
+                             shape = as.factor(K))) +
+  geom_point(size = 3, alpha = 1/2) +
+  facet_grid(tau ~ r)
+
+# 3.2
+sims3.2 <- run_sims(bvals = c(35.416, 32.3, 27.17, 27.028, 24.65, 20.735, 20.504,
+                              18.7, 15.73),
+                    avals = c(10**-10), kvals = c(10**9), rvals = c(0.04),
+                    tauvals = c(45))
+length(sims3.2)
+sims3.2[[1]]
+sims3.2[[2]]
+sims3.2[[3]]
+
+## Let's group_by these simulations
+sub_sims3.2 <- subset(sims3.2[[1]], Pop == "B")
+class(sub_sims3.2)
+
+group_sims3.2 <- dplyr::group_by(sub_sims3.2, uniq_run, a, b, c, K, tau, r)
+group_sims3.2
+
+sum_sims3.2 <- dplyr::summarise(group_sims3.2, maximum_B = max(Density),
+                                maxtime = time[Density == maximum_B],
+                                slope = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
+                                             time[time < maxtime & Density < 0.1*K])$coefficients[2],
+                                intercept = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
+                                                 time[time < maxtime & Density < 0.1*K])$coefficients[1])
+sum_sims3.2
+
+for (row in 1:nrow(sum_sims3.2)) {
+  bigfinal_rows <- which(sum_sims3.2$b[row] == group_sims3.2$b & 
+                           sum_sims3.2$tau[row] == group_sims3.2$tau &
+                           sum_sims3.2$a[row] == group_sims3.2$a &
+                           sum_sims3.2$r[row] == group_sims3.2$r &
+                           sum_sims3.2$K[row] == group_sims3.2$K &
+                           sum_sims3.2$c[row] == group_sims3.2$c)
+  
+  print(ggplot(data = group_sims3.2[bigfinal_rows, ],
+               aes(x = time, y = Density)) +
+          geom_line() +
+          scale_y_continuous(trans = "log10") +
+          geom_abline(slope = sum_sims3.2$slope[row], intercept = sum_sims3.2$intercept[row],
+                      color = "red") +
+          geom_point(data = sum_sims3.2[row, ], aes(x = maxtime, y = maximum_B), 
+                     col = "blue", size = 3) +
+          NULL
+  )
+}
+
+## Let's make the ggplot for this data
+ggplot(data = sum_sims3.2, aes(x = log10(b), y = maxtime, color = as.factor(a),
+                               shape = as.factor(K))) +
+  geom_point(size = 3, alpha = 1/2) +
+  facet_grid(tau ~ r)
+
+## 3.3
+sims3.3 <- run_sims(bvals = c(51.26, 46.75, 39.325, 42.872, 39.1, 32.89, 36.348,
+                              33.15, 27.885),
+                    avals = c(10**-10), kvals = c(10**9), rvals = c(0.04),
+                    tauvals = c(62))
+length(sims3.3)
+sims3.3[[1]]
+sims3.3[[2]]
+sims3.3[[3]]
+
+## Let's group_by these simulations
+sub_sims3.3 <- subset(sims3.3[[1]], Pop == "B")
+class(sub_sims3.3)
+
+group_sims3.3 <- dplyr::group_by(sub_sims3.3, uniq_run, a, b, c, K, tau, r)
+group_sims3.3
+
+sum_sims3.3 <- dplyr::summarise(group_sims3.3, maximum_B = max(Density),
+                                maxtime = time[Density == maximum_B],
+                                slope = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
+                                             time[time < maxtime & Density < 0.1*K])$coefficients[2],
+                                intercept = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
+                                                 time[time < maxtime & Density < 0.1*K])$coefficients[1])
+sum_sims3.3
+
+for (row in 1:nrow(sum_sims3.3)) {
+  bigfinal_rows <- which(sum_sims3.3$b[row] == group_sims3.3$b & 
+                           sum_sims3.3$tau[row] == group_sims3.3$tau &
+                           sum_sims3.3$a[row] == group_sims3.3$a &
+                           sum_sims3.3$r[row] == group_sims3.3$r &
+                           sum_sims3.3$K[row] == group_sims3.3$K &
+                           sum_sims3.3$c[row] == group_sims3.3$c)
+  
+  print(ggplot(data = group_sims3.3[bigfinal_rows, ],
+               aes(x = time, y = Density)) +
+          geom_line() +
+          scale_y_continuous(trans = "log10") +
+          geom_abline(slope = sum_sims3.3$slope[row], intercept = sum_sims3.3$intercept[row],
+                      color = "red") +
+          geom_point(data = sum_sims3.3[row, ], aes(x = maxtime, y = maximum_B), 
+                     col = "blue", size = 3) +
+          NULL
+  )
+}
+
+## Let's make the ggplot for this data
+ggplot(data = sum_sims3.3, aes(x = log10(b), y = maxtime, color = as.factor(a),
+                               shape = as.factor(K))) +
+  geom_point(size = 3, alpha = 1/2) +
+  facet_grid(tau ~ r)
+
+## 3.4
+sims3.4 <- run_sims(bvals = c(74.56, 68, 57.2, 66.172, 60.35, 50.765, 59.648, 54.4,
+                              45.76),
+                    avals = c(10**-10), kvals = c(10**9), rvals = c(0.04),
+                    tauvals = c(87))
+length(sims3.4)
+sims3.4[[1]]
+sims3.4[[2]]
+sims3.4[[3]]
+
+## Let's group_by these simulations
+sub_sims3.4 <- subset(sims3.4[[1]], Pop == "B")
+class(sub_sims3.4)
+
+group_sims3.4 <- dplyr::group_by(sub_sims3.4, uniq_run, a, b, c, K, tau, r)
+group_sims3.4
+
+sum_sims3.4 <- dplyr::summarise(group_sims3.4, maximum_B = max(Density),
+                                maxtime = time[Density == maximum_B],
+                                slope = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
+                                             time[time < maxtime & Density < 0.1*K])$coefficients[2],
+                                intercept = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
+                                                 time[time < maxtime & Density < 0.1*K])$coefficients[1])
+sum_sims3.4
+
+for (row in 1:nrow(sum_sims3.4)) {
+  bigfinal_rows <- which(sum_sims3.4$b[row] == group_sims3.4$b & 
+                           sum_sims3.4$tau[row] == group_sims3.4$tau &
+                           sum_sims3.4$a[row] == group_sims3.4$a &
+                           sum_sims3.4$r[row] == group_sims3.4$r &
+                           sum_sims3.4$K[row] == group_sims3.4$K &
+                           sum_sims3.4$c[row] == group_sims3.4$c)
+  
+  print(ggplot(data = group_sims3.4[bigfinal_rows, ],
+               aes(x = time, y = Density)) +
+          geom_line() +
+          scale_y_continuous(trans = "log10") +
+          geom_abline(slope = sum_sims3.4$slope[row], intercept = sum_sims3.4$intercept[row],
+                      color = "red") +
+          geom_point(data = sum_sims3.4[row, ], aes(x = maxtime, y = maximum_B), 
+                     col = "blue", size = 3) +
+          NULL
+  )
+}
+
+## Let's make the ggplot for this data
+ggplot(data = sum_sims3.4, aes(x = log10(b), y = maxtime, color = as.factor(a),
+                               shape = as.factor(K))) +
+  geom_point(size = 3, alpha = 1/2) +
+  facet_grid(tau ~ r)
+
+## 3.5
+sims3.5 <- run_sims(bvals = c(88.54, 80.75, 67.925, 80.152, 73.1, 61.49, 73.628,
+                              67.15, 56.485),
+                    avals = c(10**-10), kvals = c(10**9), rvals = c(0.04),
+                    tauvals = c(102))
+length(sims3.5)
+sims3.5[[1]]
+sims3.5[[2]]
+sims3.5[[3]]
+
+## Let's group_by these simulations
+sub_sims3.5 <- subset(sims3.5[[1]], Pop == "B")
+class(sub_sims3.5)
+
+group_sims3.5 <- dplyr::group_by(sub_sims3.5, uniq_run, a, b, c, K, tau, r)
+group_sims3.5
+
+sum_sims3.5 <- dplyr::summarise(group_sims3.5, maximum_B = max(Density),
+                                maxtime = time[Density == maximum_B],
+                                slope = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
+                                             time[time < maxtime & Density < 0.1*K])$coefficients[2],
+                                intercept = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
+                                                 time[time < maxtime & Density < 0.1*K])$coefficients[1])
+sum_sims3.5
+
+for (row in 1:nrow(sum_sims3.5)) {
+  bigfinal_rows <- which(sum_sims3.5$b[row] == group_sims3.5$b & 
+                           sum_sims3.5$tau[row] == group_sims3.5$tau &
+                           sum_sims3.5$a[row] == group_sims3.5$a &
+                           sum_sims3.5$r[row] == group_sims3.5$r &
+                           sum_sims3.5$K[row] == group_sims3.5$K &
+                           sum_sims3.5$c[row] == group_sims3.5$c)
+  
+  print(ggplot(data = group_sims3.5[bigfinal_rows, ],
+               aes(x = time, y = Density)) +
+          geom_line() +
+          scale_y_continuous(trans = "log10") +
+          geom_abline(slope = sum_sims3.5$slope[row], intercept = sum_sims3.5$intercept[row],
+                      color = "red") +
+          geom_point(data = sum_sims3.5[row, ], aes(x = maxtime, y = maximum_B), 
+                     col = "blue", size = 3) +
+          NULL
+  )
+}
+
+## Let's make the ggplot for this data
+ggplot(data = sum_sims3.5, aes(x = log10(b), y = maxtime, color = as.factor(a),
+                               shape = as.factor(K))) +
+  geom_point(size = 3, alpha = 1/2) +
+  facet_grid(tau ~ r)
+
+## GLOBAL 3
+sims3 <- run_sims(bvals = c(21.436, 19.55, 16.445, 13.048, 11.9, 10.01, 6.524, 5.95,
+                            5.005, 35.416, 32.3, 27.17, 27.028, 24.65, 20.735, 
+                            20.504, 18.7, 15.73, 88.54, 80.75, 67.925, 80.152, 73.1,
+                            61.49, 73.628, 67.15, 56.485, 51.26, 46.75, 39.325,
+                            42.872, 39.1, 32.89, 36.348, 33.15, 27.885, 74.56,
+                            68, 57.2, 66.172, 60.35, 50.765, 59.648, 54.4, 45.76),
+                    avals = c(10**-10), kvals = c(10**9), rvals = c(0.04),
+                    tauvals = c(30, 45, 62, 87, 102))
+length(sims3)
+sims3[[1]]
+sims3[[2]]
+sims3[[3]]
+
+## Let's group_by these simulations
+sub_sims3 <- subset(sims3[[1]], Pop == "B")
+class(sub_sims3)
+
+group_sims3 <- dplyr::group_by(sub_sims3, uniq_run, a, b, c, K, tau, r)
+group_sims3
+
+sum_sims3 <- dplyr::summarise(group_sims3, maximum_B = max(Density),
+                                maxtime = time[Density == maximum_B],
+                                slope = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
+                                             time[time < maxtime & Density < 0.1*K])$coefficients[2],
+                                intercept = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
+                                                 time[time < maxtime & Density < 0.1*K])$coefficients[1])
+sum_sims3
+tail(sum_sims3)
+
+for (row in 1:nrow(sum_sims3)) {
+  bigfinal_rows <- which(sum_sims3$b[row] == group_sims3$b & 
+                           sum_sims3$tau[row] == group_sims3$tau &
+                           sum_sims3$a[row] == group_sims3$a &
+                           sum_sims3$r[row] == group_sims3$r &
+                           sum_sims3$K[row] == group_sims3$K &
+                           sum_sims3$c[row] == group_sims3$c)
+  
+  print(ggplot(data = group_sims3[bigfinal_rows, ],
+               aes(x = time, y = Density)) +
+          geom_line() +
+          scale_y_continuous(trans = "log10") +
+          geom_abline(slope = sum_sims3$slope[row], intercept = sum_sims3$intercept[row],
+                      color = "red") +
+          geom_point(data = sum_sims3[row, ], aes(x = maxtime, y = maximum_B), 
+                     col = "blue", size = 3) +
+          NULL
+  )
+}
+
+## Let's make the ggplot for this data
+ggplot(data = sum_sims3, aes(x = log10(b), y = maxtime, color = as.factor(a),
+                               shape = as.factor(K))) +
+  geom_point(size = 3, alpha = 1/2) +
+  facet_grid(tau ~ r) +
+  geom_smooth(method = "lm")
+  
+# How to see how tau and b affect maxtime as if they were INDEPENDENT from 
+# each other?
+reg <- lm(maxtime ~ tau + b, data = sum_sims3)
+summary(reg)
+# To see which predictor variables are significant, you can examine the
+# coefficients table
+summary(reg)$coefficients
+confint(reg)
+# Calulate the RSE
+sigma(reg)/mean(sum_sims3$maxtime) # The lower the RSE, the more accurate the model.
+# The RSE estimate gives a measure of error of prediction.
+
+# Analyzing the data as if tau and be were CORRELATED
+# Split the data into training and test set
+set.seed(123)
+training.samples <- sum_sims3$maxtime %>%
+  createDataPartition(p = 0.8, list = FALSE)
+train.data <- sum_sims3[training.samples, ]
+test.data <- sum_sims3[-training.samples, ]
+
+# The standard linear regression model can be computed as follow:
+# Buil the model
+reg1 <- lm(maxtime ~ tau + b, data = train.data)
+# Summarize the model
+summary(reg1)
+# Make predictions
+predictions <- reg1 %>% predict(test.data)
+# Make performance. (a) Prediction error, RMSE
+RMSE(predictions, test.data$maxtime)
+# (b) R2
+R2(predictions, test.data$maxtime)
+
+# INTERACTION EFFECTS
+# Build the model
+reg2 <- lm(maxtime ~ b + tau + b:tau, data = sum_sims3)
+summary(reg2)
+# Make predictions
+predictions <- reg2 %>% predict(test.data)
+# Model performance (a) Prediction error, RMSE
+RMSE(predictions, test.data$maxtime)
+# (b) R2
+R2(predictions, test.data$maxtime)
