@@ -807,6 +807,7 @@ run_sims <- function(rvals,
                      min_dens = 0.1,
                      init_time = 100,
                      init_stepsize = 1,
+                     combinatorial = TRUE,
                      print_info = TRUE) {
   
   #Inputs: vectors of parameters to be combined factorially to make
@@ -832,201 +833,198 @@ run_sims <- function(rvals,
     warning("init_time is not divisible by init_stepsize, this has not been tested")
   }
   
+  #Save parameter values provided into dataframe
+  # taking all different combinations
+  if (combinatorial) {
+    param_combos <- expand.grid(list("rvals" = rvals, "kvals" = kvals, 
+                                     "avals" = avals, "tauvals" = tauvals, 
+                                     "bvals" = bvals, "cvals" = cvals, 
+                                     "init_bact_dens_vals" = init_bact_dens_vals, 
+                                     "init_moi_vals" = init_moi_vals),
+                                stringsAsFactors = FALSE)
+    num_sims <- nrow(param_combos)
+  } else { #not combinatorial
+    num_sims <- max(sapply(X = list(rvals, kvals, avals, tauvals, bvals,
+                                    cvals, init_bact_dens_vals, init_moi_vals), 
+                           FUN = length))
+    
+    #Check for parameter lengths being non-divisible with the
+    # number of simulations inferred from the longest parameter length
+    if (!all(num_sims %% sapply(X = list(rvals, kvals, avals, tauvals, bvals,
+                                         cvals, init_bact_dens_vals, init_moi_vals), 
+                                FUN = length) == 0)) {
+      warning("Combinatorial is true but longest param vals length is not a multiple of all other param vals lengths")
+    }
+    
+    #Save parameters into dataframe, replicating shorter parameter
+    # vectors as needed to reach # of simulations
+    param_combos <- data.frame("rvals" = rep_len(rvals, num_sims), 
+                               "kvals" = rep_len(kvals, num_sims), 
+                               "avals" = rep_len(avals, num_sims), 
+                               "tauvals" = rep_len(tauvals, num_sims), 
+                               "bvals" = rep_len(bvals, num_sims), 
+                               "cvals" = rep_len(cvals, num_sims), 
+                               "init_bact_dens_vals" = rep_len(init_bact_dens_vals, num_sims), 
+                               "init_moi_vals" = rep_len(init_moi_vals, num_sims),
+                               stringsAsFactors = FALSE)
+  }
+  
   #Print number of simulations that will be run
   if(print_info) {
-    print(paste(length(rvals)*length(kvals)*length(avals)*
-                  length(tauvals)*length(bvals)*length(cvals)*
-                  length(init_bact_dens_vals)*length(init_moi_vals),
-                "simulations will be run"))
+    print(paste(num_sims, "simulations will be run"))
     
     #Save sequence of 10% cutoff points for later reference
-    progress_seq <- round(seq(from = 0, 
-                              to = (length(rvals)*length(kvals)*length(avals)*
-                                      length(tauvals)*length(bvals)*length(cvals)*
-                                      length(init_bact_dens_vals)*
-                                      length(init_moi_vals)),
-                              by = (length(rvals)*length(kvals)*length(avals)*
-                                      length(tauvals)*length(bvals)*length(cvals)*
-                                      length(init_bact_dens_vals)*
-                                      length(init_moi_vals))/10))
+    progress_seq <- round(seq(from = 0, to = num_sims, by = num_sims/10))
   }
   
   #Make placeholders
   yfail <- NULL #for runs that fail
-  i <- 1 #the uniq_run counter
   #for runs that succeed, pre-allocate ybig now to save on memory/speed
-  ybig <- data.frame("uniq_run" = rep(NA, 5*(1+init_time/init_stepsize)*
-                                        length(rvals)*length(kvals)*
-                                        length(avals)*length(tauvals)*
-                                        length(bvals)*length(cvals)*
-                                        length(init_bact_dens_vals)*
-                                        length(init_moi_vals)),
+  ybig <- data.frame("uniq_run" = rep(NA, 5*(1+init_time/init_stepsize)*num_sims),
                      "r" = NA, "a" = NA, "b" = NA, "tau" = NA, "K" = NA,
                      "c" = NA, "init_bact_dens" = NA, "init_moi" = NA,
                      "equil" = NA, "time" = NA, "Pop" = as.character(NA), 
                      "Density" = NA, stringsAsFactors = F)
   
-  #Cycle through all parameter combinations
-  for (myr in rvals) {
-    for (myk in kvals) {
-      for (mya in avals) {
-        for (mytau in tauvals) {
-          for (myb in bvals) {
-            for (myc in cvals) {
-              for (my_init_bact in init_bact_dens_vals) {
-                for (my_moi in init_moi_vals) {
-                  #Define pops & parameters
-                  yinit <- c(S = my_init_bact,
-                             I = 0,
-                             P = my_init_bact*my_moi)
-                  params <- c(r = myr, a = mya, b = myb, tau = mytau,
-                              K = myk, c = myc,
-                              warnings = 0, thresh_min_dens = 10**-100)
-                  
-                  #Run simulation(s) with longer & longer times until equil reached
-                  #Also, if equil has non-zero I run with shorter steps
-                  keep_running <- TRUE #placeholder for triggering end of sims
-                  #Placeholder for the number of times I has been detected above
-                  # min_dens while S has not been
-                  i_only_pos_times <- 0
-                  j <- 0 #length counter (larger is longer times)
-                  k <- 0 #step size counter (larger is smaller steps)
-                  while(keep_running) {
-                    #Define times, with lengths & steps doubling for ea j count
-                    # (so that the number of timepoints returned is constant)
-                    times <- seq(0, init_time*2**j, init_stepsize*2**j)
-                    
-                    #Run simulation (using 1st entry of list as error code:\
-                    # 0 - success
-                    # 1 - error
-                    # 2 - warning
-                    yout_list <- tryCatch(
-                      expr = {
-                        #Note that the max step size for the integrator is the 
-                        # same as our step size except halved for each k count
-                        list(0,
-                             as.data.frame(
-                               dede(y = yinit, times = times, func = derivs, 
-                                    parms = params, hmax = init_stepsize*2**(j-k))))
-                      },
-                      error = function(e) {list(1)},
-                      warning = function(w) {
-                        list(2,
-                             as.data.frame(
-                               dede(y = yinit, times = times, func = derivs, 
-                                    parms = params, hmax = 2**(j-k))))
-                      }
-                    )
-                    
-                    #Infinite loop prevention check (j = 10 is 24 hrs)
-                    if (j >= 10 | k >= 15 | j+k >= 20) {
-                      keep_running <- FALSE
-                      at_equil <- FALSE
-                    }
-                    
-                    #If there was an error, increase k by 1 and re-run
-                    if(yout_list[[1]] == 1) {
-                      k <- k+1
-                      #If there was a warning, could be several causes, so we
-                      # generally just halve step size and increase length
-                    } else if (yout_list[[1]] == 2) {
-                      j <- j+1
-                      k <- k+2
-                      #If it was successful, check for equilibrium
-                    } else if (yout_list[[1]] == 0) {
-                      #First drop all rows with nan
-                      yout_list[[2]] <- yout_list[[2]][!(is.nan(yout_list[[2]]$S) |
-                                                           is.nan(yout_list[[2]]$I) |
-                                                           is.nan(yout_list[[2]]$P)), ]
-                      
-                      #S and I both at equil, we're done
-                      if (yout_list[[2]]$S[nrow(yout_list[[2]])] < min_dens & 
-                          yout_list[[2]]$I[nrow(yout_list[[2]])] < min_dens) {
-                        keep_running <- FALSE
-                        at_equil <- TRUE
-                        #S not at equil, need more time
-                      } else if (yout_list[[2]]$S[nrow(yout_list[[2]])] >= min_dens) { 
-                        j <- j+1
-                        #I not at equil (but S is because above check failed),
-                        #   first we'll lengthen the simulation
-                        #    (to make sure it was long enough to catch the last burst)
-                        #   then we'll start shrinking our step size
-                      } else if (yout_list[[2]]$I[nrow(yout_list[[2]])] >= min_dens) {
-                        if (i_only_pos_times < 1) {
-                          j <- j+1
-                          i_only_pos_times <- i_only_pos_times+1
-                        } else {
-                          k <- k+1
-                        }
-                      }
-                      
-                      ###Old version of equilibrium checking
-                      # #then check for equil
-                      # if (all(abs(yout[nrow(yout), 2:4] - 
-                      #             yout[nrow(yout)-1, 2:4]) < .001)) {
-                      #   #If at equil but S or I are non-zero, halve step size
-                      #   if(any(yout[nrow(yout), c("S", "I")] > 0.1)) {
-                      #     k <- k+1
-                      #   #If at equil and S & I are zero, stop
-                      #   } else {
-                      #     keep_running <- FALSE
-                      #     at_equil <- TRUE
-                      #   }
-                      # } else {
-                      #   j <- j+1
-                      # }
-                    }
-                  }
-                  
-                  #Once end conditions triggered, if run succeeded
-                  if(yout_list[[1]] == 0 | yout_list[[1]] == 2) {
-                    #Calculate all bacteria (B)
-                    yout_list[[2]]$B <- yout_list[[2]]$S + yout_list[[2]]$I
-                    #Calculate all phage (PI)
-                    yout_list[[2]]$PI <- yout_list[[2]]$P + yout_list[[2]]$I
-                    
-                    #Reshape, add parameters, and fill into ybig in right rows
-                    ybig[((i-1)*5*(1+init_time/init_stepsize)+1):
-                           ((i)*5*(1+init_time/init_stepsize)), ] <- 
-                      cbind(data.frame(uniq_run = i, r = myr, a = mya, 
-                                       b = myb, tau = mytau, K = myk, 
-                                       c = myc, init_bact_dens = my_init_bact, 
-                                       init_moi = my_moi, equil = at_equil),
-                            data.table::melt(data = data.table::as.data.table(yout_list[[2]]), 
-                                             id.vars = c("time"),
-                                             value.name = "Density", 
-                                             variable.name = "Pop",
-                                             variable.factor = FALSE))
-                    
-                    #If the run failed
-                  } else {
-                    if (is.null(yfail)) { #This is the first failed run
-                      yfail <- data.frame(uniq_run = i, r = myr, a = mya, 
-                                          b = myb, tau = mytau, K = myk,
-                                          c = myc, init_bact_dens = my_init_bact, 
-                                          init_moi = my_moi, equil = at_equil)
-                    } else { #This is a non-first failed run
-                      yfail <- rbind(yfail, 
-                                     data.frame(uniq_run = i, r = myr, a = mya, 
-                                                b = myb, tau = mytau, K = myk, 
-                                                c = myc, init_bact_dens = my_init_bact, 
-                                                init_moi = my_moi, equil = at_equil))
-                    }
-                  }
-                  i <- i+1
-                  
-                  #Print progress update
-                  if (print_info & i %in% progress_seq) {
-                    print(paste((which(progress_seq == i)-1)*10,
-                                "% completed", sep = ""))
-                  }
-                }
-              }
-            }
+  for (i in 1:nrow(param_combos)) { #i acts as the uniq_run counter
+    myr <- param_combos$rvals[i]
+    myk <- param_combos$kvals[i]
+    mya <- param_combos$avals[i]
+    mytau <- param_combos$tauvals[i]
+    myb <- param_combos$bvals[i]
+    myc <- param_combos$cvals[i]
+    my_init_bact <- param_combos$init_bact_dens_vals[i]
+    my_moi <- param_combos$init_moi_vals[i]
+    
+    #Define pops & parameters
+    yinit <- c(S = my_init_bact,
+               I = 0,
+               P = my_init_bact*my_moi)
+    params <- c(r = myr, a = mya, b = myb, tau = mytau,
+                K = myk, c = myc,
+                warnings = 0, thresh_min_dens = 10**-100)
+    
+    #Run simulation(s) with longer & longer times until equil reached
+    #Also, if equil has non-zero I run with shorter steps
+    keep_running <- TRUE #placeholder for triggering end of sims
+    #Placeholder for the number of times I has been detected above
+    # min_dens while S has not been
+    i_only_pos_times <- 0
+    j <- 0 #length counter (larger is longer times)
+    k <- 0 #step size counter (larger is smaller steps)
+    while(keep_running) {
+      #Define times, with lengths & steps doubling for ea j count
+      # (so that the number of timepoints returned is constant)
+      times <- seq(0, init_time*2**j, init_stepsize*2**j)
+      
+      #Run simulation (using 1st entry of list as error code:\
+      # 0 - success
+      # 1 - error
+      # 2 - warning
+      yout_list <- tryCatch(
+        expr = {
+          #Note that the max step size for the integrator is the 
+          # same as our step size except halved for each k count
+          list(0,
+               as.data.frame(
+                 dede(y = yinit, times = times, func = derivs, 
+                      parms = params, hmax = init_stepsize*2**(j-k))))
+        },
+        error = function(e) {list(1)},
+        warning = function(w) {
+          list(2,
+               as.data.frame(
+                 dede(y = yinit, times = times, func = derivs, 
+                      parms = params, hmax = 2**(j-k))))
+        }
+      )
+      
+      #Infinite loop prevention check (j = 10 is 24 hrs)
+      if (j >= 10 | k >= 15 | j+k >= 20) {
+        keep_running <- FALSE
+        at_equil <- FALSE
+      }
+      
+      #If there was an error, increase k by 1 and re-run
+      if(yout_list[[1]] == 1) {
+        k <- k+1
+        #If there was a warning, could be several causes, so we
+        # generally just halve step size and increase length
+      } else if (yout_list[[1]] == 2) {
+        j <- j+1
+        k <- k+2
+        #If it was successful, check for equilibrium
+      } else if (yout_list[[1]] == 0) {
+        #First drop all rows with nan
+        yout_list[[2]] <- yout_list[[2]][!(is.nan(yout_list[[2]]$S) |
+                                             is.nan(yout_list[[2]]$I) |
+                                             is.nan(yout_list[[2]]$P)), ]
+        
+        #S and I both at equil, we're done
+        if (yout_list[[2]]$S[nrow(yout_list[[2]])] < min_dens & 
+            yout_list[[2]]$I[nrow(yout_list[[2]])] < min_dens) {
+          keep_running <- FALSE
+          at_equil <- TRUE
+          #S not at equil, need more time
+        } else if (yout_list[[2]]$S[nrow(yout_list[[2]])] >= min_dens) { 
+          j <- j+1
+          #I not at equil (but S is because above check failed),
+          #   first we'll lengthen the simulation
+          #    (to make sure it was long enough to catch the last burst)
+          #   then we'll start shrinking our step size
+        } else if (yout_list[[2]]$I[nrow(yout_list[[2]])] >= min_dens) {
+          if (i_only_pos_times < 1) {
+            j <- j+1
+            i_only_pos_times <- i_only_pos_times+1
+          } else {
+            k <- k+1
           }
         }
       }
     }
+    
+    #Once end conditions triggered, if run succeeded
+    if(yout_list[[1]] == 0 | yout_list[[1]] == 2) {
+      #Calculate all bacteria (B)
+      yout_list[[2]]$B <- yout_list[[2]]$S + yout_list[[2]]$I
+      #Calculate all phage (PI)
+      yout_list[[2]]$PI <- yout_list[[2]]$P + yout_list[[2]]$I
+      
+      #Reshape, add parameters, and fill into ybig in right rows
+      ybig[((i-1)*5*(1+init_time/init_stepsize)+1):
+             ((i)*5*(1+init_time/init_stepsize)), ] <- 
+        cbind(data.frame(uniq_run = i, r = myr, a = mya, 
+                         b = myb, tau = mytau, K = myk, 
+                         c = myc, init_bact_dens = my_init_bact, 
+                         init_moi = my_moi, equil = at_equil),
+              data.table::melt(data = data.table::as.data.table(yout_list[[2]]), 
+                               id.vars = c("time"),
+                               value.name = "Density", 
+                               variable.name = "Pop",
+                               variable.factor = FALSE))
+      
+      #If the run failed
+    } else {
+      if (is.null(yfail)) { #This is the first failed run
+        yfail <- data.frame(uniq_run = i, r = myr, a = mya, 
+                            b = myb, tau = mytau, K = myk,
+                            c = myc, init_bact_dens = my_init_bact, 
+                            init_moi = my_moi, equil = at_equil)
+      } else { #This is a non-first failed run
+        yfail <- rbind(yfail, 
+                       data.frame(uniq_run = i, r = myr, a = mya, 
+                                  b = myb, tau = mytau, K = myk, 
+                                  c = myc, init_bact_dens = my_init_bact, 
+                                  init_moi = my_moi, equil = at_equil))
+      }
+    }
+    
+    #Print progress update
+    if (print_info & i %in% progress_seq) {
+      print(paste((which(progress_seq == i)-1)*10,
+                  "% completed", sep = ""))
+    }
+    
   }
   
   #Pull out all the runs that didn't reach equilibrium
@@ -1042,45 +1040,45 @@ run_sims <- function(rvals,
   return(list(ybig, y_noequil, yfail))
   
   #Code for visualizing while debugging
-  if (F) {
-    #Code for plotting population sizes over time
-    ymelt <- reshape2::melt(data = as.data.frame(yout_list[[2]]), 
-                            id = c("time"),
-                            value.name = "Density", 
-                            variable.name = "Pop")
-    
-    ggplot(data = ymelt, 
-           aes(x = time, y = Density+10, color = Pop)) +
-      geom_line(lwd = 1.5, alpha = 1) + 
-      scale_y_continuous(trans = "log10") +
-      scale_x_continuous(breaks = seq(from = 0, to = max(ymelt$time), 
-                                      by = round(max(ymelt$time)/10))) +
-      geom_hline(yintercept = 10, lty = 2) +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-      NULL
-  }
+  # if (F) {
+  #   #Code for plotting population sizes over time
+  #   ymelt <- reshape2::melt(data = as.data.frame(yout_list[[2]]), 
+  #                           id = c("time"),
+  #                           value.name = "Density", 
+  #                           variable.name = "Pop")
+  #   
+  #   ggplot(data = ymelt, 
+  #          aes(x = time, y = Density+10, color = Pop)) +
+  #     geom_line(lwd = 1.5, alpha = 1) + 
+  #     scale_y_continuous(trans = "log10") +
+  #     scale_x_continuous(breaks = seq(from = 0, to = max(ymelt$time), 
+  #                                     by = round(max(ymelt$time)/10))) +
+  #     geom_hline(yintercept = 10, lty = 2) +
+  #     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  #     NULL
+  # }
   
   #for troubleshooting runs that don't get to equilibrium
-  if (F) {
-    my_row <- 1
-    myr <- y_noequil$r[my_row]
-    mya <- y_noequil$a[my_row]
-    myb <- y_noequil$b[my_row]
-    mytau <- y_noequil$tau[my_row]
-    myk <- y_noequil$K[my_row]
-    myc <- y_noequil$c[my_row]
-  }
+  # if (F) {
+  #   my_row <- 1
+  #   myr <- y_noequil$r[my_row]
+  #   mya <- y_noequil$a[my_row]
+  #   myb <- y_noequil$b[my_row]
+  #   mytau <- y_noequil$tau[my_row]
+  #   myk <- y_noequil$K[my_row]
+  #   myc <- y_noequil$c[my_row]
+  # }
   
   #for troubleshooting runs that fail
-  if (F) {
-    my_row <- 1
-    myr <- yfail$r[my_row]
-    mya <- yfail$a[my_row]
-    myb <- yfail$b[my_row]
-    mytau <- yfail$tau[my_row]
-    myk <- yfail$K[my_row]
-    myc <- yfail$c[my_row]
-  }
+  # if (F) {
+  #   my_row <- 1
+  #   myr <- yfail$r[my_row]
+  #   mya <- yfail$a[my_row]
+  #   myb <- yfail$b[my_row]
+  #   mytau <- yfail$tau[my_row]
+  #   myk <- yfail$K[my_row]
+  #   myc <- yfail$c[my_row]
+  # }
 }
 
 sims1 <- run_sims(bvals = c(75, 480, 760), avals = c(10**-10.5, 10**-9, 10**-8.25),
