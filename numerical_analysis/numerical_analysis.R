@@ -300,22 +300,6 @@ run_sims <- function(rvals,
             k <- k+1
           }
         }
-        
-        ###Old version of equilibrium checking
-        # #then check for equil
-        # if (all(abs(yout[nrow(yout), 2:4] - 
-        #             yout[nrow(yout)-1, 2:4]) < .001)) {
-        #   #If at equil but S or I are non-zero, halve step size
-        #   if(any(yout[nrow(yout), c("S", "I")] > 0.1)) {
-        #     k <- k+1
-        #   #If at equil and S & I are zero, stop
-        #   } else {
-        #     keep_running <- FALSE
-        #     at_equil <- TRUE
-        #   }
-        # } else {
-        #   j <- j+1
-        # }
       }
     }
     
