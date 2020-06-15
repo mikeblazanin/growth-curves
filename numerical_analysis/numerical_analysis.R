@@ -162,7 +162,7 @@ run_sims <- function(rvals,
                                "init_bact_dens_vals" = init_bact_dens_vals, 
                                "init_moi_vals" = init_moi_vals),
                           stringsAsFactors = FALSE)
-    num_sims <- nrow(params)
+    num_sims <- nrow(param_combos)
   } else { #not combinatorial
     num_sims <- max(sapply(X = list(rvals, kvals, avals, tauvals, bvals,
                                     cvals, init_bact_dens_vals, init_moi_vals), 
