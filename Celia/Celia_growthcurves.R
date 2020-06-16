@@ -794,6 +794,7 @@ ggplot(data = BIG, aes(x = log10(burst), y = maxtime, color = as.factor(K),
   geom_point(size = 3, alpha = 1/2) +
   facet_grid(tau ~ r)
 
+
 ## MIKE'S CODE
 ## Define function for running simulations across many parameter values ----
 run_sims <- function(rvals,
@@ -807,7 +808,7 @@ run_sims <- function(rvals,
                      min_dens = 0.1,
                      init_time = 100,
                      init_stepsize = 1,
-                     combinatorial = TRUE,
+                     combinatorial = FALSE,
                      print_info = TRUE) {
   
   #Inputs: vectors of parameters to be combined factorially to make
@@ -1154,8 +1155,8 @@ ggplot(data = sum_sims1, aes(x = log10(b), y = maxtime, color = as.factor(K),
   facet_grid(tau ~ r) +
   scale_y_continuous(trans = "log10") +
   geom_smooth(method = "lm")
-
 ## lm function on our data
+
 # How to see how tau and b affect maxtime as if they were INDEPENDENT from 
 # each other?
 reg_sims1 <- lm(maxtime ~ tau + b + a + r, data = sum_sims1)
@@ -1265,7 +1266,26 @@ sum_sims2
 ggplot(data = sum_sims2, aes(x = log10(b), y = maxtime, color = as.factor(a),
                              shape = as.factor(K))) +
   geom_point(size = 3, alpha = 1/2) +
-  facet_grid(tau ~ r)
+  facet_grid(tau ~ r) +
+  geom_smooth(method = "lm")
+
+
+# How to see how the parameters affect maxtime as if they were INDEPENDENT from 
+# each other?
+reg_sims2 <- lm(maxtime ~ tau + b + a, data = sum_sims2)
+summary(reg_sims2)
+
+confint(reg_sims2)
+# Calulate the RSE
+sigma(reg_sims2)/mean(sum_sims2$maxtime) # The lower the RSE, the more accurate the model.
+# The RSE estimate gives a measure of error of prediction.
+
+# Analyzing the data as if the parameters were CORRELATED
+# INTERACTION EFFECTS
+# Build the model
+regi_sims2 <- lm(maxtime ~ tau + b + a + tau:b + tau:a + b:a, data = sum_sims2)
+                   
+summary(regi_sims2)
 
 
 
@@ -1529,6 +1549,7 @@ ggplot(data = sum_sims3.5, aes(x = log10(b), y = maxtime, color = as.factor(a),
   geom_point(size = 3, alpha = 1/2) +
   facet_grid(tau ~ r)
 
+## Let's run sims3 with all our different trade-offs
 # Caluclating the b values with R
 tau <- c(30, 45, 62, 87, 102)
 intercept <- c(7, 16, 23)
@@ -1549,3 +1570,271 @@ for (tauval in tau){
 }
 
 bvals
+class(bvals)
+b <- bvals[,4]
+b
+tau <- bvals[,1]
+tau
+
+sims3 <- run_sims(bvals = c(b), avals = c(10**-10), kvals = c(10**9),
+                  rvals = c(0.04), tauvals = c(tau))
+length(sims3)
+sims3[[1]]
+sims3[[2]]
+sims3[[3]]
+
+## Let's group_by these simulations
+sub_sims3 <- subset(sims3[[1]], Pop == "B")
+class(sub_sims3)
+
+group_sims3 <- dplyr::group_by(sub_sims3, uniq_run, a, b, c, K, tau, r)
+group_sims3
+
+sum_sims3 <- dplyr::summarise(group_sims3, maximum_B = max(Density),
+                                maxtime = time[Density == maximum_B],
+                                slope = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
+                                             time[time < maxtime & Density < 0.1*K])$coefficients[2],
+                                intercept = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
+                                                 time[time < maxtime & Density < 0.1*K])$coefficients[1])
+sum_sims3
+
+for (row in 1:nrow(sum_sims3)) {
+  bigfinal_rows <- which(sum_sims3$b[row] == group_sims3$b & 
+                           sum_sims3$tau[row] == group_sims3$tau &
+                           sum_sims3$a[row] == group_sims3$a &
+                           sum_sims3$r[row] == group_sims3$r &
+                           sum_sims3$K[row] == group_sims3$K &
+                           sum_sims3$c[row] == group_sims3$c)
+  
+  print(ggplot(data = group_sims3[bigfinal_rows, ],
+               aes(x = time, y = Density)) +
+          geom_line() +
+          scale_y_continuous(trans = "log10") +
+          geom_abline(slope = sum_sims3$slope[row], intercept = sum_sims3$intercept[row],
+                      color = "red") +
+          geom_point(data = sum_sims3[row, ], aes(x = maxtime, y = maximum_B), 
+                     col = "blue", size = 3) +
+          NULL
+  )
+}
+
+## Let's make the ggplot for this data
+ggplot(data = sum_sims3, aes(x = log10(b), y = maxtime, color = as.factor(a),
+                               shape = as.factor(K))) +
+  geom_point(size = 3, alpha = 1/2) +
+  facet_grid(tau ~ r) +
+  scale_y_continuous(trans = "log10")
+
+# How to see how the parameters affect maxtime as if they were INDEPENDENT from 
+# each other?
+reg_sims3 <- lm(maxtime ~ tau + log10(b), data = sum_sims3)
+summary(reg_sims3)
+
+# Calulate the RSE
+sigma(reg_sims3)/mean(sum_sims3$maxtime) # The lower the RSE, the more accurate the model.
+# The RSE estimate gives a measure of error of prediction.
+
+# Analyzing the data as if the parameters were CORRELATED
+# INTERACTION EFFECTS
+# Build the model
+regi_sims3 <- lm(maxtime ~ tau + log10(b) + tau:log10(b), data = sum_sims3)
+summary(regi_sims3)
+
+
+## RANDOMIZATION OF THE VALUES FOR B AND TAU
+simsR <- run_sims(bvals = c(b), avals = c(10**-10), kvals = c(10**9),
+                  rvals = c(0.04), tauvals = c(30, 45, 62, 87, 102))
+length(simsR)
+simsR[[1]]
+simsR[[2]]
+simsR[[3]]
+
+## Let's group_by these simulations
+sub_simsR <- subset(simsR[[1]], Pop == "B")
+class(sub_simsR)
+
+group_simsR <- dplyr::group_by(sub_simsR, uniq_run, a, b, c, K, tau, r)
+group_simsR
+
+sum_simsR <- dplyr::summarise(group_simsR, maximum_B = max(Density),
+                              maxtime = time[Density == maximum_B],
+                              slope = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
+                                           time[time < maxtime & Density < 0.1*K])$coefficients[2],
+                              intercept = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
+                                               time[time < maxtime & Density < 0.1*K])$coefficients[1])
+sum_simsR
+
+for (row in 1:nrow(sum_simsR)) {
+  bigfinal_rows <- which(sum_simsR$b[row] == group_simsR$b & 
+                           sum_simsR$tau[row] == group_simsR$tau &
+                           sum_simsR$a[row] == group_simsR$a &
+                           sum_simsR$r[row] == group_simsR$r &
+                           sum_simsR$K[row] == group_simsR$K &
+                           sum_simsR$c[row] == group_simsR$c)
+  
+  print(ggplot(data = group_simsR[bigfinal_rows, ],
+               aes(x = time, y = Density)) +
+          geom_line() +
+          scale_y_continuous(trans = "log10") +
+          geom_abline(slope = sum_simsR$slope[row], intercept = sum_simsR$intercept[row],
+                      color = "red") +
+          geom_point(data = sum_simsR[row, ], aes(x = maxtime, y = maximum_B), 
+                     col = "blue", size = 3) +
+          NULL
+  )
+}
+
+## Let's make the ggplot for this data
+ggplot(data = sum_simsR, aes(x = log10(b), y = maxtime, color = as.factor(a),
+                             shape = as.factor(K))) +
+  geom_point(size = 3, alpha = 1/2) +
+  facet_grid(tau ~ r) +
+  scale_y_continuous(trans = "log10") +
+  geom_smooth(method = "lm")
+
+# How to see how the parameters affect maxtime as if they were INDEPENDENT from 
+# each other?
+reg_simsR <- lm(maxtime ~ tau + log10(b), data = sum_simsR)
+summary(reg_simsR)
+
+# Calulate the RSE
+sigma(reg_simsR)/mean(sum_simsR$maxtime) # The lower the RSE, the more accurate the model.
+# The RSE estimate gives a measure of error of prediction.
+
+# Analyzing the data as if the parameters were CORRELATED
+# INTERACTION EFFECTS
+# Build the model
+regi_simsR <- lm(maxtime ~ tau + log10(b) + tau:log10(b), data = sum_simsR)
+summary(regi_simsR)
+
+
+# Let's try to change their axis and facets (point 29 in the Word sheet)
+
+ggplot(data = sum_simsR, aes(x = tau, y = maxtime, color = as.factor(b),
+                             shape = as.factor(a))) +
+  geom_point(size = 3, alpha = 1/2) +
+  facet_grid(intercept ~ slope) +
+  scale_y_continuous(trans = "log10") +
+  geom_smooth(method = "lm")
+
+
+## Using some of the values for b, we'll run single simulations to analyze their
+## B curve
+#Run simulation with b = 20.735
+yinit <- c(S = 10**6, I = 0, P = 10**4)
+params <- c(r = 0.04, a = 10**-10, b = 20.735, tau = 45, K = 10**9,
+            c = 1, warnings = 0, thresh_min_dens = 10**-100)
+times <- seq(from = 0, to = 600, by = 1)
+yout_B1 <- as.data.frame(dede(y = yinit, times = times, func = derivs, parms = params))
+
+##Plot results with b = 20.735
+library(tidyr)
+yout_B1$B <- yout_B1$S+yout_B1$I
+head(yout_B1)
+yout_B1_plot <- pivot_longer(yout_B1, c(S, I, P, B), names_to = "Population",
+                             values_to = "Density")
+
+ggplot(data = yout_B1_plot, aes(x = time, y = Density + 10, color = Population)) +
+  geom_line(lwd = 1.5, alpha = 1/2) +
+  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
+  scale_y_continuous(trans = "log10")
+
+#Run simulation with b = 20.504
+yinit <- c(S = 10**6, I = 0, P = 10**4)
+params <- c(r = 0.04, a = 10**-10, b = 20.504, tau = 45, K = 10**9,
+            c = 1, warnings = 0, thresh_min_dens = 10**-100)
+times <- seq(from = 0, to = 600, by = 1)
+yout_B2 <- as.data.frame(dede(y = yinit, times = times, func = derivs, parms = params))
+
+##Plot results with b = 20.504
+library(tidyr)
+yout_B2$B <- yout_B2$S+yout_B2$I
+head(yout_B2)
+yout_B2_plot <- pivot_longer(yout_B2, c(S, I, P, B), names_to = "Population",
+                             values_to = "Density")
+
+ggplot(data = yout_B2_plot, aes(x = time, y = Density + 10, color = Population)) +
+  geom_line(lwd = 1.5, alpha = 1/2) +
+  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
+  scale_y_continuous(trans = "log10")
+
+# Now, we want to find the maximum of both simulations to see if they're the same
+yout_sum <- rbind(yout_B1, yout_B2)
+yout_sum
+
+maximums <- summarise(yout_sum, maximum_B = max(yout_B1$B, na.rm = T),
+                      max(yout_B2$B, na.rm = T))
+maximums
+
+
+
+## Let's run sims4, where we'll have c and K constant, and we'll be changing
+##between 3 different values of b, a, r and tau evenly spaced
+sims4 <- run_sims(bvals = c(100, 200, 400), rvals = c(0.009, 0.016, 0.02845),
+                  avals = c(10**-11, 10**-10, 10**-9), kvals = c(10**9),
+                  tauvals = c(22.5, 33.75, 50.625))
+length(sims4)                  
+sims4[[1]]
+sims4[[2]]
+sims4[[3]]
+table(sims4[[1]]$Pop)
+
+## Now that we're sure that everything went well, we'll strat summarizing the data
+sub_sims4 <- subset(sims4[[1]], Pop == "B")
+class(sub_sims4)
+group_sims4 <- dplyr::group_by(sub_sims4, uniq_run, a, b, c, K, tau, r)
+group_sims4
+
+sum_sims4 <- dplyr::summarise(group_sims4, maximum_B = max(Density),                
+                              maxtime = time[Density == maximum_B],
+                              slope = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
+                                           time[time < maxtime & Density < 0.1*K])$coefficients[2],
+                              intercept = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
+                                               time[time < maxtime & Density < 0.1*K])$coefficients[1])
+
+for (row in 1:nrow(sum_sims4)) {
+  bigfinal_rows <- which(sum_sims4$b[row] == group_sims4$b & 
+                           sum_sims4$tau[row] == group_sims4$tau &
+                           sum_sims4$a[row] == group_sims4$a &
+                           sum_sims4$r[row] == group_sims4$r &
+                           sum_sims4$K[row] == group_sims4$K &
+                           sum_sims4$c[row] == group_sims4$c)
+  
+  print(ggplot(data = group_sims4[bigfinal_rows, ],
+               aes(x = time, y = Density)) +
+          geom_line() +
+          scale_y_continuous(trans = "log10") +
+          geom_abline(slope = sum_sims4$slope[row], intercept = sum_sims4$intercept[row],
+                      color = "red") +
+          geom_point(data = sum_sims4[row, ], aes(x = maxtime, y = maximum_B), 
+                     col = "blue", size = 3) +
+          NULL
+  )
+}
+
+sum_sims4
+
+## Let's make the ggplot for this data
+ggplot(data = sum_sims4, aes(x = log10(b), y = maxtime, color = as.factor(a),
+                             shape = as.factor(K))) +
+  geom_point(size = 3, alpha = 1/2) +
+  facet_grid(tau ~ r) +
+  geom_smooth(method = "lm")
+
+# How to see how the parameters affect maxtime as if they were INDEPENDENT from 
+# each other?
+reg_sims4 <- lm(maxtime ~ tau + log10(b) + log10(a) + log10(r), data = sum_sims4)
+summary(reg_sims4)
+
+# Calulate the RSE
+sigma(reg_sims4)/mean(sum_sims4$maxtime) # The lower the RSE, the more accurate the model.
+# The RSE estimate gives a measure of error of prediction.
+
+# Analyzing the data as if the parameters were CORRELATED
+# INTERACTION EFFECTS
+# Build the model
+regi_sims4 <- lm(maxtime ~ tau + log10(b) + log10(a) + log10(r) + tau:log10(b) +
+                 tau:log10(a) + tau:log10(r) + log10(b):log10(a) + log10(b):log10(r) +
+                   log10(a):log10(r), data = sum_sims4)
+
+summary(regi_sims4)
