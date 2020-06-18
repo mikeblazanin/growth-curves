@@ -1320,7 +1320,7 @@ cor(sum_sims2$tau, sum_sims2$maxtime)
 ## different values of b, and tau
 
 # Caluclating the b values with R
-tau <- c(22, 25.5, 29.5568, 34.259, 39.709)
+tau <- c(30, 45, 62, 87, 102)
 intercept <- c(7, 16, 23)
 slope <- c(0.932, 0.85, 0.715)
 bvals <- as.data.frame(matrix(data = NA, ncol = 4, 
@@ -1385,13 +1385,13 @@ lm_fit <- lm(maxtime ~ b + tau, data = df)
 summary(lm_fit)
 # Save predictions of the model in the new data frame together with the variable
 # you want to plot against
-predicted_df <- data.frame(maxtime_pred = predict(lm_fit, df), tau = df$tau)
+predicted_df <- data.frame(maxtime_pred = predict(lm_fit, df), b = df$b)
 # This is the predicted line of multiple linear regressions
-ggplot(data = df, aes(x = tau, y = maxtime)) +
+ggplot(data = df, aes(x = b, y = maxtime)) +
   geom_point(color = "green") +
-  geom_line(color = "blue", data = predicted_df, aes(x = tau, y = maxtime_pred))
+  geom_line(color = "blue", data = predicted_df, aes(x = b, y = maxtime_pred))
 # this is the predicted line comparing only chosen variables
-ggplot(data = df, aes(x = tau, y = maxtime)) +
+ggplot(data = df, aes(x = b, y = maxtime)) +
   geom_point(color = "green") +
   geom_smooth(method = "lm", se = FALSE)
 
