@@ -1271,11 +1271,11 @@ ggplot(data = sum_sims2, aes(x = log10(b), y = maxtime, color = as.factor(a),
   facet_grid(tau ~ r) +
   geom_smooth(method = "lm")
 
-
 # How to see how the parameters affect maxtime as if they were INDEPENDENT from 
 # each other?
 reg_sims2 <- lm(maxtime ~ tau + b + a, data = sum_sims2)
 summary(reg_sims2)
+plot(reg_sims2)
 
 confint(reg_sims2)
 # Calulate the RSE
@@ -1291,27 +1291,42 @@ summary(regi_sims2)
 
 ## We want to plot the multiple linear regressions
 # Read data set
-df = sum_sims2
+sum_sims2
 # Create multiple linear regressions
-lm_fit <- lm(maxtime ~ b + a + tau, data = df)
+lm_fit <- lm(maxtime ~ log10(b) + log10(a) + log10(tau), data = sum_sims2)
 summary(lm_fit)
 # Save predictions of the model in the new data frame together with the variable
 # you want to plot against
-predicted_df <- data.frame(maxtime_pred = predict(lm_fit, df), b = df$b)
+sum_sims2_predicted <- data.frame(maxtime_pred = predict(lm_fit, sum_sims2),
+                                  tau = sum_sims2$tau,
+                                  b = sum_sims2$b,
+                                  a = sum_sims2$a)
+sum_sims2_predicted
 # This is the predicted line of multiple linear regressions
-ggplot(data = df, aes(x = b, y = maxtime)) +
-  geom_point(color = "green") +
-  geom_line(color = "blue", data = predicted_df, aes(x = b, y = maxtime_pred))
-# this is the predicted line comparing only chosen variables
-ggplot(data = df, aes(x = tau, y = maxtime)) +
-  geom_point(color = "green") +
-  geom_smooth(method = "lm", se = FALSE)
+ggplot(data = sum_sims2, aes(x = log10(tau), y = maxtime, 
+                             color = as.factor(log10(a)))) +
+  geom_point() +
+  geom_line(data = sum_sims2_predicted, aes(x = log10(tau), y = maxtime_pred, 
+                                            color = as.factor(log10(a)))) +
+  facet_grid(b ~ .)
 
-## Correlation: is a statistical measure that suggests the level of linear 
-## dependence between two variables
-cor(sum_sims2$a, sum_sims2$maxtime)
-cor(sum_sims2$b, sum_sims2$maxtime)
-cor(sum_sims2$tau, sum_sims2$maxtime)
+# Create multiple linear regressions with interactions
+lm_fit2 <- lm(maxtime ~ log10(b)*log10(a)*log10(tau), data = sum_sims2)
+summary(lm_fit2)
+# Save predictions of the model in the new data frame together with the variable
+# you want to plot against
+sum_sims2_predicted2 <- data.frame(maxtime_pred = predict(lm_fit2, sum_sims2),
+                                  tau = sum_sims2$tau,
+                                  b = sum_sims2$b,
+                                  a = sum_sims2$a)
+sum_sims2_predicted2
+# This is the predicted line of multiple linear regressions
+ggplot(data = sum_sims2, aes(x = log10(tau), y = maxtime, 
+                             color = as.factor(log10(a)))) +
+  geom_point() +
+  geom_line(data = sum_sims2_predicted2, aes(x = log10(tau), y = maxtime_pred, 
+                                            color = as.factor(log10(a)))) +
+  facet_grid(b ~ .)
 
 
 
@@ -1320,7 +1335,7 @@ cor(sum_sims2$tau, sum_sims2$maxtime)
 ## different values of b, and tau
 
 # Caluclating the b values with R
-tau <- c(30, 45, 62, 87, 102)
+tau <- c(15, 18, 21.59999, 25.92, 31.104)
 intercept <- c(7, 16, 23)
 slope <- c(0.932, 0.85, 0.715)
 bvals <- as.data.frame(matrix(data = NA, ncol = 4, 
@@ -1361,7 +1376,9 @@ group_sims3
 sum_sims3 <- dplyr::summarise(group_sims3, maximum_B = max(Density),
                                 maxtime = time[Density == maximum_B])
 # Here, we cut the slope because we don't need it in our simulation
-sum_sims3
+View(sum_sims3)
+
+plot(reg_sims3)
 
 # This step is useful to combine to data frames that have interesting columns
 # that we want to plot together
@@ -1385,13 +1402,13 @@ lm_fit <- lm(maxtime ~ b + tau, data = df)
 summary(lm_fit)
 # Save predictions of the model in the new data frame together with the variable
 # you want to plot against
-predicted_df <- data.frame(maxtime_pred = predict(lm_fit, df), b = df$b)
+predicted_df <- data.frame(maxtime_pred = predict(lm_fit, df), tau = df$tau)
 # This is the predicted line of multiple linear regressions
-ggplot(data = df, aes(x = b, y = maxtime)) +
+ggplot(data = df, aes(x = tau, y = maxtime)) +
   geom_point(color = "green") +
-  geom_line(color = "blue", data = predicted_df, aes(x = b, y = maxtime_pred))
+  geom_line(color = "blue", data = predicted_df, aes(x = tau, y = maxtime_pred))
 # this is the predicted line comparing only chosen variables
-ggplot(data = df, aes(x = b, y = maxtime)) +
+ggplot(data = df, aes(x = tau, y = maxtime)) +
   geom_point(color = "green") +
   geom_smooth(method = "lm", se = FALSE)
 
