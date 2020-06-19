@@ -1,3 +1,35 @@
+##Example code for saving
+if (F) {
+  run1 <- run_sims(rvals = c(0.023), #(30 min doubling time)
+                   kvals = c(10**9),
+                   avals = 10**seq(from = -12, to = -8, by = 1),
+                   tauvals = signif(10**seq(from = 1, to = 2, by = 0.25), 3),
+                   bvals = signif(5*10**seq(from = 0, to = 2, by = 0.5), 3),
+                   cvals = 1,
+                   init_bact_dens_vals = 10**6,
+                   init_moi_vals = 10**-2,
+                   min_dens = 0.1,
+                   init_time = 100,
+                   init_stepsize = 1,
+                   print_info = TRUE)
+  #Save results so they can be re-loaded in future
+  write.csv(run1[[1]], "run1_1.csv", row.names = F)
+  if (!is.null(run1[[2]])) {write.csv(run1[[2]], "run1_2.csv", row.names = F)}
+  if (!is.null(run1[[3]])) {write.csv(run1[[3]], "run1_3.csv", row.names = F)}
+} else {
+  #Load results previously simulated
+  temp1 <- read.csv("run1_1.csv", stringsAsFactors = F)
+  if ("run1_2.csv" %in% list.files()) {
+    temp2 <- read.csv("run1_2.csv", stringsAsFactors = F)
+  } else {temp2 <- NULL}
+  if ("run1_3.csv" %in% list.files()) {
+    temp3 <- read.csv("run1_3.csv", stringsAsFactors = F)
+  } else {temp3 <- NULL}
+  run1 <- list(temp1, temp2, temp3)
+}
+
+
+
 #Okabe and Ito 2008 colorblind-safe qualitative color scale
 my_cols <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
              "#D55E00", "#CC79A7", "#000000")
