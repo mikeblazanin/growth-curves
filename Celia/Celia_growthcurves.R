@@ -419,7 +419,7 @@ sim_bigFINAL <- run_sims(rvals = bigFINAL_params$r,
                          cvals = bigFINAL_params$c,
                          init_bact_dens_vals = bigFINAL_params$init_bact_dens,
                          init_moi_vals = bigFINAL_params$init_moi,
-                         init_time = 200, init_stepsize = 2,
+                         init_time = 200, init_stepsize = 0.5,
                          combinatorial = FALSE)
 bigFINAL_plot <- sim_bigFINAL[[1]]
 bigFINAL <- pivot_wider(bigFINAL_plot, names_from = Pop, values_from = Density)
