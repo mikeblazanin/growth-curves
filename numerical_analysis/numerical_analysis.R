@@ -128,6 +128,7 @@ run_sims <- function(rvals,
                      init_time = 100,
                      init_stepsize = 1,
                      combinatorial = TRUE,
+                     dynamic_stepsize = TRUE,
                      print_info = TRUE) {
   
   #Inputs: vectors of parameters to be combined factorially to make
@@ -233,9 +234,15 @@ run_sims <- function(rvals,
     j <- 0 #length counter (larger is longer times)
     k <- 0 #step size counter (larger is smaller steps)
     while(keep_running) {
-      #Define times, with lengths & steps doubling for ea j count
-      # (so that the number of timepoints returned is constant)
-      times <- seq(0, init_time*2**j, init_stepsize*2**j)
+      #Define times
+      if (dynamic_stepsize) {
+        #If dynamic_stepsize true, double lengths & steps for ea j count
+        # (so that the number of timepoints returned is constant)
+        times <- seq(0, init_time*2**j, init_stepsize*2**j)
+      } else {
+        #If dynamic_stepsize false, keep stepsize at init_stepsize
+        times <- seq(0, init_time*2**j, init_stepsize)
+      }
       
       #Run simulation (using 1st entry of list as error code:\
       # 0 - success
