@@ -437,48 +437,9 @@ for (my_run in unique(bigFINAL_plot$uniq_run)) {
 
 bigFINAL <- dplyr::group_by(bigFINAL, b, tau, a, r, K, c)
 bigFINAL
-FINAL <- dplyr::summarise(bigFINAL, maximum_B = max(B), maxtime = time[B == maximum_B])
+FINAL <- dplyr::summarise(bigFINAL, maximum_B = max(B), 
+                          maxtime = time[B == maximum_B])
 FINAL
-
-## Let's try find the SLOPE of some simulations ----
-## I'll try to find the slope for a = 10**-8
-## Run simulation
-yinit <- c(S = 10**6, I = 0, P = 10**4)
-params <- c(r = 0.04, a = 10**-8, b = 50, tau = 10, K = 10**9,
-            c = 1, warnings = 0, thresh_min_dens = 10**-100)
-times <- seq(from = 0, to = 250, by = 1)
-youtA2S <- as.data.frame(dede(y = yinit, times = times, func = derivs, parms = params))
-
-head(youtA2S)
-
-##Plot results
-library(tidyr)
-youtA2S$B <- youtA2$S+youtA2$I
-head(youtA2S)
-youtA2S_plot <- pivot_longer(youtA2S, c(S, I, P, B), names_to = "Population", values_to = "Density")
-
-ggplot(data = youtA2S_plot, aes(x = time, y = Density + 10, color = Population)) +
-  geom_line(lwd = 1.5, alpha = 1/2) +
-  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
-  scale_y_continuous(trans = "log10")
-
-## Find the SLOPE of B in this plot
-x <- 1:50
-y <- youtA2S$B[1:50]
-
-plot(x, log10(y))
-mod <- lm(log10(y)~x) #this can be combined with mod$coefficients[2] within summarize
-summary(mod)
-
-cor(x, y)
-
-attributes(mod)
-## To pull up some the attributes we can use the $ sign
-## For example, we extract the coefficients
-
-plot(x, log10(y))
-abline(mod, col = 4) #To include the regression line
-mod$coefficients[2]
 
 ## Finding the slope with summarize ----
 
