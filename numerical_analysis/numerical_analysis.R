@@ -240,8 +240,9 @@ run_sims <- function(rvals,
         # (so that the number of timepoints returned is constant)
         times <- seq(0, init_time*2**j, init_stepsize*2**j)
       } else {
+        stop("dynamic_stepsize = FALSE does not yet work")
         #If dynamic_stepsize false, keep stepsize at init_stepsize
-        times <- seq(0, init_time*2**j, init_stepsize)
+        #times <- seq(0, init_time*2**j, init_stepsize)
       }
       
       #Run simulation (using 1st entry of list as error code:\
