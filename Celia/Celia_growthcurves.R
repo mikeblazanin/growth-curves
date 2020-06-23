@@ -1,31 +1,22 @@
 ##Example code for saving
 if (F) {
-  run1 <- run_sims(rvals = c(0.023), #(30 min doubling time)
-                   kvals = c(10**9),
-                   avals = 10**seq(from = -12, to = -8, by = 1),
-                   tauvals = signif(10**seq(from = 1, to = 2, by = 0.25), 3),
-                   bvals = signif(5*10**seq(from = 0, to = 2, by = 0.5), 3),
-                   cvals = 1,
-                   init_bact_dens_vals = 10**6,
-                   init_moi_vals = 10**-2,
-                   min_dens = 0.1,
-                   init_time = 100,
-                   init_stepsize = 1,
-                   print_info = TRUE)
+  sims4 <- run_sims(bvals = c(100, 200, 400), rvals = c(0.009, 0.016, 0.02845),
+                    avals = c(10**-11, 10**-10, 10**-9), kvals = c(10**9),
+                    tauvals = c(22.5, 33.75, 50.625))
   #Save results so they can be re-loaded in future
-  write.csv(run1[[1]], "run1_1.csv", row.names = F)
-  if (!is.null(run1[[2]])) {write.csv(run1[[2]], "run1_2.csv", row.names = F)}
-  if (!is.null(run1[[3]])) {write.csv(run1[[3]], "run1_3.csv", row.names = F)}
+  write.csv(sims4[[1]], "./Celia/sims4_1.csv", row.names = F)
+  if (!is.null(sims4[[2]])) {write.csv(sims4[[2]], "./Celia/sims4_2.csv", row.names = F)}
+  if (!is.null(sims4[[3]])) {write.csv(sims4[[3]], "./Celia/sims4_3.csv", row.names = F)}
 } else {
   #Load results previously simulated
-  temp1 <- read.csv("run1_1.csv", stringsAsFactors = F)
-  if ("run1_2.csv" %in% list.files()) {
-    temp2 <- read.csv("run1_2.csv", stringsAsFactors = F)
+  temp1 <- read.csv("./Celia/sims4_1.csv", stringsAsFactors = F)
+  if ("./Celia/sims4_2.csv" %in% list.files()) {
+    temp2 <- read.csv("./Celia/sims4_2.csv", stringsAsFactors = F)
   } else {temp2 <- NULL}
-  if ("run1_3.csv" %in% list.files()) {
-    temp3 <- read.csv("run1_3.csv", stringsAsFactors = F)
+  if ("./Celia/sims4_3.csv" %in% list.files()) {
+    temp3 <- read.csv("./Celia/sims4_3.csv", stringsAsFactors = F)
   } else {temp3 <- NULL}
-  run1 <- list(temp1, temp2, temp3)
+  sims4 <- list(temp1, temp2, temp3)
 }
 
 
@@ -1367,7 +1358,7 @@ ggplot(data = sum_sims2, aes(x = log10(tau), y = maxtime,
 ## different values of b, and tau
 
 # Caluclating the b values with R
-tau <- c(15, 18, 21.59999, 25.92, 31.104)
+tau <- c(30, 45, 62, 87, 102)
 intercept <- c(7, 16, 23)
 slope <- c(0.932, 0.85, 0.715)
 bvals <- as.data.frame(matrix(data = NA, ncol = 4, 
@@ -1391,34 +1382,159 @@ bvals
 class(bvals)
 
 # Now, we caculate it with the names changed
-sims3 <- run_sims(bvals = bvals$b, avals = c(10**-10), kvals = c(10**9),
+sims3.1 <- run_sims(bvals = bvals$b, avals = c(10**-10), kvals = c(10**9),
                   rvals = c(0.04), tauvals = bvals$tau, combinatorial = FALSE)
-length(sims3)
-sims3[[1]]
-sims3[[2]]
-sims3[[3]]
+length(sims3.1)
+sims3.1[[1]]
+sims3.1[[2]]
+sims3.1[[3]]
 
 ## Let's group_by these simulations
-sub_sims3 <- subset(sims3[[1]], Pop == "B")
-class(sub_sims3)
+sub_sims3.1 <- subset(sims3.1[[1]], Pop == "B")
+class(sub_sims3.1)
 
-group_sims3 <- dplyr::group_by(sub_sims3, uniq_run, a, b, c, K, tau, r)
-group_sims3
+group_sims3.1 <- dplyr::group_by(sub_sims3.1, uniq_run, a, b, c, K, tau, r)
+group_sims3.1
 
-sum_sims3 <- dplyr::summarise(group_sims3, maximum_B = max(Density),
+sum_sims3.1 <- dplyr::summarise(group_sims3.1, maximum_B = max(Density),
                                 maxtime = time[Density == maximum_B])
 # Here, we cut the slope because we don't need it in our simulation
-View(sum_sims3)
-
-plot(reg_sims3)
+View(sum_sims3.1)
 
 # This step is useful to combine to data frames that have interesting columns
 # that we want to plot together
-joined_sims3 <- left_join(sum_sims3, bvals)
-joined_sims3
+joined_sims3.1 <- left_join(sum_sims3.1, bvals)
+joined_sims3.1
 
 ## Let's make the ggplot for this data
-ggplot(data = joined_sims3, aes(x = tau, y = maxtime, colour = log10(b))) +
+ggplot(data = joined_sims3.1, aes(x = tau, y = maxtime, colour = log10(b))) +
+  geom_point(size = 3, alpha = 1/2) +
+  facet_grid(tradeslope ~ tradeintercept) +
+  scale_y_continuous(trans = "log10")
+
+# Caluclating the b values with R
+tau <- c(15, 18, 21.59999, 25.92, 31.104)
+intercept <- c(7, 16, 23)
+slope <- c(0.932, 0.85, 0.715)
+bvals <- as.data.frame(matrix(data = NA, ncol = 4, 
+                              nrow = length(tau)*length(intercept)*length(slope)))
+bvals
+i <- 1
+
+for (tauval in tau){
+  for (inter in intercept){
+    for (slop in slope){
+      b <- slop*(tauval-inter)
+      bvals[i,] <- c(tauval, inter, slop, b)
+      i <- i+1
+    }
+  }
+}
+
+# This step was made to change the name of the axis and the name of the facets
+colnames(bvals) <- c("tau", "tradeintercept", "tradeslope", "b")
+bvals
+class(bvals)
+
+bvals <- bvals[-c(4, 5, 6, 7, 8, 9, 16, 17, 18, 25, 26, 27), ]
+bvals
+# Now, we caculate it with the names changed
+sims3.2 <- run_sims(bvals = bvals$b, avals = c(10**-10), kvals = c(10**9),
+                  rvals = c(0.04), tauvals = bvals$tau, combinatorial = FALSE)
+length(sims3.2)
+sims3.2[[1]]
+sims3.2[[2]]
+sims3.2[[3]]
+
+## Let's group_by these simulations
+sub_sims3.2 <- subset(sims3.2[[1]], Pop == "B")
+class(sub_sims3.2)
+
+group_sims3.2 <- dplyr::group_by(sub_sims3.2, uniq_run, a, b, c, K, tau, r)
+group_sims3.2
+
+sum_sims3.2 <- dplyr::summarise(group_sims3.2, maximum_B = max(Density),
+                              maxtime = time[Density == maximum_B])
+# Here, we cut the slope because we don't need it in our simulation
+View(sum_sims3.2)
+
+# This step is useful to combine to data frames that have interesting columns
+# that we want to plot together
+joined_sims3.2 <- left_join(sum_sims3.2, bvals)
+joined_sims3.2
+
+## Let's make the ggplot for this data
+ggplot(data = joined_sims3.2, aes(x = tau, y = maxtime, colour = log10(b))) +
+  geom_point(size = 3, alpha = 1/2) +
+  facet_grid(tradeslope ~ tradeintercept) +
+  scale_y_continuous(trans = "log10")
+
+# Caluclating the b values with R
+tau <- c(22, 25.5, 29.5568, 34.259, 39.709)
+intercept <- c(7, 16, 23)
+slope <- c(0.932, 0.85, 0.715)
+bvals <- as.data.frame(matrix(data = NA, ncol = 4, 
+                              nrow = length(tau)*length(intercept)*length(slope)))
+bvals
+i <- 1
+
+for (tauval in tau){
+  for (inter in intercept){
+    for (slop in slope){
+      b <- slop*(tauval-inter)
+      bvals[i,] <- c(tauval, inter, slop, b)
+      i <- i+1
+    }
+  }
+}
+
+# This step was made to change the name of the axis and the name of the facets
+colnames(bvals) <- c("tau", "tradeintercept", "tradeslope", "b")
+bvals
+class(bvals)
+
+bvals <- bvals[-c(7, 8, 9), ]
+bvals
+# Now, we caculate it with the names changed
+sims3.3 <- run_sims(bvals = bvals$b, avals = c(10**-10), kvals = c(10**9),
+                  rvals = c(0.04), tauvals = bvals$tau, combinatorial = FALSE)
+length(sims3.3)
+sims3.3[[1]]
+sims3.3[[2]]
+sims3.3[[3]]
+
+## Let's group_by these simulations
+sub_sims3.3 <- subset(sims3.3[[1]], Pop == "B")
+class(sub_sims3.3)
+
+group_sims3.3 <- dplyr::group_by(sub_sims3.3, uniq_run, a, b, c, K, tau, r)
+group_sims3.3
+
+sum_sims3.3 <- dplyr::summarise(group_sims3.3, maximum_B = max(Density),
+                              maxtime = time[Density == maximum_B])
+# Here, we cut the slope because we don't need it in our simulation
+View(sum_sims3.3)
+
+# This step is useful to combine to data frames that have interesting columns
+# that we want to plot together
+joined_sims3.3 <- left_join(sum_sims3.3, bvals)
+joined_sims3.3
+
+## Let's make the ggplot for this data
+ggplot(data = joined_sims3.3, aes(x = tau, y = maxtime, colour = log10(b))) +
+  geom_point(size = 3, alpha = 1/2) +
+  facet_grid(tradeslope ~ tradeintercept) +
+  scale_y_continuous(trans = "log10")
+
+## Take all the summarized data frames in section sims2, rbind them, and make a 
+## big grap to compere all of them together.
+
+sims3 <- rbind(joined_sims3.1, joined_sims3.2, joined_sims3.3)
+sims3
+View(sims3)
+
+## Let's make the ggplot for this data
+ggplot(data = sims3, aes(x = tau, y = maxtime, colour = log10(b))) +
   geom_point(size = 3, alpha = 1/2) +
   facet_grid(tradeslope ~ tradeintercept) +
   scale_y_continuous(trans = "log10")
@@ -1426,28 +1542,24 @@ ggplot(data = joined_sims3, aes(x = tau, y = maxtime, colour = log10(b))) +
 # If we wanted to plot a regular graph (which we already have in the Word sheet)
 # we should follow the steps followed in the other simulations
 
-## We want to plot the multiple linear regressions
-# Read data set
-df = sum_sims3
-# Create multiple linear regressions
-lm_fit <- lm(maxtime ~ b + tau, data = df)
-summary(lm_fit)
+# Create multiple linear regressions with interactions
+lm_fit3 <- lm(maxtime ~ log10(b)*log10(tau)*log10(a), data = sum_sims3)
+summary(lm_fit3)
 # Save predictions of the model in the new data frame together with the variable
 # you want to plot against
-predicted_df <- data.frame(maxtime_pred = predict(lm_fit, df), tau = df$tau)
+sum_sims3_predicted3 <- data.frame(maxtime_pred = predict(lm_fit3, sum_sims3),
+                                   tau = sum_sims3$tau,
+                                   b = sum_sims3$b,
+                                   a = sum_sims3$a)
+sum_sims3_predicted3
 # This is the predicted line of multiple linear regressions
-ggplot(data = df, aes(x = tau, y = maxtime)) +
-  geom_point(color = "green") +
-  geom_line(color = "blue", data = predicted_df, aes(x = tau, y = maxtime_pred))
-# this is the predicted line comparing only chosen variables
-ggplot(data = df, aes(x = tau, y = maxtime)) +
-  geom_point(color = "green") +
-  geom_smooth(method = "lm", se = FALSE)
+ggplot(data = sum_sims3, aes(x = log10(b), y = maxtime, 
+                             color = as.factor(log10(a)))) +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_line(data = sum_sims3_predicted3, aes(x = log10(b), y = maxtime_pred, 
+                                             color = as.factor(log10(a)))) +
+  facet_grid(tau ~ .)
 
-## Correlation: is a statistical measure that suggests the level of linear 
-## dependence between two variables
-cor(sum_sims3$b, sum_sims3$maxtime)
-cor(sum_sims3$tau, sum_sims3$maxtime)
 
 
 
