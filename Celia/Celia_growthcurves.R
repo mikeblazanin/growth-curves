@@ -30,9 +30,9 @@ library(deSolve)
 library(tidyr)
 library(ggplot2)
 library(dplyr)
-library(plyr)
-library(tidyverse)
-library(caret)
+# library(plyr)
+# library(tidyverse)
+# library(caret)
 
 ## Define derivatives function ----
 derivs <- function(t, y, parms) {
@@ -386,383 +386,49 @@ run_sims <- function(rvals,
   # }
 }
 
-
-#   Also, we'll have to calculate the total bacteria densty by addinc S and I
-#   columns into a new one called B. We do thin in "yout", before we pivot_longer it.
-
-## I'll try to plot the results with Density +10 and the wished colors ----
-#
-#Run simulation with "Density + 10"
-yinit <- c(S = 10**6, I = 0, P = 10**4)
-params <- c(r = 0.04, a = 10**-10, b = 50, tau = 10, K = 10**9,
-            c = 1, warnings = 0, thresh_min_dens = 10**-100)
-times <- seq(from = 0, to = 250, by = 1)
-youtD <- as.data.frame(dede(y = yinit, times = times, func = derivs, parms = params))
-
-## Now, I'l try to change the colors to the colorblind-friendly scale
-#
-#Run simulation with different colors
-yinit <- c(S = 10**6, I = 0, P = 10**4)
-params <- c(r = 0.04, a = 10**-10, b = 50, tau = 10, K = 10**9,
-            c = 1, warnings = 0, thresh_min_dens = 10**-100)
-times <- seq(from = 0, to = 250, by = 1)
-youtC <- as.data.frame(dede(y = yinit, times = times, func = derivs, parms = params))
-
-##Plot results with different colors
-library(tidyr)
-youtC$B <- youtC$S+youtC$I
-youtC_plot <- pivot_longer(youtC, c(S, I, P, B), names_to = "Population", values_to = "Density")
-
-ggplot(data = youtC_plot, aes(x = time, y = Density + 10, color = Population)) +
-  geom_line(lwd = 1.5, alpha = 1/2) +
-  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
-  scale_y_continuous(trans = "log10")
-
-#Run simulation with different colors, Density + 10, and K = 10**9
-yinit <- c(S = 10**6, I = 0, P = 10**4)
-params <- c(r = 0.04, a = 10**-10, b = 50, tau = 10, K = 10**9,
-            c = 1, warnings = 0, thresh_min_dens = 10**-100)
-times <- seq(from = 0, to = 250, by = 1)
-youtK <- as.data.frame(dede(y = yinit, times = times, func = derivs, parms = params))
-
-head(youtK)
-
-## We'll add new rows for each parameter here
-youtK$r <- 0.04
-youtK$a <- 10**-10
-youtK$b <- 50
-youtK$tau <- 10
-youtK$K <- 10**9
-youtK$c <- 1
-
-##Plot results with different colors, Density + 10, and K = 10**9
-library(tidyr)
-youtK$B <- youtK$S+youtK$I
-head(youtK)
-youtK_plot <- pivot_longer(youtK, c(S, I, P, B), names_to = "Population", values_to = "Density")
-
-ggplot(data = youtK_plot, aes(x = time, y = Density + 10, color = Population)) +
-  geom_line(lwd = 1.5, alpha = 1/2) +
-  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
-  scale_y_continuous(trans = "log10")
-
-#Run simulation with different colors, Density + 10, and K = 10**8
-yinit <- c(S = 10**6, I = 0, P = 10**4)
-params <- c(r = 0.04, a = 10**-10, b = 50, tau = 10, K = 10**8, c = 1,
-            warnings = 0, thresh_min_dens = 10**-100)
-times <- seq(from = 0, to = 250, by = 1)
-youtK2 <- as.data.frame(dede(y = yinit, times = times, func = derivs, parms = params))
-
-head(youtK2)
-
-## We'll add new rows for each parameter here
-youtK2$r <- 0.04
-youtK2$a <- 10**-10
-youtK2$b <- 50
-youtK2$tau <- 10
-youtK2$K <- 10**8
-youtK2$c <- 1
-
-##Plot results with different colors, Density + 10, and K = 10**8
-library(tidyr)
-youtK2$B <- youtK2$S+youtK2$I
-head(youtK2)
-youtK2_plot <- pivot_longer(youtK2, c(S, I, P, B), names_to = "Population", values_to = "Density")
-
-ggplot(data = youtK2_plot, aes(x = time, y = Density + 10, color = Population)) +
-  geom_line(lwd = 1.5, alpha = 1/2) +
-  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
-  scale_y_continuous(trans = "log10")
-
-#Run simulation with different colors, Density + 10, and r = 0.03
-yinit <- c(S = 10**6, I = 0, P = 10**4)
-params <- c(r = 0.03, a = 10**-10, b = 50, tau = 10, K = 10**9,
-            c = 1,  warnings = 0, thresh_min_dens = 10**-100)
-times <- seq(from = 0, to = 250, by = 1)
-youtR <- as.data.frame(dede(y = yinit, times = times, func = derivs, parms = params))
-
-head(youtR)
-
-## We'll add new rows for each parameter here
-youtR$r <- 0.03
-youtR$a <- 10**-10
-youtR$b <- 50
-youtR$tau <- 10
-youtR$K <- 10**9
-youtR$c <- 1
-
-##Plot results with different colors, Density + 10, and r = 0.03
-library(tidyr)
-youtR$B <- youtR$S+youtR$I
-head(youtR)
-youtR_plot <- pivot_longer(youtR, c(S, I, P, B), names_to = "Population", values_to = "Density")
-
-ggplot(data = youtR_plot, aes(x = time, y = Density + 10, color = Population)) +
-  geom_line(lwd = 1.5, alpha = 1/2) + 
-  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
-  scale_y_continuous(trans = "log10")
-
-#Run simulation with different colors, Density + 10, and r = 0.007
-yinit <- c(S = 10**6, I = 0, P = 10**4)
-params <- c(r = 0.007, a = 10**-10, b = 50, tau = 10, K = 10**9,
-            c = 1, warnings = 0, thresh_min_dens = 10**-100)
-times <- seq(from = 0, to = 800, by = 1)
-youtR2 <- as.data.frame(dede(y = yinit, times = times, func = derivs, parms = params))
-
-head(youtR2)
-
-## We'll add new rows for each parameter here
-youtR2$r <- 0.007
-youtR2$a <- 10**-10
-youtR2$b <- 50
-youtR2$tau <- 10
-youtR2$K <- 10**9
-youtR2$c <- 1
-
-##Plot results with different colors, Density + 10, and r = 0.007
-library(tidyr)
-youtR2$B <- youtR2$S+youtR2$I
-head(youtR2)
-youtR2_plot <- pivot_longer(youtR2, c(S, I, P, B), names_to = "Population", values_to = "Density")
-
-ggplot(data = youtR2_plot, aes(x = time, y = Density + 10, color = Population)) +
-  geom_line(lwd = 1.5, alpha = 1/2) +
-  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
-  scale_y_continuous(trans = "log10")
-
-#Run simulation with different colors, Density + 10, and a = 10**-13
-yinit <- c(S = 10**6, I = 0, P = 10**4)
-params <- c(r = 0.04, a = 10**-13, b = 50, tau = 10, K = 10**9,
-            c = 1, warnings = 0, thresh_min_dens = 10**-100)
-times <- seq(from = 0, to = 11000, by = 1)
-youtA <- as.data.frame(dede(y = yinit, times = times, func = derivs, parms = params))
-
-head(youtA)
-
-## We'll add new rows for each parameter here
-youtA$r <- 0.04
-youtA$a <- 10**-13
-youtA$b <- 50
-youtA$tau <- 10
-youtA$K <- 10**9
-youtA$c <- 1
-
-##Plot results with different colors, Density + 10, and a = 10**-13
-library(tidyr)
-youtA$B <- youtA$S+youtA$I
-head(youtA)
-youtA_plot <- pivot_longer(youtA, c(S, I, P, B), names_to = "Population", values_to = "Density")
-
-ggplot(data = youtA_plot, aes(x = time, y = Density + 10, color = Population)) +
-  geom_line(lwd = 1.5, alpha = 1/2) +
-  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
-  scale_y_continuous(trans = "log10")
-
-#Run simulation with different colors, Density + 10, and a = 10**-8
-yinit <- c(S = 10**6, I = 0, P = 10**4)
-params <- c(r = 0.04, a = 10**-8, b = 50, tau = 10, K = 10**9,
-            c = 1, warnings = 0, thresh_min_dens = 10**-100)
-times <- seq(from = 0, to = 250, by = 1)
-youtA2 <- as.data.frame(dede(y = yinit, times = times, func = derivs, parms = params))
-
-head(youtA2)
-
-## We'll add new rows for each parameter here
-youtA2$r <- 0.04
-youtA2$a <- 10**-8
-youtA2$b <- 50
-youtA2$tau <- 10
-youtA2$K <- 10**9
-youtA2$c <- 1
-
-##Plot results with different colors, Density + 10, and a = 10**-8
-library(tidyr)
-youtA2$B <- youtA2$S+youtA2$I
-head(youtA2)
-youtA2_plot <- pivot_longer(youtA2, c(S, I, P, B), names_to = "Population", values_to = "Density")
-
-ggplot(data = youtA2_plot, aes(x = time, y = Density + 10, color = Population)) +
-  geom_line(lwd = 1.5, alpha = 1/2) +
-  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
-  scale_y_continuous(trans = "log10")
-
-#Run simulation with different colors, Density + 10, and tau = 65
-yinit <- c(S = 10**6, I = 0, P = 10**4)
-params <- c(r = 0.04, a = 10**-10, b = 50, tau = 65, K = 10**9,
-            c = 1, warnings = 0, thresh_min_dens = 10**-100)
-times <- seq(from = 0, to = 600, by = 1)
-youtT <- as.data.frame(dede(y = yinit, times = times, func = derivs, parms = params))
-
-head(youtT)
-
-## We'll add new rows for each parameter here
-youtT$r <- 0.04
-youtT$a <- 10**-10
-youtT$b <- 50
-youtT$tau <- 65
-youtT$K <- 10**9
-youtT$c <- 1
-
-##Plot results with different colors, Density + 10, and tau = 65
-library(tidyr)
-youtT$B <- youtT$S+youtT$I
-head(youtT)
-youtT_plot <- pivot_longer(youtT, c(S, I, P, B), names_to = "Population", values_to = "Density")
-
-ggplot(data = youtT_plot, aes(x = time, y = Density + 10, color = Population)) +
-  geom_line(lwd = 1.5, alpha = 1/2) +
-  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
-  scale_y_continuous(trans = "log10")
-
-#Run simulation with different colors, Density + 10, and tau = 120
-yinit <- c(S = 10**6, I = 0, P = 10**4)
-params <- c(r = 0.04, a = 10**-10, b = 50, tau = 120, K = 10**9,
-            c = 1, warnings = 0, thresh_min_dens = 10**-100)
-times <- seq(from = 0, to = 800, by = 1)
-youtT2 <- as.data.frame(dede(y = yinit, times = times, func = derivs, parms = params))
-
-head(youtT2)
-
-## We'll add new rows for each parameter here
-youtT2$r <- 0.04
-youtT2$a <- 10**-10
-youtT2$b <- 50
-youtT2$tau <- 120
-youtT2$K <- 10**9
-youtT2$c <- 1
-
-##Plot results with different colors, Density + 10, and tau = 120
-library(tidyr)
-youtT2$B <- youtT2$S+youtT2$I
-head(youtT2)
-youtT2_plot <- pivot_longer(youtT2, c(S, I, P, B), names_to = "Population", values_to = "Density")
-
-ggplot(data = youtT2_plot, aes(x = time, y = Density + 10, color = Population)) +
-  geom_line(lwd = 1.5, alpha = 1/2) +
-  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
-  scale_y_continuous(trans = "log10")
-
-#Run simulation with different colors, Density + 10, and b = 20
-yinit <- c(S = 10**6, I = 0, P = 10**4)
-params <- c(r = 0.04, a = 10**-10, b = 20, tau = 10, K = 10**9,
-            c = 1, warnings = 0, thresh_min_dens = 10**-100)
-times <- seq(from = 0, to = 250, by = 1)
-youtB1 <- as.data.frame(dede(y = yinit, times = times, func = derivs, parms = params))
-
-## Now, we'll add the new columns for each parameter
-youtB1$r <- 0.04
-youtB1$a <- 10**-10
-youtB1$K <- 10**9
-youtB1$c <- 1
-head(youtB1)
-
-##Plot results with different colors, Density + 10, and b = 20
-library(tidyr)
-youtB1$B <- youtB1$S+youtB1$I
-youtB1_plot <- pivot_longer(youtB1, c(S, I, P, B), names_to = "Population", values_to = "Density")
-
-ggplot(data = youtB1_plot, aes(x = time, y = Density + 10, color = Population)) +
-  geom_line(lwd = 1.5, alpha = 1/2) +
-  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
-  scale_y_continuous(trans = "log10")
-
-#Run simulation with different colors, Density + 10, and b = 500
-yinit <- c(S = 10**6, I = 0, P = 10**4)
-params <- c(r = 0.04, a = 10**-10, b = 500, tau = 10, K = 10**9,
-            c = 1, warnings = 0, thresh_min_dens = 10**-100)
-times <- seq(from = 0, to = 250, by = 1)
-youtB2 <- as.data.frame(dede(y = yinit, times = times, func = derivs, parms = params))
-
-head(youtB2)
-
-## We'll add the new columns for each parameter
-youtB2$r <- 0.04
-youtB2$a <- 10**-10
-youtB2$b <- 500
-youtB2$tau <- 10
-youtB2$K <- 10**9
-youtB2$c <- 1
-head(youtB2)
-
-##Plot results with different colors, Density + 10, and b = 500
-library(tidyr)
-youtB2$B <- youtB2$S+youtB2$I
-youtB2_plot <- pivot_longer(youtB2, c(S, I, P, B), names_to = "Population", values_to = "Density")
-
-ggplot(data = youtB2_plot, aes(x = time, y = Density + 10, color = Population)) +
-  geom_line(lwd = 1.5, alpha = 1/2) +
-  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
-  scale_y_continuous(trans = "log10")
-
-#Run simulation with different colors, Density + 10, and b = 850
-yinit <- c(S = 10**6, I = 0, P = 10**4)
-params <- c(r = 0.04, a = 10**-10, b = 850, tau = 10, K = 10**9,
-            c = 1, warnings = 0, thresh_min_dens = 10**-100)
-times <- seq(from = 0, to = 250, by = 1)
-youtB3 <- as.data.frame(dede(y = yinit, times = times, func = derivs, parms = params))
-
-head(youtB3)
-
-## We'll add new columns for each parameter
-youtB3$r <- 0.04
-youtB3$a <- 10**-10
-youtB3$b <- 850
-youtB3$tau <- 10
-youtB3$K <- 10**9
-youtB3$c <- 1
-head(youtB3)
-
-##Plot results with different colors, Density + 10, and b = 850
-library(tidyr)
-youtB3$B <- youtB3$S+youtB3$I
-youtB3_plot <- pivot_longer(youtB3, c(S, I, P, B), names_to = "Population", values_to = "Density")
-
-tiff("plot.tiff")
-ggplot(data = youtB3_plot, aes(x = time, y = Density + 10, color = Population)) +
-  geom_line(lwd = 1.5, alpha = 1/2) +
-  scale_color_manual(values = c("#000000", "#56B4E9", "#009E73", "#E69F00")) +
-  scale_y_continuous(trans = "log10")
-dev.off()
-
-## Tiff is the function that converts our graph in an image document, which is
-## a ".tiff" one. This is because we saw the legend disrupted here (some problem
-## with the code of ggplot). Therefore, I can use this function and close i with
-## de.off() to have an imagewhere I CAN clearly see the legend of the plot.
-
-
-## Finding MAXIMUMS ----
-## We have to make sure we also run the command for B!! Since it was introduced
-## later than S, I, and P
-
-## To add new columns to a data frame in a quick way, we'd use the following
-## command:
-youtB1 <- cbind(data.frame(b = 20, tau = 10), youtB1)
-head(youtB1)
-
-## Now, we'd like to use all the simulations I've run and combine them into one
-## big data frame. Then, summarize them.
-
-## First, I'll try it by adding the simulations for different values of b
-bigB <- rbind(youtB1, youtB2, youtB3)
-bigB
-
-## Now, I'll do it for ALL the simulations I had run
-bigFINAL <- rbind(bigB, youtK, youtK2, youtR, youtR2, youtA, youtA2, youtT, youtT2)
-bigFINAL
-
-## Now, I'll try to summarize the data in "bigFINAL"
-bigFINAL_plot <- pivot_longer(bigFINAL, c(S, I, P, B), names_to = "Population", values_to = "Density")
-ggplot(data = bigFINAL_plot, aes(x = time, y = Density + 10, color = Population)) +
-  geom_point(lwd = 1) +
-  scale_y_continuous(trans = "log10")
-## I pivot_longer'd because I remembered that "summarize" works better after doing so
-summarise(bigFINAL, maximum_B = max(youtB1$B, na.rm = T), max(youtB2$B, na.rm = T),
-          max(youtB3$B, na.rm = T), max(youtK$B, na.rm = T), max(youtK2$B, na.rm = T),
-          max(youtR$B, na.rm = T), max(youtR2$B, na.rm = T), max(youtA$B, na.rm = T),
-          max(youtA2$B, na.rm = T), max(youtT$B, na.rm = T), max(youtT2$B, na.rm = T))
-
-
-head(bigFINAL)
+#New bigFINAL run using run_sims ----                 
+bigFINAL_params <- as.data.frame(matrix(
+  #         r      k     a       tau   b  c  init_S  moi
+  data = c(0.04, 10**9, 10**-10, 10, 50, 1, 10**6, 0.01,
+           0.04, 10**8, 10**-10, 10, 50, 1, 10**6, 0.01,
+           0.03, 10**9, 10**-10, 10, 50, 1, 10**6, 0.01,
+           0.007, 10**9, 10**-10, 10, 50, 1, 10**6, 0.01,
+           0.04, 10**9, 10**-13, 10, 50, 1, 10**6, 0.01,
+           0.04, 10**9, 10**-8, 10, 50, 1, 10**6, 0.01,
+           0.04, 10**9, 10**-10, 65, 50, 1, 10**6, 0.01,
+           0.04, 10**9, 10**-10, 120, 50, 1, 10**6, 0.01,
+           0.04, 10**9, 10**-10, 10, 20, 1, 10**6, 0.01,
+           0.04, 10**9, 10**-10, 10, 500, 1, 10**6, 0.01,
+           0.04, 10**9, 10**-10, 10, 850, 1, 10**6, 0.01), 
+  ncol = 8, byrow = TRUE))
+colnames(bigFINAL_params) <- c("r", "K", "a", "tau", "b", "c", 
+                               "init_bact_dens", "init_moi")
+sim_bigFINAL <- run_sims(rvals = bigFINAL_params$r,
+                         kvals = bigFINAL_params$K,
+                         avals = bigFINAL_params$a,
+                         tauvals = bigFINAL_params$tau,
+                         bvals = bigFINAL_params$b,
+                         cvals = bigFINAL_params$c,
+                         init_bact_dens_vals = bigFINAL_params$init_bact_dens,
+                         init_moi_vals = bigFINAL_params$init_moi,
+                         combinatorial = FALSE)
+bigFINAL_plot <- sim_bigFINAL[[1]]
+bigFINAL <- pivot_wider(bigFINAL_plot, names_from = Pop, values_from = Density)
+
+#Make plots
+for (my_run in unique(bigFINAL_plot$uniq_run)) {
+  dir.create("./Celia/bigFINAL_plots/", showWarnings = FALSE)
+  tiff(paste("./Celia/bigFINAL_plots/", my_run, ".tiff", sep = ""),
+             width = 4, height = 4, units = "in", res = 200)
+  print(ggplot(data = bigFINAL_plot[bigFINAL_plot$uniq_run == my_run &
+                                      bigFINAL_plot$Pop != "PI", ],
+               aes(x = time, y = Density + 10, color = Pop)) +
+          geom_line(lwd = 1.5, alpha = 1/2) +
+          scale_color_manual(values = my_cols[c(8, 2, 3, 1)]) +
+          scale_y_continuous(trans = "log10") +
+          ggtitle(paste("Run #", my_run, sep = "")))
+  dev.off()
+}
 
 ## Here, I achived to summarize every maximum of each of the simulations included
 ## in the big data frame
