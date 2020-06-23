@@ -1,4 +1,4 @@
-##Example code for saving
+##Example code for saving ----
 if (F) {
   sims4 <- run_sims(bvals = c(100, 200, 400), rvals = c(0.009, 0.016, 0.02845),
                     avals = c(10**-11, 10**-10, 10**-9), kvals = c(10**9),
@@ -19,154 +19,10 @@ if (F) {
   sims4 <- list(temp1, temp2, temp3)
 }
 
-
-
-#Okabe and Ito 2008 colorblind-safe qualitative color scale
+#Okabe and Ito 2008 colorblind-safe qualitative color scale ----
 my_cols <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
              "#D55E00", "#CC79A7", "#000000")
 scales::show_col(my_cols)
-
-##Celia TODO List
-#1. Read code I've put below in derivs. This code should be sufficient to
-#   figure out what the model we're using is. Diagram and write out the
-#   equations for the model we're simulating. 
-#   For the diagram make sure all arrows are labeled.
-#   For any symbols you use, make sure to define what the symbol is.
-#   (basically I'd like you to do what you did for Problems 2.5 & 3.12
-#    but for this model)
-#   As some hints:
-#   The model includes the following populations:
-#     susceptible
-#     infected
-#     phage
-#   The model includes the following symbols:
-#     r
-#     K
-#     c
-#     a
-#     tau
-#     b
-#     
-#2. Run the simulation with the following conditions:
-#       Starting bacterial density = 10**6
-#       Starting infected density = 0
-#       Starting phage density = 0
-#       r = 0.04
-#       b = 50
-#       a = 10**-10
-#       tau = 10
-#       c = 1
-#       K = 10**9  
-#     (hint: I've given you a skeleton code that you can just fill-in)   
-#   
-#3. Look at how yout is formatted. Use tidyr::pivot_longer to reshape it
-#   and ggplot to plot the density of the 3 populations over time
-#     hint: the population sizes are quite different, so you'll probably have
-#     to use a log10 y-axis to view them. That can be achieved by:
-#     + scale_y_continuous(trans = "log10")
-#   
-#4. Based on the model equations we talked about Tuesday, which parameters
-#   do you expect would change this curve?
-#
-#   ANSWER: Based on what we saw on Tuesday, I’d say that the parameter "a" could
-#           change this plot because the three populations depend on it. Plus, "a" 
-#           is the probability by which the phage successfully infects the bacteria,
-#           which means that, if we increase this parameter, S population will 
-#           plateau or increase at some point.
-#           
-#           Then, we have "K", which is the carrying capacity (maximum population
-#           size at which the population can sustain itself). Therefore, this parameter
-#           will also change the shape of the plot. The curve will be able to grow
-#           more if we increase K, but S population will shrink if we decrease K’s value.
-#
-#           Also, if we want to change the shape of the susceptible population curve,
-#           we could play with "c" (competition coefficient). It measures the strength
-#           of competition that does a different specie or, in this case, the infected
-#           population, over the susceptible population. Therefore, if "c" is high,
-#           the curve will shrink and vice versa.
-#    
-#           I also think that "r" has something to do with the curve shape. However,
-#           I think that "r" depends on the carrying capacity. What I mean is that,
-#           if we are in "K" (meaning c = maximum (1?)), "r" will be zero, because
-#           competition will be in its maximum, and if we have no competition 
-#           (meaning c = 0), "r" will increase. So, the shape of the cure doesn’t
-#           depend on a direct way of "r"’s value. Thus, the value that "r" has 
-#           is a consequence of the value that "c" has.
-#
-#5. Play around with all the parameters and re-run the simulation a few times, 
-#   plotting the results each time (you can vary r,b,a,tau,c,K and the starting 
-#   bacterial density, but for now keep the starting infected density & 
-#   starting phage density at 0). Which parameters affect the density curve?
-#   How does each one affect it?
-#     note: if you want to simultaneously save the results of multiplt
-#     different parameter runs, simply change where you save the results 
-#     of dede() to
-#     e.g.  yout2 <- as.data.frame(dede(...
-#           yout3 <- as.data.frame(dede(...
-#   
-#   I was wrong!! The value of "r" does change the shape of the curve! If it
-#   increases, the curve reaches plateau sooner. 
-#
-#   I was wrong again, "a" doesn’t affect the shape of the curve!!
-#   
-#   TO SUM UP, WE ONLY SEE THE PLOT CHANGING WHEN WE VARY THE FOLLOWING
-#   PARAMETERS: K, and r.
-#
-#   Reflection: I think this is because of the conditions we have here.
-#   Since P and I = 0, all the parameters that are multiplying them become 0,
-#   therefore, they can’t affect the shape of the curve. And, since K and r
-#   aren’t multiplying P and I at any point, they don’t become 0, thus are
-#   able to change the shape of the cure with the fluctuation of their value.
-#   I suppose that if we had different conditions, where P and I weren’t 0,
-#   other parameters would make the graph look different.
-#
-#6. Now run the simulation with the following conditions:
-#       Starting bacterial density = 10**6
-#       Starting infected density = 0
-#       Starting phage density = 10**4
-#       r = 0.04
-#       b = 50
-#       a = 10**-10
-#       tau = 10
-#       c = 1
-#       K = 10**9
-#
-#       Observations: As we can see, each population has its own starting
-#       concentration. We can observe that the infected one increases a lot
-#       the first 5 to 8 minutes, and by the 10th it slows down a little bit,
-#       even though it's still increasing.
-#
-#       Phage population doesn’t really grow by time with these conditions,
-#       but it maintains its initial concentration, pretty much.
-#
-#       By these two observations, we can say that phages successfully infect
-#       susceptible bacteria and create new phages to maintain their population.
-#       However, susceptible population’s rate of growth is higher, because, even
-#       though they are infected at some point, they continue to grow and proliferate,
-#       more than the phage population.
-#
-#7. Did both the susceptible and infected populations go extinct?
-#   If not, increase the duration of the simulation until they both do go extinct
-#   and plot the densities over time.
-#   Why do we expect the susceptible and infected populations to always
-#   go extinct with this model?
-#   (Note that "extinct" can just mean the densities fall below some level,
-#   like 10**-5, since the model mathematically allows infinitely small 
-#   population sizes)
-#
-#   ANAWER: None of them went extinct with a duration of 50 (hours?). I tried a
-#   longer duration: 250 (hours?) and saw that only the S population went extinct
-#   at a time point around 200 (hours?). Then, I tried much longer durations but with
-#   none of them I saw I population go extinct!! I was expecting it to go extinct
-#   since I thought that with no S population, I oppulation can't be created, thus
-#   it's be impossible for them tu survive (if we don't think about resistence to 
-#   phages, or sometinh like this).
-#
-#8. Play around with all the parameters (easiest to leave the starting densities
-#   the same for now), plotting the results each time. Are there any
-#   parameter combinations that do something unexpected? How do the parameters
-#   affect the curve?
-
 
 ## Import libraries ----
 
@@ -235,14 +91,15 @@ derivs <- function(t, y, parms) {
   return(list(dY))
 }
 
-#9. Play with the parameters again but knowing the realistic values for each of them:
+#Realistic parameter values: ----
 #  
 #   r ranges from 0.04 (a 17-minute doubling time) to 0.007 (a 90-minute doubling time).
 #   K ranges from 10^6 to 10^10, although typically we focus on 10^8 to 10^9.
-#   a ranges from 10^-12 to 10^-18.
+#   a ranges from 10^-12 to 10^-8.
 #   tau ranges from 10 to 105 (mins).
 #   b ranges from 5 to 1000.
-#
+
+
 #   Also, we'll have to calculate the total bacteria densty by addinc S and I
 #   columns into a new one called B. We do thin in "yout", before we pivot_longer it.
 
