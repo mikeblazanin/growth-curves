@@ -1,24 +1,3 @@
-##Example code for saving ----
-if (F) {
-  sims4 <- run_sims(bvals = c(100, 200, 400), rvals = c(0.009, 0.016, 0.02845),
-                    avals = c(10**-11, 10**-10, 10**-9), kvals = c(10**9),
-                    tauvals = c(22.5, 33.75, 50.625))
-  #Save results so they can be re-loaded in future
-  write.csv(sims4[[1]], "./Celia/sims4_1.csv", row.names = F)
-  if (!is.null(sims4[[2]])) {write.csv(sims4[[2]], "./Celia/sims4_2.csv", row.names = F)}
-  if (!is.null(sims4[[3]])) {write.csv(sims4[[3]], "./Celia/sims4_3.csv", row.names = F)}
-} else {
-  #Load results previously simulated
-  temp1 <- read.csv("./Celia/sims4_1.csv", stringsAsFactors = F)
-  if ("./Celia/sims4_2.csv" %in% list.files()) {
-    temp2 <- read.csv("./Celia/sims4_2.csv", stringsAsFactors = F)
-  } else {temp2 <- NULL}
-  if ("./Celia/sims4_3.csv" %in% list.files()) {
-    temp3 <- read.csv("./Celia/sims4_3.csv", stringsAsFactors = F)
-  } else {temp3 <- NULL}
-  sims4 <- list(temp1, temp2, temp3)
-}
-
 #Okabe and Ito 2008 colorblind-safe qualitative color scale ----
 my_cols <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
              "#D55E00", "#CC79A7", "#000000")
@@ -1086,9 +1065,30 @@ ggplot(data = sum_sims3, aes(x = log10(b), y = maxtime,
 ## Let's run sims4 ----
 ## Where we'll have c and K constant, and we'll be changing between 3 different
 ## values of b, a, r and tau evenly spaced
-sims4 <- run_sims(bvals = c(100, 200, 400), rvals = c(0.009, 0.016, 0.02845),
-                  avals = c(10**-11, 10**-10, 10**-9), kvals = c(10**9),
-                  tauvals = c(22.5, 33.75, 50.625))
+
+#Check if saved simulation results exist. If so, load. If not, run simulation
+if ("sims4_1.csv" %in% list.files("./Celia/")) {
+  #Load results previously simulated
+  sims4 <- list(NULL, NULL, NULL)
+  sims4[[1]] <- read.csv("./Celia/sims4_1.csv", stringsAsFactors = F)
+  if ("sims4_2.csv" %in% list.files("./Celia/")) {
+    sims4[[2]] <- read.csv("./Celia/sims4_2.csv", stringsAsFactors = F)
+  }
+  if ("sims4_3.csv" %in% list.files("./Celia/")) {
+    sims4[[3]] <- read.csv("./Celia/sims4_3.csv", stringsAsFactors = F)
+  }
+} else {
+  #Run simulations (if files don't exist)
+  sims4 <- run_sims(bvals = c(100, 200, 400), rvals = c(0.009, 0.016, 0.02845),
+                    avals = c(10**-11, 10**-10, 10**-9), kvals = c(10**9),
+                    tauvals = c(22.5, 33.75, 50.625))
+  #Save results so they can be re-loaded in future
+  write.csv(sims4[[1]], "./Celia/sims4_1.csv", row.names = F)
+  if (!is.null(sims4[[2]])) {write.csv(sims4[[2]], "./Celia/sims4_2.csv", row.names = F)}
+  if (!is.null(sims4[[3]])) {write.csv(sims4[[3]], "./Celia/sims4_3.csv", row.names = F)}
+}
+             
+
 length(sims4)                  
 sims4[[1]]
 sims4[[2]]
