@@ -459,6 +459,8 @@ FINAL
 
 FINAL <- dplyr::summarise(bigFINAL, maximum_B = max(B), 
                           maxtime = time[B == maximum_B],
+                          extin_time = lm(log10(B[time > maxtime & B < 10**4]) ~
+                                       time[time > maxtime & B < 10**14]),
                           slope = lm(log10(B[time < maxtime & B < 0.1*K]) ~ 
                                        time[time < maxtime & B < 0.1*K])$coefficients[2],
                           intercept = lm(log10(B[time < maxtime & B < 0.1*K]) ~ 
@@ -596,6 +598,7 @@ ggplot(data = BIG, aes(x = log10(burst), y = maxtime, color = as.factor(K),
                        shape = as.factor(infec))) +
   geom_point(size = 3, alpha = 1/2) +
   facet_grid(tau ~ r)
+
 
 
 ## Let's run sims1 ----
@@ -784,16 +787,14 @@ sum_sims2
 ggplot(data = sum_sims2, aes(x = log10(b), y = maxtime, color = as.factor(a),
                              shape = as.factor(K))) +
   geom_point(size = 3, alpha = 1/2) +
-  facet_grid(tau ~ r) +
+  facet_grid(r ~ tau) +
   geom_smooth(method = "lm")
 
 # How to see how the parameters affect maxtime as if they were INDEPENDENT from 
 # each other?
 reg_sims2 <- lm(maxtime ~ tau + b + a, data = sum_sims2)
 summary(reg_sims2)
-plot(reg_sims2)
 
-confint(reg_sims2)
 # Calulate the RSE
 sigma(reg_sims2)/mean(sum_sims2$maxtime) # The lower the RSE, the more accurate the model.
 # The RSE estimate gives a measure of error of prediction.
@@ -891,6 +892,7 @@ group_sims3.1
 
 sum_sims3.1 <- dplyr::summarise(group_sims3.1, maximum_B = max(Density),
                                 maxtime = time[Density == maximum_B])
+
 # Here, we cut the slope because we don't need it in our simulation
 View(sum_sims3.1)
 
@@ -1019,18 +1021,49 @@ ggplot(data = joined_sims3.3, aes(x = tau, y = maxtime, colour = log10(b))) +
   facet_grid(tradeslope ~ tradeintercept) +
   scale_y_continuous(trans = "log10")
 
-## Take all the summarized data frames in section sims2, rbind them, and make a 
-## big grap to compere all of them together.
-
+## Take all the summarized data frames in section sims3, rbind them, and make a 
+## big graph to compare all of them together.
 sims3 <- rbind(joined_sims3.1, joined_sims3.2, joined_sims3.3)
 sims3
 View(sims3)
+class(sims3)
 
 ## Let's make the ggplot for this data
 ggplot(data = sims3, aes(x = tau, y = maxtime, colour = log10(b))) +
   geom_point(size = 3, alpha = 1/2) +
   facet_grid(tradeslope ~ tradeintercept) +
   scale_y_continuous(trans = "log10")
+
+# Finding the minimums and slopes in this graph
+group_sims3 <- dplyr::group_by(sims3, tradeintercept, tradeslope)
+
+sum_sims3 <- dplyr::summarise(group_sims3, minmaxtime = min(maxtime),
+                              average_optimal_tau = mean(tau[maxtime  == minmaxtime]),
+                              slope = lm(maxtime[tau > average_optimal_tau] ~
+                                           tau[tau > average_optimal_tau])$coefficients[2],
+                              intercept = lm(maxtime[tau > average_optimal_tau] ~
+                                           tau[tau > average_optimal_tau])$coefficients[1])
+sum_sims3
+
+## Plot sum_sims3
+ggplot(data = sims3, aes(x = tau, y = maxtime, colour = log10(b))) +
+  #geom_point(size = 3, alpha = 1/2) +
+  geom_abline(data = sum_sims3, mapping = aes(slope = slope,
+                                              intercept = intercept)) +
+  facet_grid(tradeslope ~ tradeintercept) +
+  scale_y_continuous(trans = "log10")
+  
+## The following graphs let us see if tradeintercept and/or tradeslope affect the
+## value of maxtime
+ggplot(data = sum_sims3, aes(y = minmaxtime, x = tradeslope, 
+                            color = as.factor(tradeintercept))) +
+  geom_point() +
+  geom_line()
+
+ggplot(data = sum_sims3, aes(y = average_optimal_tau, x = tradeslope, 
+                             color = as.factor(tradeintercept))) +
+  geom_point() +
+  geom_line()
 
 # If we wanted to plot a regular graph (which we already have in the Word sheet)
 # we should follow the steps followed in the other simulations
@@ -1055,7 +1088,6 @@ ggplot(data = sum_sims3, aes(x = log10(b), y = maxtime,
 
 
 
-
 ## Let's run sims4 ----
 ## Where we'll have c and K constant, and we'll be changing between 3 different
 ## values of b, a, r and tau evenly spaced
@@ -1074,7 +1106,7 @@ class(sub_sims4)
 group_sims4 <- dplyr::group_by(sub_sims4, uniq_run, a, b, c, K, tau, r)
 group_sims4
 
-sum_sims4 <- dplyr::summarise(group_sims4, maximum_B = max(Density),                
+sum_sims4 <- dplyr::summarise(group_sims4, maximum_B = max(Density),
                               maxtime = time[Density == maximum_B],
                               slope = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
                                            time[time < maxtime & Density < 0.1*K])$coefficients[2],
