@@ -482,7 +482,7 @@ for (row in 1:nrow(FINAL)) {
   dev.off()
 }
 
-## How to run the simulations with a LOOP ----
+##Run factorial simulations with a LOOP (mybig) ----
 
 mybig <- NA #We do this to erase anything that's in this data frame
 myc <- 1
@@ -550,20 +550,17 @@ for(myb in c(75, 760)){
 }
 
 # Let's find the maximums and slopes of the simulations
-mybig
 
-# Firts, we summarize the data we have
+# First, we summarize the data we have
 mybig <- dplyr::group_by(mybig, burst, tau, infec, r, K, c)
-mybig
 
-# Let's find the slopes and the inetercepts, too
+# Let's find the slopes and the intercepts, too
 BIG <- dplyr::summarise(mybig, maximum_B = max(B), 
                               maxtime = time[B == maximum_B],
                               slope = lm(log10(B[time < maxtime & B < 0.1*K]) ~ 
                                            time[time < maxtime & B < 0.1*K])$coefficients[2],
                               intercept = lm(log10(B[time < maxtime & B < 0.1*K]) ~ 
                                                time[time < maxtime & B < 0.1*K])$coefficients[1])
-BIG
 
 ## Here, we try to analyze and plot row by row of the data frame mybig
 for (row in 1:nrow(BIG)) {
@@ -585,17 +582,12 @@ for (row in 1:nrow(BIG)) {
   )
 }
 
-## To see all the values in BIG:
-View(BIG)
-
 ## Plotting all the parameters with maxtime in the 32 simulations to see how
 ## they affect it
 ggplot(data = BIG, aes(x = log10(burst), y = maxtime, color = as.factor(K),
                        shape = as.factor(infec))) +
   geom_point(size = 3, alpha = 1/2) +
   facet_grid(tau ~ r)
-
-
 
 ## Let's run sims1 ----
 sims1 <- run_sims(bvals = c(75, 480, 760), avals = c(10**-10.5, 10**-9, 10**-8.25),
