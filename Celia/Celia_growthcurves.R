@@ -1033,21 +1033,23 @@ ggplot(data = sims3, aes(x = tau, y = maxtime, colour = log10(b))) +
 # Finding the minimums and slopes in this graph
 group_sims3 <- dplyr::group_by(sims3, tradeintercept, tradeslope)
 
-sum_sims3 <- dplyr::summarise(group_sims3, minmaxtime = min(maxtime),
-                              average_optimal_tau = mean(tau[maxtime  == minmaxtime]),
-                              slope = lm(maxtime[tau > average_optimal_tau] ~
-                                           tau[tau > average_optimal_tau])$coefficients[2],
-                              intercept = lm(maxtime[tau > average_optimal_tau] ~
-                                           tau[tau > average_optimal_tau])$coefficients[1])
+sum_sims3 <- 
+  dplyr::summarise(group_sims3, minmaxtime = min(maxtime),
+                   average_optimal_tau = mean(tau[maxtime  == minmaxtime]),
+                   postoptimal_slope = lm(maxtime[tau > average_optimal_tau] ~
+                                            tau[tau > average_optimal_tau])$coefficients[2],
+                   postoptimal_intercept = lm(maxtime[tau > average_optimal_tau] ~
+                                                tau[tau > average_optimal_tau])$coefficients[1])
 sum_sims3
 
 ## Plot sum_sims3
 ggplot(data = sims3, aes(x = tau, y = maxtime, colour = log10(b))) +
-  #geom_point(size = 3, alpha = 1/2) +
-  geom_abline(data = sum_sims3, mapping = aes(slope = slope,
-                                              intercept = intercept)) +
+  geom_point(size = 3, alpha = 1/2) +
+  geom_abline(data = sum_sims3, 
+              mapping = aes(slope = postoptimal_slope, intercept = postoptimal_intercept)) +
   facet_grid(tradeslope ~ tradeintercept) +
-  scale_y_continuous(trans = "log10")
+  #scale_y_continuous(trans = "log10") +
+  NULL
   
 ## The following graphs let us see if tradeintercept and/or tradeslope affect the
 ## value of maxtime
@@ -1060,6 +1062,11 @@ ggplot(data = sum_sims3, aes(y = average_optimal_tau, x = tradeslope,
                              color = as.factor(tradeintercept))) +
   geom_point() +
   geom_line()
+
+ggplot(data = sum_sims3, aes(x = tradeslope, y = tradeintercept,
+                             color = average_optimal_tau,
+                             size = minmaxtime)) +
+  geom_point()
 
 # If we wanted to plot a regular graph (which we already have in the Word sheet)
 # we should follow the steps followed in the other simulations
