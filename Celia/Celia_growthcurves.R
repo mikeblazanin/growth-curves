@@ -91,7 +91,7 @@ derivs <- function(t, y, parms) {
   return(list(dY))
 }
 
-#Realistic parameter values: ----
+#Realistic parameter values ----
 #  
 #   r ranges from 0.04 (a 17-minute doubling time) to 0.007 (a 90-minute doubling time).
 #   K ranges from 10^6 to 10^10, although typically we focus on 10^8 to 10^9.
@@ -99,8 +99,7 @@ derivs <- function(t, y, parms) {
 #   tau ranges from 10 to 105 (mins).
 #   b ranges from 5 to 1000.
 
-## MIKE'S CODE ----
-## Define function for running simulations across many parameter values
+## Define function for running simulations across many parameter values ----
 run_sims <- function(rvals,
                      kvals,
                      avals,
@@ -394,7 +393,7 @@ run_sims <- function(rvals,
   # }
 }
 
-#New bigFINAL run using run_sims ----                 
+#Initial run that varied one parameter at a time (bigFINAL) ----  
 bigFINAL_params <- as.data.frame(matrix(
   #         r      k     a       tau   b  c  init_S  moi
   data = c(0.04, 10**9, 10**-10, 10, 50, 1, 10**6, 0.01,
@@ -422,6 +421,9 @@ sim_bigFINAL <- run_sims(rvals = bigFINAL_params$r,
                          init_time = 200, init_stepsize = 0.5,
                          combinatorial = FALSE)
 bigFINAL_plot <- sim_bigFINAL[[1]]
+
+#This pivot_wider is a stopgap because the original simulations were
+# not run using run_sims and were analyzed in the wider format
 bigFINAL <- pivot_wider(bigFINAL_plot, names_from = Pop, values_from = Density)
 
 #Make plots
@@ -439,34 +441,24 @@ for (my_run in unique(bigFINAL_plot$uniq_run)) {
   dev.off()
 }
 
-## Here, I achived to summarize every maximum of each of the simulations included
+##Summarize bigFINAL (max density & initial slope) ----
+
+## Summarize to find the maximum of each of the simulations included
 ## in the big data frame
-
-## Now, I'll try to find the maximum of the maximums
-
 bigFINAL <- dplyr::group_by(bigFINAL, b, tau, a, r, K, c)
-bigFINAL
 FINAL <- dplyr::summarise(bigFINAL, maximum_B = max(B), 
                           maxtime = time[B == maximum_B])
-FINAL
 
-## Finding the slope with summarize ----
-
-## This wasn't exactly the way to do it. The right way is the following:
-## Finding the slope with summarize
-
-## Here, we try to analyze and plot row by row of the data frame bigFINAL
-
+## Finding the slope with summarize 
 FINAL <- dplyr::summarise(bigFINAL, maximum_B = max(B), 
                           maxtime = time[B == maximum_B],
-                          extin_time = lm(log10(B[time > maxtime & B < 10**4]) ~
-                                       time[time > maxtime & B < 10**14]),
+                          extin_time = time[min(which(time > maxtime & B < 10**4))],
                           slope = lm(log10(B[time < maxtime & B < 0.1*K]) ~ 
                                        time[time < maxtime & B < 0.1*K])$coefficients[2],
                           intercept = lm(log10(B[time < maxtime & B < 0.1*K]) ~ 
                                            time[time < maxtime & B < 0.1*K])$coefficients[1])
-FINAL
 
+## Here, we try to analyze and plot row by row of the data frame bigFINAL
 for (row in 1:nrow(FINAL)) {
   bigfinal_rows <- which(FINAL$b[row] == bigFINAL$b & 
                            FINAL$tau[row] == bigFINAL$tau &
@@ -474,6 +466,9 @@ for (row in 1:nrow(FINAL)) {
                            FINAL$r[row] == bigFINAL$r &
                            FINAL$K[row] == bigFINAL$K &
                            FINAL$c[row] == bigFINAL$c)
+  dir.create("./Celia/bigFINAL_slopeplots/", showWarnings = FALSE)
+  tiff(paste("./Celia/bigFINAL_slopeplots/", row, ".tiff", sep = ""),
+       width = 4, height = 4, units = "in", res = 200)
   print(ggplot(data = bigFINAL[bigfinal_rows, ],
                aes(x = time, y = B)) +
           geom_line() +
@@ -484,7 +479,8 @@ for (row in 1:nrow(FINAL)) {
                      col = "blue", size = 3) +
           NULL
   )
-}  
+  dev.off()
+}
 
 ## How to run the simulations with a LOOP ----
 
