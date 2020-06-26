@@ -34,6 +34,8 @@
 #   of a, b, tau values should give same max time & extin time then plot those
 #   values
 # Measure amount of time I is above S (and so I is more of B) – should be correlated w/ tau
+# Run w 2 P pops in competition. Compare outcome to indiv grow curves
+# Celia lab meeting?
 
 ## Import libraries ----
 
