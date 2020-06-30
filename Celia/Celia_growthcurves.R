@@ -372,33 +372,52 @@ run_sims <- function(rvals,
   # }
 }
 
-#Initial run that varied one parameter at a time (bigFINAL) ----  
-bigFINAL_params <- as.data.frame(matrix(
-  #         r      k     a       tau   b  c  init_S  moi
-  data = c(0.04, 10**9, 10**-10, 10, 50, 1, 10**6, 0.01,
-           0.04, 10**8, 10**-10, 10, 50, 1, 10**6, 0.01,
-           0.03, 10**9, 10**-10, 10, 50, 1, 10**6, 0.01,
-           0.007, 10**9, 10**-10, 10, 50, 1, 10**6, 0.01,
-           0.04, 10**9, 10**-13, 10, 50, 1, 10**6, 0.01,
-           0.04, 10**9, 10**-8, 10, 50, 1, 10**6, 0.01,
-           0.04, 10**9, 10**-10, 65, 50, 1, 10**6, 0.01,
-           0.04, 10**9, 10**-10, 120, 50, 1, 10**6, 0.01,
-           0.04, 10**9, 10**-10, 10, 20, 1, 10**6, 0.01,
-           0.04, 10**9, 10**-10, 10, 500, 1, 10**6, 0.01,
-           0.04, 10**9, 10**-10, 10, 850, 1, 10**6, 0.01), 
-  ncol = 8, byrow = TRUE))
-colnames(bigFINAL_params) <- c("r", "K", "a", "tau", "b", "c", 
-                               "init_bact_dens", "init_moi")
-sim_bigFINAL <- run_sims(rvals = bigFINAL_params$r,
-                         kvals = bigFINAL_params$K,
-                         avals = bigFINAL_params$a,
-                         tauvals = bigFINAL_params$tau,
-                         bvals = bigFINAL_params$b,
-                         cvals = bigFINAL_params$c,
-                         init_bact_dens_vals = bigFINAL_params$init_bact_dens,
-                         init_moi_vals = bigFINAL_params$init_moi,
-                         init_time = 200, init_stepsize = 0.5,
-                         combinatorial = FALSE)
+#Initial run that varied one parameter at a time (bigFINAL) ---- 
+#Check if saved simulation results exist. If so, load. If not, run simulation
+if ("sim_bigFINAL_1.csv" %in% list.files("./Celia/")) {
+  #Load results previously simulated
+  sim_bigFINAL <- list(NULL, NULL, NULL)
+  sim_bigFINAL[[1]] <- read.csv("./Celia/sim_bigFINAL_1.csv", stringsAsFactors = F)
+  if ("sim_bigFINAL_2.csv" %in% list.files("./Celia/")) {
+    sim_bigFINAL[[2]] <- read.csv("./Celia/sim_bigFINAL_2.csv", stringsAsFactors = F)
+  }
+  if ("sim_bigFINAL_3.csv" %in% list.files("./Celia/")) {
+    sim_bigFINAL[[3]] <- read.csv("./Celia/sim_bigFINAL_3.csv", stringsAsFactors = F)
+  }
+} else {
+  #Run simulations (if files don't exist)
+  bigFINAL_params <- as.data.frame(matrix(
+    #         r      k     a       tau   b  c  init_S  moi
+    data = c(0.04, 10**9, 10**-10, 10, 50, 1, 10**6, 0.01,
+             0.04, 10**8, 10**-10, 10, 50, 1, 10**6, 0.01,
+             0.03, 10**9, 10**-10, 10, 50, 1, 10**6, 0.01,
+             0.007, 10**9, 10**-10, 10, 50, 1, 10**6, 0.01,
+             0.04, 10**9, 10**-13, 10, 50, 1, 10**6, 0.01,
+             0.04, 10**9, 10**-8, 10, 50, 1, 10**6, 0.01,
+             0.04, 10**9, 10**-10, 65, 50, 1, 10**6, 0.01,
+             0.04, 10**9, 10**-10, 120, 50, 1, 10**6, 0.01,
+             0.04, 10**9, 10**-10, 10, 20, 1, 10**6, 0.01,
+             0.04, 10**9, 10**-10, 10, 500, 1, 10**6, 0.01,
+             0.04, 10**9, 10**-10, 10, 850, 1, 10**6, 0.01), 
+    ncol = 8, byrow = TRUE))
+  colnames(bigFINAL_params) <- c("r", "K", "a", "tau", "b", "c", 
+                                 "init_bact_dens", "init_moi")
+  sim_bigFINAL <- run_sims(rvals = bigFINAL_params$r,
+                           kvals = bigFINAL_params$K,
+                           avals = bigFINAL_params$a,
+                           tauvals = bigFINAL_params$tau,
+                           bvals = bigFINAL_params$b,
+                           cvals = bigFINAL_params$c,
+                           init_bact_dens_vals = bigFINAL_params$init_bact_dens,
+                           init_moi_vals = bigFINAL_params$init_moi,
+                           init_time = 200, init_stepsize = 0.5,
+                           combinatorial = FALSE)
+  #Save results so they can be re-loaded in future
+  write.csv(sim_bigFINAL[[1]], "./Celia/sim_bigFINAL_1.csv", row.names = F)
+  if (!is.null(sim_bigFINAL[[2]])) {write.csv(sim_bigFINAL[[2]], "./Celia/sim_bigFINAL_2.csv", row.names = F)}
+  if (!is.null(sim_bigFINAL[[3]])) {write.csv(sim_bigFINAL[[3]], "./Celia/sim_bigFINAL_3.csv", row.names = F)}
+}
+
 bigFINAL_plot <- sim_bigFINAL[[1]]
 
 #This pivot_wider is a stopgap because the original simulations were
@@ -436,6 +455,7 @@ FINAL <- dplyr::summarise(bigFINAL, maximum_B = max(B),
                                        time[time < maxtime & B < 0.1*K])$coefficients[2],
                           intercept = lm(log10(B[time < maxtime & B < 0.1*K]) ~ 
                                            time[time < maxtime & B < 0.1*K])$coefficients[1])
+FINAL
 
 ## Here, we try to analyze and plot row by row of the data frame bigFINAL
 for (row in 1:nrow(FINAL)) {
@@ -456,122 +476,38 @@ for (row in 1:nrow(FINAL)) {
                       color = "red") +
           geom_point(data = FINAL[row, ], aes(x = maxtime, y = maximum_B), 
                      col = "blue", size = 3) +
+          geom_point(data = FINAL[row, ], aes(x = extin_time, y = 10**4),
+                     col = "green", size = 3) +
           NULL
   )
   dev.off()
 }
 
-##Run factorial simulations with a LOOP (mybig) ----
 
-mybig <- NA #We do this to erase anything that's in this data frame
-myc <- 1
-for(myb in c(75, 760)){
-  for(mya in c(10**-10.5, 10**-8.25)){
-    for(myK in c(10**7.75, 10**8.8)){
-      for(mytau in c(33, 95)){
-        for(myr in c(0.009, 0.025)){
-          timelength <- 250
-          timestep <- 1
-          runnumber <- 1
-          yinit <- c(S = 10**6, I = 0, P = 10**4)
-          params <- c(b = myb, a = mya, K = myK, tau = mytau, r = myr, c = myc,
-                      warnings = 0, thresh_min_dens = 10**-100)
-          keeprunning <- TRUE
-          while(keeprunning){
-            times <- seq(from = 0, to = timelength, by = timestep)
-            myyout <- as.data.frame(dede(y = yinit, times = times, func = derivs, 
-                                         parms = params))
-            if(tail(myyout$S, 1) < 1000){
-              keeprunning <- FALSE
-              ## Here, we said that if the density of S is < 1000 we want to stop
-              ## the simulation
-            }else{
-              keeprunning <- TRUE
-              timelength <- timelength*2
-              timestep <- timestep*2
-              ## And, here, that, otherwise, we want it to keep running but doubling
-              ## the time length and the timestep
-            }
-            if(timelength > 11000){
-              keeprunning <- FALSE
-              ## Finally, we indicate that if the simulation has been running for
-              ## 11000, we want it to stop
-            }
-          }
-          
-          ## Here, we create the different columns in the data frame and we say 
-          ## that they are equal to myb, for example, because we want both values
-          ## in myb, not only one.
-          myyout$B <- myyout$S + myyout$I
-          myyout$burst <- myb
-          myyout$infec <- mya
-          myyout$K <- myK
-          myyout$tau <- mytau
-          myyout$r <- myr
-          myyout$c <- myc
-          myyout$uniq_run <- runnumber
-          
-          if(is.na(mybig)){
-            mybig <- myyout
-          }else{
-            mybig <- rbind(mybig, myyout)
-          }
-          ## Here, we specified that, if mybig is empty, we want it to be equal to
-          ## myyout (so, we just want to put myyout in it). However, if we have
-          ## already run a simulation, and it's inside mybig, what we want is to
-          ## add the second simulation to it by using rbind, making mybig bigger.
-          
-          runnumber <- 1 + runnumber
-        }
-      }
-    }
-  }
-}
-
-# Let's find the maximums and slopes of the simulations
-
-# First, we summarize the data we have
-mybig <- dplyr::group_by(mybig, burst, tau, infec, r, K, c)
-
-# Let's find the slopes and the intercepts, too
-BIG <- dplyr::summarise(mybig, maximum_B = max(B), 
-                              maxtime = time[B == maximum_B],
-                              slope = lm(log10(B[time < maxtime & B < 0.1*K]) ~ 
-                                           time[time < maxtime & B < 0.1*K])$coefficients[2],
-                              intercept = lm(log10(B[time < maxtime & B < 0.1*K]) ~ 
-                                               time[time < maxtime & B < 0.1*K])$coefficients[1])
-
-## Here, we try to analyze and plot row by row of the data frame mybig
-for (row in 1:nrow(BIG)) {
-  bigfinal_rows <- which(BIG$burst[row] == mybig$burst & 
-                           BIG$tau[row] == mybig$tau &
-                           BIG$infec[row] == mybig$infec &
-                           BIG$r[row] == mybig$r &
-                           BIG$K[row] == mybig$K &
-                           BIG$c[row] == mybig$c)
-  print(ggplot(data = mybig[bigfinal_rows, ],
-               aes(x = time, y = B)) +
-          geom_line() +
-          scale_y_continuous(trans = "log10") +
-          geom_abline(slope = BIG$slope[row], intercept = BIG$intercept[row],
-                      color = "red") +
-          geom_point(data = BIG[row, ], aes(x = maxtime, y = maximum_B), 
-                     col = "blue", size = 3) +
-          NULL
-  )
-}
-
-## Plotting all the parameters with maxtime in the 32 simulations to see how
-## they affect it
-ggplot(data = BIG, aes(x = log10(burst), y = maxtime, color = as.factor(K),
-                       shape = as.factor(infec))) +
-  geom_point(size = 3, alpha = 1/2) +
-  facet_grid(tau ~ r)
-
+ 
 ## Let's run sims1 ----
-sims1 <- run_sims(bvals = c(75, 480, 760), avals = c(10**-10.5, 10**-9, 10**-8.25),
-                  kvals = c(10**7.75, 10**8.8), tauvals = c(33, 57, 95),
-                  rvals = c(0.009, 0.018, 0.025))
+#Check if saved simulation results exist. If so, load. If not, run simulation
+if ("sims1_1.csv" %in% list.files("./Celia/")) {
+  #Load results previously simulated
+  sims1 <- list(NULL, NULL, NULL)
+  sims1[[1]] <- read.csv("./Celia/sims1_1.csv", stringsAsFactors = F)
+  if ("sims1_2.csv" %in% list.files("./Celia/")) {
+    sims1[[2]] <- read.csv("./Celia/sims1_2.csv", stringsAsFactors = F)
+  }
+  if ("sims1_3.csv" %in% list.files("./Celia/")) {
+    sims1[[3]] <- read.csv("./Celia/sims1_3.csv", stringsAsFactors = F)
+  }
+} else {
+  #Run simulations (if files don't exist)
+  sims1 <- run_sims(bvals = c(75, 480, 760), avals = c(10**-10.5, 10**-9, 10**-8.25),
+                    kvals = c(10**7.75, 10**8.8), tauvals = c(33, 57, 95),
+                    rvals = c(0.009, 0.018, 0.025))
+  #Save results so they can be re-loaded in future
+  write.csv(sims1[[1]], "./Celia/sims1_1.csv", row.names = F)
+  if (!is.null(sims1[[2]])) {write.csv(sims1[[2]], "./Celia/sims1_2.csv", row.names = F)}
+  if (!is.null(sims1[[3]])) {write.csv(sims1[[3]], "./Celia/sims1_3.csv", row.names = F)}
+}
+
 length(sims1)
 # When we use [] means that the output will be a list, while when we use [[]], means
 # that it'll be a dataframe (explanation with trains and their cars).
@@ -599,10 +535,12 @@ class(group_sims1)
 
 sum_sims1 <- dplyr::summarise(group_sims1, maximum_B = max(Density),                
                               maxtime = time[Density == maximum_B],
+                              extin_time = time[min(which(time > maxtime & Density < 10**4))],
                               slope = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
                                            time[time < maxtime & Density < 0.1*K])$coefficients[2],
                               intercept = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
                                                time[time < maxtime & Density < 0.1*K])$coefficients[1])
+sum_sims1
 
 for (row in 1:nrow(sum_sims1)) {
   bigfinal_rows <- which(sum_sims1$b[row] == group_sims1$b & 
@@ -613,8 +551,6 @@ for (row in 1:nrow(sum_sims1)) {
                            sum_sims1$c[row] == group_sims1$c)
   tiff(paste("./Celia/Sims1_plots/", sum_sims1[row, "uniq_run"], ".tiff", sep = ""),
        width = 6, height = 6, units = "cm", res = 150)
-  
-  
   print(ggplot(data = group_sims1[bigfinal_rows, ],
                aes(x = time, y = Density)) +
           geom_line() +
@@ -623,6 +559,8 @@ for (row in 1:nrow(sum_sims1)) {
                       color = "red") +
           geom_point(data = sum_sims1[row, ], aes(x = maxtime, y = maximum_B), 
                      col = "blue", size = 3) +
+          geom_point(data = sum_sims1[row, ], aes(x = extin_time, y = 10**4),
+                     cil = "green", size = 3) +
           NULL
   )
   
@@ -646,45 +584,16 @@ ggplot(data = sum_sims1, aes(x = log10(b), y = maxtime, color = as.factor(K),
 
 # How to see how tau and b affect maxtime as if they were INDEPENDENT from 
 # each other?
-reg_sims1 <- lm(maxtime ~ tau + b + a + r, data = sum_sims1)
-summary(reg_sims1)
+regi_sims1 <- lm(maxtime ~ tau + b + a + r, data = sum_sims1)
+summary(regi_sims1)
 
-confint(reg_sims1)
 # Calulate the RSE
-sigma(reg_sims1)/mean(sum_sims1$maxtime) # The lower the RSE, the more accurate the model.
+sigma(regi_sims1)/mean(sum_sims1$maxtime) # The lower the RSE, the more accurate the model.
 # The RSE estimate gives a measure of error of prediction.
 
 # Analyzing the data as if the parameters were CORRELATED
-# Split the data into training and test set
-set.seed(123)
-training.samples <- sum_sims1$maxtime %>%
-  createDataPartition(p = 0.8, list = FALSE)
-train.data <- sum_sims1[training.samples, ]
-test.data <- sum_sims1[-training.samples, ]
-
-# The standard linear regression model can be computed as follow:
-# Buil the model
-reg_sims1 <- lm(maxtime ~ tau + b + a + r, data = train.data)
-# Summarize the model
+reg_sims1 <- lm(maxtime ~ tau*b*a*r, data = sum_sims1)
 summary(reg_sims1)
-# Make predictions
-predictions <- reg_sims1 %>% predict(test.data)
-# Make performance. (a) Prediction error, RMSE
-RMSE(predictions, test.data$maxtime)
-# (b) R2
-R2(predictions, test.data$maxtime)
-
-# INTERACTION EFFECTS
-# Build the model
-reg2_sims1 <- lm(maxtime ~ b + tau + a + r + b:a + a:r, data = sum_sims1)
-summary(reg2_sims1)
-# Make predictions
-predictions <- reg2_sims1 %>% predict(test.data)
-# Model performance (a) Prediction error, RMSE
-RMSE(predictions, test.data$maxtime)
-# (b) R2
-R2(predictions, test.data$maxtime)
-
 
 # What about maximum_B?
 ggplot(data = sum_sims1, aes(x = log10(b), y = maximum_B, color = as.factor(K),
@@ -705,10 +614,29 @@ ggplot(data = sum_sims1, aes(x = maxtime, y = maximum_B,
 ## Let's run sims2 ----
 ## Where we'll have c, K, and r constant, and we'll be changing between 5
 ## different values of a, b, and tau
-sims2 <- run_sims(bvals = c(50, 100, 200, 400, 800),
-                  avals = c(10**-12, 10**-11, 10**-10, 10**-9, 10**-8),
-                  kvals = c(10**9), rvals = c(0.04),
-                  tauvals = c(15, 22.5, 33.75, 50.625, 75.9375))
+#Check if saved simulation results exist. If so, load. If not, run simulation
+if ("sims2_1.csv" %in% list.files("./Celia/")) {
+  #Load results previously simulated
+  sims2 <- list(NULL, NULL, NULL)
+  sims2[[1]] <- read.csv("./Celia/sims2_1.csv", stringsAsFactors = F)
+  if ("sims2_2.csv" %in% list.files("./Celia/")) {
+    sims2[[2]] <- read.csv("./Celia/sims2_2.csv", stringsAsFactors = F)
+  }
+  if ("sims2_3.csv" %in% list.files("./Celia/")) {
+    sims2[[3]] <- read.csv("./Celia/sims2_3.csv", stringsAsFactors = F)
+  }
+} else {
+  #Run simulations (if files don't exist)
+  sims2 <- run_sims(bvals = c(50, 100, 200, 400, 800),
+                    avals = c(10**-12, 10**-11, 10**-10, 10**-9, 10**-8),
+                    kvals = c(10**9), rvals = c(0.04),
+                    tauvals = c(15, 22.5, 33.75, 50.625, 75.9375))
+  #Save results so they can be re-loaded in future
+  write.csv(sims2[[1]], "./Celia/sims2_1.csv", row.names = F)
+  if (!is.null(sims2[[2]])) {write.csv(sims2[[2]], "./Celia/sims2_2.csv", row.names = F)}
+  if (!is.null(sims2[[3]])) {write.csv(sims2[[3]], "./Celia/sims2_3.csv", row.names = F)}
+}
+
 length(sims2)                  
 sims2[[1]]
 sims2[[2]]
@@ -723,10 +651,12 @@ group_sims2
 
 sum_sims2 <- dplyr::summarise(group_sims2, maximum_B = max(Density),                
                               maxtime = time[Density == maximum_B],
+                              extin_time = time[min(which(time > maxtime & Density < 10**4))],
                               slope = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
                                            time[time < maxtime & Density < 0.1*K])$coefficients[2],
                               intercept = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
                                                time[time < maxtime & Density < 0.1*K])$coefficients[1])
+sum_sims2
 
 for (row in 1:nrow(sum_sims2)) {
   bigfinal_rows <- which(sum_sims2$b[row] == group_sims2$b & 
@@ -735,7 +665,8 @@ for (row in 1:nrow(sum_sims2)) {
                            sum_sims2$r[row] == group_sims2$r &
                            sum_sims2$K[row] == group_sims2$K &
                            sum_sims2$c[row] == group_sims2$c)
-  
+  tiff(paste("./Celia/Sims2_plots/", sum_sims2[row, "uniq_run"], ".tiff", sep = ""),
+       width = 6, height = 6, units = "cm", res = 150)
   print(ggplot(data = group_sims2[bigfinal_rows, ],
                aes(x = time, y = Density)) +
           geom_line() +
@@ -744,8 +675,12 @@ for (row in 1:nrow(sum_sims2)) {
                       color = "red") +
           geom_point(data = sum_sims2[row, ], aes(x = maxtime, y = maximum_B), 
                      col = "blue", size = 3) +
+          geom_point(data = sum_sims2[row, ], aes(x = extin_time, y = 10**4),
+                     col = "green", size = 3) +
           NULL
   )
+  
+  dev.off()
 }
 
 sum_sims2
@@ -769,7 +704,7 @@ sigma(reg_sims2)/mean(sum_sims2$maxtime) # The lower the RSE, the more accurate 
 # Analyzing the data as if the parameters were CORRELATED
 # INTERACTION EFFECTS
 # Build the model
-regi_sims2 <- lm(maxtime ~ tau + b + a + tau:b + tau:a + b:a, data = sum_sims2)
+regi_sims2 <- lm(maxtime ~ tau*b*a, data = sum_sims2)
                    
 summary(regi_sims2)
 
@@ -787,12 +722,12 @@ sum_sims2_predicted <- data.frame(maxtime_pred = predict(lm_fit, sum_sims2),
                                   a = sum_sims2$a)
 sum_sims2_predicted
 # This is the predicted line of multiple linear regressions
-ggplot(data = sum_sims2, aes(x = log10(tau), y = maxtime, 
+ggplot(data = sum_sims2, aes(x = log10(b), y = maxtime, 
                              color = as.factor(log10(a)))) +
   geom_point() +
-  geom_line(data = sum_sims2_predicted, aes(x = log10(tau), y = maxtime_pred, 
+  geom_line(data = sum_sims2_predicted, aes(x = log10(b), y = maxtime_pred, 
                                             color = as.factor(log10(a)))) +
-  facet_grid(b ~ .)
+  facet_grid(. ~ tau)
 
 # Create multiple linear regressions with interactions
 lm_fit2 <- lm(maxtime ~ log10(b)*log10(a)*log10(tau), data = sum_sims2)
@@ -843,8 +778,27 @@ bvals
 class(bvals)
 
 # Now, we caculate it with the names changed
-sims3.1 <- run_sims(bvals = bvals$b, avals = c(10**-10), kvals = c(10**9),
-                  rvals = c(0.04), tauvals = bvals$tau, combinatorial = FALSE)
+#Check if saved simulation results exist. If so, load. If not, run simulation
+if ("sims3.1_1.csv" %in% list.files("./Celia/")) {
+  #Load results previously simulated
+  sims3.1 <- list(NULL, NULL, NULL)
+  sims3.1[[1]] <- read.csv("./Celia/sims3.1_1.csv", stringsAsFactors = F)
+  if ("sims3.1_2.csv" %in% list.files("./Celia/")) {
+    sims3.1[[2]] <- read.csv("./Celia/sims3.1_2.csv", stringsAsFactors = F)
+  }
+  if ("sims3.1_3.csv" %in% list.files("./Celia/")) {
+    sims3.1[[3]] <- read.csv("./Celia/sims3.1_3.csv", stringsAsFactors = F)
+  }
+} else {
+  #Run simulations (if files don't exist)
+  sims3.1 <- run_sims(bvals = bvals$b, avals = c(10**-10), kvals = c(10**9),
+                      rvals = c(0.04), tauvals = bvals$tau, combinatorial = FALSE)
+  #Save results so they can be re-loaded in future
+  write.csv(sims3.1[[1]], "./Celia/sims3.1_1.csv", row.names = F)
+  if (!is.null(sims3.1[[2]])) {write.csv(sims3.1[[2]], "./Celia/sims3.1_2.csv", row.names = F)}
+  if (!is.null(sims3.1[[3]])) {write.csv(sims3.1[[3]], "./Celia/sims3.1_3.csv", row.names = F)}
+}
+
 length(sims3.1)
 sims3.1[[1]]
 sims3.1[[2]]
@@ -898,11 +852,30 @@ colnames(bvals) <- c("tau", "tradeintercept", "tradeslope", "b")
 bvals
 class(bvals)
 
-bvals <- bvals[-c(4, 5, 6, 7, 8, 9, 16, 17, 18, 25, 26, 27), ]
+bvals <- subset(bvals, b > 0)
 bvals
 # Now, we caculate it with the names changed
-sims3.2 <- run_sims(bvals = bvals$b, avals = c(10**-10), kvals = c(10**9),
-                  rvals = c(0.04), tauvals = bvals$tau, combinatorial = FALSE)
+#Check if saved simulation results exist. If so, load. If not, run simulation
+if ("sims3.2_1.csv" %in% list.files("./Celia/")) {
+  #Load results previously simulated
+  sims3.2 <- list(NULL, NULL, NULL)
+  sims3.2[[1]] <- read.csv("./Celia/sims3.2_1.csv", stringsAsFactors = F)
+  if ("sims3.2_2.csv" %in% list.files("./Celia/")) {
+    sims3.2[[2]] <- read.csv("./Celia/sims3.2_2.csv", stringsAsFactors = F)
+  }
+  if ("sims3.2_3.csv" %in% list.files("./Celia/")) {
+    sims3.2[[3]] <- read.csv("./Celia/sims3.2_3.csv", stringsAsFactors = F)
+  }
+} else {
+  #Run simulations (if files don't exist)
+  sims3.2 <- run_sims(bvals = bvals$b, avals = c(10**-10), kvals = c(10**9),
+                      rvals = c(0.04), tauvals = bvals$tau, combinatorial = FALSE)
+  #Save results so they can be re-loaded in future
+  write.csv(sims3.2[[1]], "./Celia/sims3.2_1.csv", row.names = F)
+  if (!is.null(sims3.2[[2]])) {write.csv(sims3.2[[2]], "./Celia/sims3.2_2.csv", row.names = F)}
+  if (!is.null(sims3.2[[3]])) {write.csv(sims3.2[[3]], "./Celia/sims3.2_3.csv", row.names = F)}
+}
+
 length(sims3.2)
 sims3.2[[1]]
 sims3.2[[2]]
@@ -955,11 +928,30 @@ colnames(bvals) <- c("tau", "tradeintercept", "tradeslope", "b")
 bvals
 class(bvals)
 
-bvals <- bvals[-c(7, 8, 9), ]
+bvals <- bvals <- subset(bvals, b > 0)
 bvals
 # Now, we caculate it with the names changed
-sims3.3 <- run_sims(bvals = bvals$b, avals = c(10**-10), kvals = c(10**9),
-                  rvals = c(0.04), tauvals = bvals$tau, combinatorial = FALSE)
+#Check if saved simulation results exist. If so, load. If not, run simulation
+if ("sims3.3_1.csv" %in% list.files("./Celia/")) {
+  #Load results previously simulated
+  sims3.3 <- list(NULL, NULL, NULL)
+  sims3.3[[1]] <- read.csv("./Celia/sims3.3_1.csv", stringsAsFactors = F)
+  if ("sims3.3_2.csv" %in% list.files("./Celia/")) {
+    sims3.3[[2]] <- read.csv("./Celia/sims3.3_2.csv", stringsAsFactors = F)
+  }
+  if ("sims3.3_3.csv" %in% list.files("./Celia/")) {
+    sims3.3[[3]] <- read.csv("./Celia/sims3.3_3.csv", stringsAsFactors = F)
+  }
+} else {
+  #Run simulations (if files don't exist)
+  sims3.3 <- run_sims(bvals = bvals$b, avals = c(10**-10), kvals = c(10**9),
+                      rvals = c(0.04), tauvals = bvals$tau, combinatorial = FALSE)
+  #Save results so they can be re-loaded in future
+  write.csv(sims3.3[[1]], "./Celia/sims3.3_1.csv", row.names = F)
+  if (!is.null(sims3.3[[2]])) {write.csv(sims3.3[[2]], "./Celia/sims3.3_2.csv", row.names = F)}
+  if (!is.null(sims3.3[[3]])) {write.csv(sims3.3[[3]], "./Celia/sims3.3_3.csv", row.names = F)}
+}
+
 length(sims3.3)
 sims3.3[[1]]
 sims3.3[[2]]
@@ -1060,12 +1052,96 @@ ggplot(data = sum_sims3, aes(x = log10(b), y = maxtime,
                                              color = as.factor(log10(a)))) +
   facet_grid(tau ~ .)
 
+## Let's run a big sims3 with new and smaller values of tau
+tau <- c(6, 9, 13.5, 15, 18, 20.25, 21.59999, 22, 25.5, 25.92, 29.5568, 30,
+         30.37, 31.104, 34.259, 39.709, 45, 62, 87, 102)
+intercept <- c(7, 16, 23)
+slope <- c(0.932, 0.85, 0.715)
+bvals <- as.data.frame(matrix(data = NA, ncol = 4, 
+                              nrow = length(tau)*length(intercept)*length(slope)))
+bvals
+i <- 1
+
+for (tauval in tau){
+  for (inter in intercept){
+    for (slop in slope){
+      b <- slop*(tauval-inter)
+      bvals[i,] <- c(tauval, inter, slop, b)
+      i <- i+1
+    }
+  }
+}
+
+# This step was made to change the name of the axis and the name of the facets
+colnames(bvals) <- c("tau", "tradeintercept", "tradeslope", "b")
+bvals
+class(bvals)
+
+bvals <- bvals <- subset(bvals, b > 0)
+bvals
+# Now, we caculate it with the names changed
+#Check if saved simulation results exist. If so, load. If not, run simulation
+if ("sims3BIG_1.csv" %in% list.files("./Celia/")) {
+  #Load results previously simulated
+  sims3BIG <- list(NULL, NULL, NULL)
+  sims3BIG[[1]] <- read.csv("./Celia/sims3BIG_1.csv", stringsAsFactors = F)
+  if ("sims3BIG_2.csv" %in% list.files("./Celia/")) {
+    sims3BIG[[2]] <- read.csv("./Celia/sims3BIG_2.csv", stringsAsFactors = F)
+  }
+  if ("sims3BIG_3.csv" %in% list.files("./Celia/")) {
+    sims3BIG[[3]] <- read.csv("./Celia/sims3BIG_3.csv", stringsAsFactors = F)
+  }
+} else {
+  #Run simulations (if files don't exist)
+  sims3BIG <- run_sims(bvals = bvals$b, avals = c(10**-10), kvals = c(10**9),
+                      rvals = c(0.04), tauvals = bvals$tau, combinatorial = FALSE)
+  #Save results so they can be re-loaded in future
+  write.csv(sims3BIG[[1]], "./Celia/sims3BIG_1.csv", row.names = F)
+  if (!is.null(sims3BIG[[2]])) {write.csv(sims3BIG[[2]], "./Celia/sims3BIG_2.csv", row.names = F)}
+  if (!is.null(sims3BIG[[3]])) {write.csv(sims3BIG[[3]], "./Celia/sims3BIG_3.csv", row.names = F)}
+}
+
+length(sims3BIG)
+sims3BIG[[1]]
+sims3BIG[[2]]
+sims3BIG[[3]]
+sims3BIG
+
+## Let's group_by these simulations
+sub_sims3BIG <- subset(sims3BIG[[1]], Pop == "B")
+class(sub_sims3BIG)
+sub_sims3BIG
+
+group_sims3BIG <- dplyr::group_by(sub_sims3BIG, uniq_run, a, b, c, K, tau, r)
+group_sims3BIG
+
+# This step is useful to combine to data frames that have interesting columns
+# that we want to plot together
+joined_sims3BIG <- left_join(sum_sims3BIG, bvals)
+joined_sims3BIG
+
+## Plot sum_sims3
+ggplot(data = joined_sims3BIG, aes(x = tau, y = maxtime, colour = log10(b))) +
+  geom_point(size = 3, alpha = 1/2) +
+  facet_grid(tradeslope ~ tradeintercept) +
+  scale_y_continuous(trans = "log10")
+
+# Let's find the minimum maxtime and the average optimal tau for this plot
+group_sims3BIG <- dplyr::group_by(joined_sims3BIG, tradeintercept, tradeslope)
+sum_sims3BIG <- dplyr::summarise(group_sims3BIG, minmaxtime = min(maxtime),
+                                average_optimal_tau = mean(tau[maxtime  == minmaxtime]),
+                                slope = lm(maxtime[tau > average_optimal_tau] ~
+                                             tau[tau > average_optimal_tau])$coefficients[2],
+                                intercept = lm(maxtime[tau > average_optimal_tau] ~
+                                                 tau[tau > average_optimal_tau])$coefficients[1])
+
+sum_sims3BIG
+
 
 
 ## Let's run sims4 ----
 ## Where we'll have c and K constant, and we'll be changing between 3 different
 ## values of b, a, r and tau evenly spaced
-
 #Check if saved simulation results exist. If so, load. If not, run simulation
 if ("sims4_1.csv" %in% list.files("./Celia/")) {
   #Load results previously simulated
@@ -1103,10 +1179,12 @@ group_sims4
 
 sum_sims4 <- dplyr::summarise(group_sims4, maximum_B = max(Density),
                               maxtime = time[Density == maximum_B],
+                              extin_time = time[min(which(time > maxtime & Density < 10**4))],
                               slope = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
                                            time[time < maxtime & Density < 0.1*K])$coefficients[2],
                               intercept = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
                                                time[time < maxtime & Density < 0.1*K])$coefficients[1])
+sum_sims4
 
 for (row in 1:nrow(sum_sims4)) {
   bigfinal_rows <- which(sum_sims4$b[row] == group_sims4$b & 
@@ -1115,6 +1193,8 @@ for (row in 1:nrow(sum_sims4)) {
                            sum_sims4$r[row] == group_sims4$r &
                            sum_sims4$K[row] == group_sims4$K &
                            sum_sims4$c[row] == group_sims4$c)
+  tiff(paste("./Celia/Sims4_plots/", sum_sims4[row, "uniq_run"], ".tiff", sep = ""),
+       width = 6, height = 6, units = "cm", res = 150)
   
   print(ggplot(data = group_sims4[bigfinal_rows, ],
                aes(x = time, y = Density)) +
@@ -1124,11 +1204,13 @@ for (row in 1:nrow(sum_sims4)) {
                       color = "red") +
           geom_point(data = sum_sims4[row, ], aes(x = maxtime, y = maximum_B), 
                      col = "blue", size = 3) +
+          geom_point(data = sum_sims4[row, ], aes(x = extin_time, y = 10**4),
+                     col = "green", size = 3) +
           NULL
   )
+  
+  dev.off()
 }
-
-sum_sims4
 
 ## Let's make the ggplot for this data
 ggplot(data = sum_sims4, aes(x = log10(b), y = maxtime, color = as.factor(a),
