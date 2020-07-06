@@ -419,6 +419,7 @@ if ("sim_bigFINAL_1.csv" %in% list.files("./Celia/")) {
 }
 
 bigFINAL_plot <- sim_bigFINAL[[1]]
+class(bigFINAL_plot)
 
 #This pivot_wider is a stopgap because the original simulations were
 # not run using run_sims and were analyzed in the wider format
@@ -524,22 +525,40 @@ sims1[[3]]
 ## Notice that the summarize will be slightly different since the data has been
 ## pivot_longer'd. So, we have to use the density column and make a subset where 
 ## "Pop" = B
+sims1_plot <- sims1[[1]]
+class(sims1_plot)
+#This pivot_wider is a stopgap because the original simulations were
+# not run using run_sims and were analyzed in the wider format
+sims1 <- pivot_wider(sims1_plot, names_from = Pop, values_from = Density)
 
-sub_sims1 <- subset(sims1[[1]], Pop == "B")
-class(sub_sims1)
+#Make plots
+for (my_run in unique(sims1_plot$uniq_run)) {
+  dir.create("./Celia/sims1_plots/", showWarnings = FALSE)
+  tiff(paste("./Celia/sims1_plots/", my_run, ".tiff", sep = ""),
+       width = 4, height = 4, units = "in", res = 200)
+  print(ggplot(data = sims1_plot[sims1_plot$uniq_run == my_run &
+                                      sims1_plot$Pop != "PI", ],
+               aes(x = time, y = Density + 10, color = Pop)) +
+          geom_line(lwd = 1.5, alpha = 1/2) +
+          scale_color_manual(values = my_cols[c(8, 2, 3, 1)]) +
+          scale_y_continuous(trans = "log10") +
+          ggtitle(paste("Run #", my_run, sep = "")))
+  dev.off()
+}
 
-## Now, we want to find the maximum_B, the maxtime, and the slope of each simulation
-group_sims1 <- dplyr::group_by(sub_sims1, uniq_run, b, tau, a, r, K, c)
+## Now, we want to find the maximum_B, the maxtime, the extintion time, and the
+## slope of each simulation
+group_sims1 <- dplyr::group_by(sims1, uniq_run, b, tau, a, r, K, c)
 group_sims1
 class(group_sims1)
 
-sum_sims1 <- dplyr::summarise(group_sims1, maximum_B = max(Density),                
-                              maxtime = time[Density == maximum_B],
-                              extin_time = time[min(which(time > maxtime & Density < 10**4))],
-                              slope = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
-                                           time[time < maxtime & Density < 0.1*K])$coefficients[2],
-                              intercept = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
-                                               time[time < maxtime & Density < 0.1*K])$coefficients[1])
+sum_sims1 <- dplyr::summarise(group_sims1, maximum_B = max(B),                
+                              maxtime = time[B == maximum_B],
+                              extin_time = time[min(which(time > maxtime & B < 10**4))],
+                              slope = lm(log10(B[time < maxtime & B < 0.1*K]) ~ 
+                                           time[time < maxtime & B < 0.1*K])$coefficients[2],
+                              intercept = lm(log10(B[time < maxtime & B < 0.1*K]) ~ 
+                                               time[time < maxtime & B < 0.1*K])$coefficients[1])
 sum_sims1
 
 for (row in 1:nrow(sum_sims1)) {
@@ -549,10 +568,11 @@ for (row in 1:nrow(sum_sims1)) {
                            sum_sims1$r[row] == group_sims1$r &
                            sum_sims1$K[row] == group_sims1$K &
                            sum_sims1$c[row] == group_sims1$c)
-  tiff(paste("./Celia/Sims1_plots/", sum_sims1[row, "uniq_run"], ".tiff", sep = ""),
+  dir.create("./Celia/sims1_slopeplots/", showWarnings = FALSE)
+  tiff(paste("./Celia/Sims1_slopeplots/", sum_sims1[row, "uniq_run"], ".tiff", sep = ""),
        width = 6, height = 6, units = "cm", res = 150)
   print(ggplot(data = group_sims1[bigfinal_rows, ],
-               aes(x = time, y = Density)) +
+               aes(x = time, y = B)) +
           geom_line() +
           scale_y_continuous(trans = "log10") +
           geom_abline(slope = sum_sims1$slope[row], intercept = sum_sims1$intercept[row],
@@ -566,10 +586,6 @@ for (row in 1:nrow(sum_sims1)) {
   
   dev.off()
 }
-
-group_sims1
-sum_sims1
-View(sum_sims1)
 
 ## Now, we want to make a gglpot that represents all the simulations with the
 ## summarized data
@@ -644,18 +660,38 @@ sims2[[3]]
 table(sims2[[1]]$Pop)
 
 ## Now that we're sure that everything went well, we'll strat summarizing the data
-sub_sims2 <- subset(sims2[[1]], Pop == "B")
-class(sub_sims2)
-group_sims2 <- dplyr::group_by(sub_sims2, uniq_run, a, b, c, K, tau, r)
+sims2_plot <- sims2[[1]]
+class(sims2_plot)
+#This pivot_wider is a stopgap because the original simulations were
+# not run using run_sims and were analyzed in the wider format
+sims2 <- pivot_wider(sims2_plot, names_from = Pop, values_from = Density)
+
+#Make plots
+for (my_run in unique(sims2_plot$uniq_run)) {
+  dir.create("./Celia/sims2_plots/", showWarnings = FALSE)
+  tiff(paste("./Celia/sims2_plots/", my_run, ".tiff", sep = ""),
+       width = 4, height = 4, units = "in", res = 200)
+  print(ggplot(data = sims2_plot[sims2_plot$uniq_run == my_run &
+                                   sims2_plot$Pop != "PI", ],
+               aes(x = time, y = Density + 10, color = Pop)) +
+          geom_line(lwd = 1.5, alpha = 1/2) +
+          scale_color_manual(values = my_cols[c(8, 2, 3, 1)]) +
+          scale_y_continuous(trans = "log10") +
+          ggtitle(paste("Run #", my_run, sep = "")))
+  dev.off()
+}
+
+
+group_sims2 <- dplyr::group_by(sims2, uniq_run, a, b, c, K, tau, r)
 group_sims2
 
-sum_sims2 <- dplyr::summarise(group_sims2, maximum_B = max(Density),                
-                              maxtime = time[Density == maximum_B],
-                              extin_time = time[min(which(time > maxtime & Density < 10**4))],
-                              slope = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
-                                           time[time < maxtime & Density < 0.1*K])$coefficients[2],
-                              intercept = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
-                                               time[time < maxtime & Density < 0.1*K])$coefficients[1])
+sum_sims2 <- dplyr::summarise(group_sims2, maximum_B = max(B),                
+                              maxtime = time[B == maximum_B],
+                              extin_time = time[min(which(time > maxtime & B < 10**4))],
+                              slope = lm(log10(B[time < maxtime & B < 0.1*K]) ~ 
+                                           time[time < maxtime & B < 0.1*K])$coefficients[2],
+                              intercept = lm(log10(B[time < maxtime & B < 0.1*K]) ~ 
+                                               time[time < maxtime & B < 0.1*K])$coefficients[1])
 sum_sims2
 
 for (row in 1:nrow(sum_sims2)) {
@@ -665,10 +701,11 @@ for (row in 1:nrow(sum_sims2)) {
                            sum_sims2$r[row] == group_sims2$r &
                            sum_sims2$K[row] == group_sims2$K &
                            sum_sims2$c[row] == group_sims2$c)
-  tiff(paste("./Celia/Sims2_plots/", sum_sims2[row, "uniq_run"], ".tiff", sep = ""),
+  dir.create("./Celia/sims2_slopeplots/", showWarnings = FALSE)
+  tiff(paste("./Celia/Sims2_slopeplots/", sum_sims2[row, "uniq_run"], ".tiff", sep = ""),
        width = 6, height = 6, units = "cm", res = 150)
   print(ggplot(data = group_sims2[bigfinal_rows, ],
-               aes(x = time, y = Density)) +
+               aes(x = time, y = B)) +
           geom_line() +
           scale_y_continuous(trans = "log10") +
           geom_abline(slope = sum_sims2$slope[row], intercept = sum_sims2$intercept[row],
@@ -686,10 +723,10 @@ for (row in 1:nrow(sum_sims2)) {
 sum_sims2
 
 ## Let's make the ggplot for this data
-ggplot(data = sum_sims2, aes(x = log10(b), y = maxtime, color = as.factor(a),
+ggplot(data = sum_sims2, aes(x = log10(tau), y = maxtime, color = as.factor(a),
                              shape = as.factor(K))) +
   geom_point(size = 3, alpha = 1/2) +
-  facet_grid(r ~ tau) +
+  facet_grid(b ~ .) +
   geom_smooth(method = "lm")
 
 # How to see how the parameters affect maxtime as if they were INDEPENDENT from 
@@ -740,12 +777,12 @@ sum_sims2_predicted2 <- data.frame(maxtime_pred = predict(lm_fit2, sum_sims2),
                                   a = sum_sims2$a)
 sum_sims2_predicted2
 # This is the predicted line of multiple linear regressions
-ggplot(data = sum_sims2, aes(x = log10(tau), y = maxtime, 
+ggplot(data = sum_sims2, aes(x = log10(b), y = extin_time, 
                              color = as.factor(log10(a)))) +
   geom_point() +
-  geom_line(data = sum_sims2_predicted2, aes(x = log10(tau), y = maxtime_pred, 
+  geom_line(data = sum_sims2_predicted2, aes(x = log10(b), y = maxtime_pred, 
                                             color = as.factor(log10(a)))) +
-  facet_grid(b ~ .)
+  facet_grid(. ~ tau)
 
 
 
@@ -1052,9 +1089,9 @@ ggplot(data = sum_sims3, aes(x = log10(b), y = maxtime,
                                              color = as.factor(log10(a)))) +
   facet_grid(tau ~ .)
 
-## Let's run a big sims3 with new and smaller values of tau
-tau <- c(6, 9, 13.5, 15, 18, 20.25, 21.59999, 22, 25.5, 25.92, 29.5568, 30,
-         30.37, 31.104, 34.259, 39.709, 45, 62, 87, 102)
+## Let's run a big sims3 with new and smaller values of tau ----
+tau <- c(6, 9, 13.5, 15, 18, 20.25, 22, 25.5, 28, 30, 32, 34.259, 39.709, 45,
+         56, 62, 87, 100, 115, 130)
 intercept <- c(7, 16, 23)
 slope <- c(0.932, 0.85, 0.715)
 bvals <- as.data.frame(matrix(data = NA, ncol = 4, 
@@ -1081,61 +1118,89 @@ bvals <- bvals <- subset(bvals, b > 0)
 bvals
 # Now, we caculate it with the names changed
 #Check if saved simulation results exist. If so, load. If not, run simulation
-if ("sims3BIG_1.csv" %in% list.files("./Celia/")) {
+if ("sims3BIG2_1.csv" %in% list.files("./Celia/")) {
   #Load results previously simulated
-  sims3BIG <- list(NULL, NULL, NULL)
-  sims3BIG[[1]] <- read.csv("./Celia/sims3BIG_1.csv", stringsAsFactors = F)
-  if ("sims3BIG_2.csv" %in% list.files("./Celia/")) {
-    sims3BIG[[2]] <- read.csv("./Celia/sims3BIG_2.csv", stringsAsFactors = F)
+  sims3BIG2 <- list(NULL, NULL, NULL)
+  sims3BIG2[[1]] <- read.csv("./Celia/sims3BIG2_1.csv", stringsAsFactors = F)
+  if ("sims3BIG2_2.csv" %in% list.files("./Celia/")) {
+    sims3BIG2[[2]] <- read.csv("./Celia/sims3BIG2_2.csv", stringsAsFactors = F)
   }
-  if ("sims3BIG_3.csv" %in% list.files("./Celia/")) {
-    sims3BIG[[3]] <- read.csv("./Celia/sims3BIG_3.csv", stringsAsFactors = F)
+  if ("sims3BIG2_3.csv" %in% list.files("./Celia/")) {
+    sims3BIG2[[3]] <- read.csv("./Celia/sims3BIG2_3.csv", stringsAsFactors = F)
   }
 } else {
   #Run simulations (if files don't exist)
-  sims3BIG <- run_sims(bvals = bvals$b, avals = c(10**-10), kvals = c(10**9),
+  sims3BIG2 <- run_sims(bvals = bvals$b, avals = c(10**-10), kvals = c(10**9),
                       rvals = c(0.04), tauvals = bvals$tau, combinatorial = FALSE)
   #Save results so they can be re-loaded in future
-  write.csv(sims3BIG[[1]], "./Celia/sims3BIG_1.csv", row.names = F)
-  if (!is.null(sims3BIG[[2]])) {write.csv(sims3BIG[[2]], "./Celia/sims3BIG_2.csv", row.names = F)}
-  if (!is.null(sims3BIG[[3]])) {write.csv(sims3BIG[[3]], "./Celia/sims3BIG_3.csv", row.names = F)}
+  write.csv(sims3BIG2[[1]], "./Celia/sims3BIG2_1.csv", row.names = F)
+  if (!is.null(sims3BIG2[[2]])) {write.csv(sims3BIG2[[2]], "./Celia/sims3BIG2_2.csv", row.names = F)}
+  if (!is.null(sims3BIG2[[3]])) {write.csv(sims3BIG2[[3]], "./Celia/sims3BIG2_3.csv", row.names = F)}
 }
 
-length(sims3BIG)
-sims3BIG[[1]]
-sims3BIG[[2]]
-sims3BIG[[3]]
-sims3BIG
+length(sims3BIG2)
+sims3BIG2[[1]]
+sims3BIG2[[2]]
+sims3BIG2[[3]]
+sims3BIG2
 
 ## Let's group_by these simulations
-sub_sims3BIG <- subset(sims3BIG[[1]], Pop == "B")
-class(sub_sims3BIG)
-sub_sims3BIG
+sims3BIG2_plot <- sims3BIG2[[1]]
+class(sims3BIG2_plot)
+#This pivot_wider is a stopgap because the original simulations were
+# not run using run_sims and were analyzed in the wider format
+sims3BIG2 <- pivot_wider(sims3BIG2_plot, names_from = Pop, values_from = Density)
 
-group_sims3BIG <- dplyr::group_by(sub_sims3BIG, uniq_run, a, b, c, K, tau, r)
-group_sims3BIG
+#Make plots
+for (my_run in unique(sims3BIG2_plot$uniq_run)) {
+  dir.create("./Celia/sims3BIG2_plots/", showWarnings = FALSE)
+  tiff(paste("./Celia/sims3BIG2_plots/", my_run, ".tiff", sep = ""),
+       width = 4, height = 4, units = "in", res = 200)
+  print(ggplot(data = sims3BIG2_plot[sims3BIG2_plot$uniq_run == my_run &
+                                   sims3BIG2_plot$Pop != "PI", ],
+               aes(x = time, y = Density + 10, color = Pop)) +
+          geom_line(lwd = 1.5, alpha = 1/2) +
+          scale_color_manual(values = my_cols[c(8, 2, 3, 1)]) +
+          scale_y_continuous(trans = "log10") +
+          ggtitle(paste("Run #", my_run, sep = "")))
+  dev.off()
+}
+
+group_sims3BIG2 <- dplyr::group_by(sims3BIG2, uniq_run, a, b, c, K, tau, r)
+group_sims3BIG2
+
+sum_sims3BIG2 <- dplyr::summarise(group_sims3BIG2, maximum_B = max(B),
+                                maxtime = time[B == maximum_B])
 
 # This step is useful to combine to data frames that have interesting columns
 # that we want to plot together
-joined_sims3BIG <- left_join(sum_sims3BIG, bvals)
-joined_sims3BIG
+joined_sims3BIG2 <- left_join(sum_sims3BIG2, bvals)
+joined_sims3BIG2
 
-## Plot sum_sims3
-ggplot(data = joined_sims3BIG, aes(x = tau, y = maxtime, colour = log10(b))) +
+## Plot joined_sims3BIG2
+ggplot(data = joined_sims3BIG2, aes(x = tau, y = maxtime, colour = log10(b))) +
   geom_point(size = 3, alpha = 1/2) +
   facet_grid(tradeslope ~ tradeintercept) +
   scale_y_continuous(trans = "log10")
 
 # Let's find the minimum maxtime and the average optimal tau for this plot
-group_sims3BIG <- dplyr::group_by(joined_sims3BIG, tradeintercept, tradeslope)
-sum_sims3BIG <- dplyr::summarise(group_sims3BIG, minmaxtime = min(maxtime),
+group_sims3BIG2 <- dplyr::group_by(joined_sims3BIG2, tradeintercept, tradeslope)
+sum_sims3BIG2 <- dplyr::summarise(group_sims3BIG2, minmaxtime = min(maxtime),
                                 average_optimal_tau = mean(tau[maxtime  == minmaxtime]),
-                                slope = lm(maxtime[tau > average_optimal_tau] ~
-                                             tau[tau > average_optimal_tau])$coefficients[2],
-                                intercept = lm(maxtime[tau > average_optimal_tau] ~
-                                                 tau[tau > average_optimal_tau])$coefficients[1])
+                                slope = lm(maxtime[tau > 50] ~
+                                             tau[tau > 50])$coefficients[2],
+                                intercept = lm(maxtime[tau > 50] ~
+                                                 tau[tau > 50])$coefficients[1])
 
-sum_sims3BIG
+sum_sims3BIG2
+
+#Let's plot sum_sims3BIG2 with its slope
+ggplot(data = joined_sims3BIG2, aes(x = tau, y = maxtime, colour = log10(b))) +
+  geom_point(size = 3, alpha = 1/2) +
+  geom_abline(data = sum_sims3BIG2, 
+              mapping = aes(slope = slope, intercept = intercept)) +
+  facet_grid(tradeslope ~ tradeintercept)
+#scale_y_continuous(trans = "log10") +
 
 
 
@@ -1172,18 +1237,37 @@ sims4[[3]]
 table(sims4[[1]]$Pop)
 
 ## Now that we're sure that everything went well, we'll strat summarizing the data
-sub_sims4 <- subset(sims4[[1]], Pop == "B")
-class(sub_sims4)
-group_sims4 <- dplyr::group_by(sub_sims4, uniq_run, a, b, c, K, tau, r)
+sims4_plot <- sims4[[1]]
+class(sims4_plot)
+#This pivot_wider is a stopgap because the original simulations were
+# not run using run_sims and were analyzed in the wider format
+sims4 <- pivot_wider(sims4_plot, names_from = Pop, values_from = Density)
+
+#Make plots
+for (my_run in unique(sims4_plot$uniq_run)) {
+  dir.create("./Celia/sims4_plots/", showWarnings = FALSE)
+  tiff(paste("./Celia/sims4_plots/", my_run, ".tiff", sep = ""),
+       width = 4, height = 4, units = "in", res = 200)
+  print(ggplot(data = sims4_plot[sims4_plot$uniq_run == my_run &
+                                   sims4_plot$Pop != "PI", ],
+               aes(x = time, y = Density + 10, color = Pop)) +
+          geom_line(lwd = 1.5, alpha = 1/2) +
+          scale_color_manual(values = my_cols[c(8, 2, 3, 1)]) +
+          scale_y_continuous(trans = "log10") +
+          ggtitle(paste("Run #", my_run, sep = "")))
+  dev.off()
+}
+
+group_sims4 <- dplyr::group_by(sims4, uniq_run, a, b, c, K, tau, r)
 group_sims4
 
-sum_sims4 <- dplyr::summarise(group_sims4, maximum_B = max(Density),
-                              maxtime = time[Density == maximum_B],
-                              extin_time = time[min(which(time > maxtime & Density < 10**4))],
-                              slope = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
-                                           time[time < maxtime & Density < 0.1*K])$coefficients[2],
-                              intercept = lm(log10(Density[time < maxtime & Density < 0.1*K]) ~ 
-                                               time[time < maxtime & Density < 0.1*K])$coefficients[1])
+sum_sims4 <- dplyr::summarise(group_sims4, maximum_B = max(B),
+                              maxtime = time[B == maximum_B],
+                              extin_time = time[min(which(time > maxtime & B < 10**4))],
+                              slope = lm(log10(B[time < maxtime & B < 0.1*K]) ~ 
+                                           time[time < maxtime & B < 0.1*K])$coefficients[2],
+                              intercept = lm(log10(B[time < maxtime & B < 0.1*K]) ~ 
+                                               time[time < maxtime & B < 0.1*K])$coefficients[1])
 sum_sims4
 
 for (row in 1:nrow(sum_sims4)) {
@@ -1193,11 +1277,11 @@ for (row in 1:nrow(sum_sims4)) {
                            sum_sims4$r[row] == group_sims4$r &
                            sum_sims4$K[row] == group_sims4$K &
                            sum_sims4$c[row] == group_sims4$c)
-  tiff(paste("./Celia/Sims4_plots/", sum_sims4[row, "uniq_run"], ".tiff", sep = ""),
+  dir.create("./Celia/sims4_slopeplots/", showWarnings = FALSE)
+  tiff(paste("./Celia/Sims4_slopeplots/", sum_sims4[row, "uniq_run"], ".tiff", sep = ""),
        width = 6, height = 6, units = "cm", res = 150)
-  
   print(ggplot(data = group_sims4[bigfinal_rows, ],
-               aes(x = time, y = Density)) +
+               aes(x = time, y = B)) +
           geom_line() +
           scale_y_continuous(trans = "log10") +
           geom_abline(slope = sum_sims4$slope[row], intercept = sum_sims4$intercept[row],
