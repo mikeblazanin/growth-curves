@@ -657,7 +657,6 @@ length(sims2)
 sims2[[1]]
 sims2[[2]]
 sims2[[3]]
-table(sims2[[1]]$Pop)
 
 ## Now that we're sure that everything went well, we'll strat summarizing the data
 sims2_plot <- sims2[[1]]
@@ -720,10 +719,8 @@ for (row in 1:nrow(sum_sims2)) {
   dev.off()
 }
 
-sum_sims2
-
 ## Let's make the ggplot for this data
-ggplot(data = sum_sims2, aes(x = log10(tau), y = maxtime, color = as.factor(a),
+ggplot(data = sum_sims2, aes(x = log10(tau), y = extin_time, color = as.factor(a),
                              shape = as.factor(K))) +
   geom_point(size = 3, alpha = 1/2) +
   facet_grid(b ~ .) +
@@ -731,7 +728,7 @@ ggplot(data = sum_sims2, aes(x = log10(tau), y = maxtime, color = as.factor(a),
 
 # How to see how the parameters affect maxtime as if they were INDEPENDENT from 
 # each other?
-reg_sims2 <- lm(maxtime ~ tau + b + a, data = sum_sims2)
+reg_sims2 <- lm(extin_time ~ tau + b + a, data = sum_sims2)
 summary(reg_sims2)
 
 # Calulate the RSE
@@ -741,7 +738,7 @@ sigma(reg_sims2)/mean(sum_sims2$maxtime) # The lower the RSE, the more accurate 
 # Analyzing the data as if the parameters were CORRELATED
 # INTERACTION EFFECTS
 # Build the model
-regi_sims2 <- lm(maxtime ~ tau*b*a, data = sum_sims2)
+regi_sims2 <- lm(extin_time ~ tau*b*a, data = sum_sims2)
                    
 summary(regi_sims2)
 
@@ -749,38 +746,21 @@ summary(regi_sims2)
 # Read data set
 sum_sims2
 # Create multiple linear regressions
-lm_fit <- lm(maxtime ~ log10(b) + log10(a) + log10(tau), data = sum_sims2)
+lm_fit <- lm(extin_time ~ log10(b)*log10(a)*log10(tau), data = sum_sims2)
 summary(lm_fit)
 # Save predictions of the model in the new data frame together with the variable
 # you want to plot against
-sum_sims2_predicted <- data.frame(maxtime_pred = predict(lm_fit, sum_sims2),
+sum_sims2_predicted <- data.frame(extin_time_pred = predict(lm_fit, sum_sims2),
                                   tau = sum_sims2$tau,
                                   b = sum_sims2$b,
                                   a = sum_sims2$a)
 sum_sims2_predicted
-# This is the predicted line of multiple linear regressions
-ggplot(data = sum_sims2, aes(x = log10(b), y = maxtime, 
-                             color = as.factor(log10(a)))) +
-  geom_point() +
-  geom_line(data = sum_sims2_predicted, aes(x = log10(b), y = maxtime_pred, 
-                                            color = as.factor(log10(a)))) +
-  facet_grid(. ~ tau)
 
-# Create multiple linear regressions with interactions
-lm_fit2 <- lm(maxtime ~ log10(b)*log10(a)*log10(tau), data = sum_sims2)
-summary(lm_fit2)
-# Save predictions of the model in the new data frame together with the variable
-# you want to plot against
-sum_sims2_predicted2 <- data.frame(maxtime_pred = predict(lm_fit2, sum_sims2),
-                                  tau = sum_sims2$tau,
-                                  b = sum_sims2$b,
-                                  a = sum_sims2$a)
-sum_sims2_predicted2
 # This is the predicted line of multiple linear regressions
 ggplot(data = sum_sims2, aes(x = log10(b), y = extin_time, 
                              color = as.factor(log10(a)))) +
   geom_point() +
-  geom_line(data = sum_sims2_predicted2, aes(x = log10(b), y = maxtime_pred, 
+  geom_line(data = sum_sims2_predicted, aes(x = log10(b), y = extin_time_pred, 
                                             color = as.factor(log10(a)))) +
   facet_grid(. ~ tau)
 
@@ -1171,26 +1151,36 @@ group_sims3BIG2
 
 sum_sims3BIG2 <- dplyr::summarise(group_sims3BIG2, maximum_B = max(B),
                                 maxtime = time[B == maximum_B])
+## What we do next is to have the same number of digits in the columns tau and b
+## from both dataframes bvals and sum_sims3BIG2. Otherwise, there's a rounding
+## error
+bvals$tau <- round(bvals$tau, digits = 2)
+sum_sims3BIG2$tau <- round(sum_sims3BIG2$tau, digits = 2)
+
+bvals$b <- round(bvals$b, digits = 3)
+sum_sims3BIG2$b <- round(sum_sims3BIG2$b, digits = 3)
+
+class(sum_sims3BIG2$tau)
 
 # This step is useful to combine to data frames that have interesting columns
 # that we want to plot together
 joined_sims3BIG2 <- left_join(sum_sims3BIG2, bvals)
-joined_sims3BIG2
+View(joined_sims3BIG2)
 
 ## Plot joined_sims3BIG2
 ggplot(data = joined_sims3BIG2, aes(x = tau, y = maxtime, colour = log10(b))) +
   geom_point(size = 3, alpha = 1/2) +
-  facet_grid(tradeslope ~ tradeintercept) +
-  scale_y_continuous(trans = "log10")
+  facet_grid(tradeslope ~ tradeintercept)
+  #scale_y_continuous(trans = "log10")
 
 # Let's find the minimum maxtime and the average optimal tau for this plot
 group_sims3BIG2 <- dplyr::group_by(joined_sims3BIG2, tradeintercept, tradeslope)
 sum_sims3BIG2 <- dplyr::summarise(group_sims3BIG2, minmaxtime = min(maxtime),
                                 average_optimal_tau = mean(tau[maxtime  == minmaxtime]),
-                                slope = lm(maxtime[tau > 50] ~
-                                             tau[tau > 50])$coefficients[2],
-                                intercept = lm(maxtime[tau > 50] ~
-                                                 tau[tau > 50])$coefficients[1])
+                                slope = lm(maxtime[tau > 30] ~
+                                             tau[tau > 30])$coefficients[2],
+                                intercept = lm(maxtime[tau > 30] ~
+                                                 tau[tau > 30])$coefficients[1])
 
 sum_sims3BIG2
 
@@ -1201,6 +1191,13 @@ ggplot(data = joined_sims3BIG2, aes(x = tau, y = maxtime, colour = log10(b))) +
               mapping = aes(slope = slope, intercept = intercept)) +
   facet_grid(tradeslope ~ tradeintercept)
 #scale_y_continuous(trans = "log10") +
+
+#Let's plot the different columns in sum_sims3BIG2
+ggplot(data = sum_sims3BIG2, aes(x = tradeslope, y = minmaxtime,
+                                 colour = as.factor(tradeintercept))) +
+  geom_point(size = 3, alpha = 1/2) +
+  geom_line(data = sum_sims3BIG2, aes(x = tradeslope, y = minmaxtime, 
+                                             color = as.factor(tradeintercept)))
 
 
 
