@@ -777,14 +777,28 @@ sum_sims2_predicted2 <- data.frame(maxtime_pred = predict(lm_fit2, sum_sims2),
                                   a = sum_sims2$a)
 sum_sims2_predicted2
 # This is the predicted line of multiple linear regressions
-ggplot(data = sum_sims2, aes(x = log10(b), y = extin_time, 
+ggplot(data = sum_sims2, aes(x = log10(b), y = maxtime, 
                              color = as.factor(log10(a)))) +
   geom_point() +
   geom_line(data = sum_sims2_predicted2, aes(x = log10(b), y = maxtime_pred, 
                                             color = as.factor(log10(a)))) +
   facet_grid(. ~ tau)
 
+#Plot using contours
+ggplot(data = sum_sims2, aes(x = b, y = tau, 
+                             z = -maxtime)) +
+  geom_contour_filled() +
+  facet_grid(~a)
 
+ggplot(data = sum_sims2, aes(x = tau, y = a, 
+                             z = -maxtime)) +
+  geom_contour_filled() +
+  facet_grid(~b)
+
+ggplot(data = sum_sims2, aes(x = a, y = b, 
+                             z = -maxtime)) +
+  geom_contour_filled() +
+  facet_grid(~tau)
 
 ## Let's run sims3 ----
 ## Where we'll have c, K, a, and r constant, and we'll be changing between 
