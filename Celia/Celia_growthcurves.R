@@ -1119,6 +1119,8 @@ ggplot(data = sum_sims3, aes(x = log10(b), y = maxtime,
                                              color = as.factor(log10(a)))) +
   facet_grid(tau ~ .)
 
+
+
 ## Let's run a big sims3 with new and smaller values of tau ----
 tau <- c(6, 9, 13.5, 15, 18, 20.25, 22, 25.5, 28, 30, 32, 34.259, 39.709, 45,
          56, 62, 87, 100, 115, 130)
@@ -1367,3 +1369,130 @@ regi_sims4 <- lm(maxtime ~ tau + log10(b) + log10(a) + log10(r) + tau:log10(b) +
                    log10(a):log10(r), data = sum_sims4)
 
 summary(regi_sims4)
+
+
+
+## Let's run sims5, which wil be similar to sims3 but with new values of tradeslope
+## and tradeintercept
+# To calculate the values of tau evenly spaced from 11 to 120, we'll use the
+# following command:
+seq(from = 11, to = 120, length.out = 10)
+tau <- c(11.00000, 23.11111,  35.22222,  47.33333,  59.44444,  71.55556,
+         83.66667,  95.77778, 107.88889, 120.00000)
+intercept <- c(10, 20, 30)
+slope <- c(5, 12, 19, 26, 33)
+bvals <- as.data.frame(matrix(data = NA, ncol = 4, 
+                              nrow = length(tau)*length(intercept)*length(slope)))
+bvals
+i <- 1
+
+for (tauval in tau){
+  for (inter in intercept){
+    for (slop in slope){
+      b <- slop*(tauval-inter)
+      bvals[i,] <- c(tauval, inter, slop, b)
+      i <- i+1
+    }
+  }
+}
+
+# This step was made to change the name of the axis and the name of the facets
+colnames(bvals) <- c("tau", "tradeintercept", "tradeslope", "b")
+bvals
+class(bvals)
+
+bvals <- bvals <- subset(bvals, b > 0)
+bvals
+
+# Now, we caculate it with the names changed
+#Check if saved simulation results exist. If so, load. If not, run simulation
+if ("sims5_1.csv" %in% list.files("./Celia/")) {
+  #Load results previously simulated
+  sims5 <- list(NULL, NULL, NULL)
+  sims5[[1]] <- read.csv("./Celia/sims5_1.csv", stringsAsFactors = F)
+  if ("sims5_2.csv" %in% list.files("./Celia/")) {
+    sims5[[2]] <- read.csv("./Celia/sims5_2.csv", stringsAsFactors = F)
+  }
+  if ("sims5_3.csv" %in% list.files("./Celia/")) {
+    sims5[[3]] <- read.csv("./Celia/sims5_3.csv", stringsAsFactors = F)
+  }
+} else {
+  #Run simulations (if files don't exist)
+  sims5 <- run_sims(bvals = bvals$b, avals = c(10**-10), kvals = c(10**9),
+                        rvals = c(0.04), tauvals = bvals$tau, combinatorial = FALSE)
+  #Save results so they can be re-loaded in future
+  write.csv(sims5[[1]], "./Celia/sims5_1.csv", row.names = F)
+  if (!is.null(sims5[[2]])) {write.csv(sims5[[2]], "./Celia/sims3BIG2_2.csv", row.names = F)}
+  if (!is.null(sims5[[3]])) {write.csv(sims5[[3]], "./Celia/sims3BIG2_3.csv", row.names = F)}
+}
+
+length(sims5)
+sims5[[1]]
+sims5[[2]]
+sims5[[3]]
+sims5
+
+## Let's group_by these simulations
+sims5_plot <- sims5[[1]]
+class(sims5_plot)
+#This pivot_wider is a stopgap because the original simulations were
+# not run using run_sims and were analyzed in the wider format
+sims5 <- pivot_wider(sims5_plot, names_from = Pop, values_from = Density)
+
+#Make plots
+for (my_run in unique(sims5_plot$uniq_run)) {
+  dir.create("./Celia/sims5_plots/", showWarnings = FALSE)
+  tiff(paste("./Celia/sims5_plots/", my_run, ".tiff", sep = ""),
+       width = 4, height = 4, units = "in", res = 200)
+  print(ggplot(data = sims5_plot[sims5_plot$uniq_run == my_run &
+                                       sims5_plot$Pop != "PI", ],
+               aes(x = time, y = Density + 10, color = Pop)) +
+          geom_line(lwd = 1.5, alpha = 1/2) +
+          scale_color_manual(values = my_cols[c(8, 2, 3, 1)]) +
+          scale_y_continuous(trans = "log10") +
+          ggtitle(paste("Run #", my_run, sep = "")))
+  dev.off()
+}
+
+group_sims5 <- dplyr::group_by(sims5, uniq_run, a, b, c, K, tau, r)
+group_sims5
+
+sum_sims5 <- dplyr::summarise(group_sims5, maximum_B = max(B),
+                                  maxtime = time[B == maximum_B])
+
+# This step is useful to combine to data frames that have interesting columns
+# that we want to plot together
+joined_sims5 <- left_join(sum_sims5, bvals)
+View(joined_sims5)
+
+## Plot joined_sims3BIG2
+ggplot(data = joined_sims5, aes(x = tau, y = maxtime, colour = log10(b))) +
+  geom_point(size = 3, alpha = 1/2) +
+  facet_grid(tradeslope ~ tradeintercept)
+#scale_y_continuous(trans = "log10")
+
+# Let's find the minimum maxtime and the average optimal tau for this plot
+group_sims5 <- dplyr::group_by(joined_sims5, tradeintercept, tradeslope)
+sum_sims5 <- dplyr::summarise(group_sims5, minmaxtime = min(maxtime),
+                                  average_optimal_tau = mean(tau[maxtime == minmaxtime]),
+                                  slope = lm(maxtime[tau > minmaxtime] ~
+                                               tau[tau > minmaxtime])$coefficients[2],
+                                  intercept = lm(maxtime[tau > minmaxtime] ~
+                                                   tau[tau > minmaxtime])$coefficients[1])
+
+sum_sims5
+
+#Let's plot sum_sims3BIG2 with its slope
+ggplot(data = joined_sims5, aes(x = tau, y = maxtime, colour = log10(b))) +
+  geom_point(size = 3, alpha = 1/2) +
+  geom_abline(data = sum_sims5, 
+              mapping = aes(slope = slope, intercept = intercept)) +
+  facet_grid(tradeslope ~ tradeintercept)
+#scale_y_continuous(trans = "log10") +
+
+#Let's plot the different columns in sum_sims3BIG2
+ggplot(data = sum_sims5, aes(x = tradeslope, y = average_optimal_tau,
+                                 colour = as.factor(tradeintercept))) +
+  geom_point(size = 3, alpha = 1/2) +
+  geom_line(data = sum_sims5, aes(x = tradeslope, y = average_optimal_tau, 
+                                      color = as.factor(tradeintercept)))
