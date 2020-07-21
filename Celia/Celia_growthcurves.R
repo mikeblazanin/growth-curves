@@ -757,13 +757,56 @@ sum_sims2_predicted <- data.frame(extin_time_pred = predict(lm_fit, sum_sims2),
 sum_sims2_predicted
 
 # This is the predicted line of multiple linear regressions
-ggplot(data = sum_sims2, aes(x = log10(b), y = extin_time, 
+ggplot(data = sum_sims2, aes(x = log10(b), y = maxtime, 
                              color = as.factor(log10(a)))) +
   geom_point() +
   geom_line(data = sum_sims2_predicted, aes(x = log10(b), y = extin_time_pred, 
                                             color = as.factor(log10(a)))) +
   facet_grid(. ~ tau)
 
+#Plot maxtime using contours
+ggplot(data = sum_sims2, aes(x = log10(b), 
+                             y = log10(tau), 
+                             z = -maxtime)) +
+  geom_contour_filled() +
+  facet_grid(~a) +
+  ggtitle("maxtime")
+
+ggplot(data = sum_sims2, aes(x = log10(tau), 
+                             y = log10(a), 
+                             z = -maxtime)) +
+  geom_contour_filled() +
+  facet_grid(~b) +
+  ggtitle("maxtime")
+
+ggplot(data = sum_sims2, aes(x = log10(a), 
+                             y = log10(b), 
+                             z = -maxtime)) +
+  geom_contour_filled() +
+  facet_grid(~tau) +
+  ggtitle("maxtime")
+
+#Plot extin time using contours
+ggplot(data = sum_sims2, aes(x = log10(b), 
+                             y = log10(tau), 
+                             z = -log10(extin_time))) +
+  geom_contour_filled() +
+  facet_grid(~a) +
+  ggtitle("extinction time")
+
+ggplot(data = sum_sims2, aes(x = log10(tau), 
+                             y = log10(a), 
+                             z = -log10(extin_time))) +
+  geom_contour_filled() +
+  facet_grid(~b) +
+  ggtitle("extinction time")
+
+ggplot(data = sum_sims2, aes(x = log10(a), 
+                             y = log10(b), 
+                             z = -log10(extin_time))) +
+  geom_contour_filled() +
+  facet_grid(~tau) +
+  ggtitle("extinction time")
 
 
 ## Let's run sims3 ----
