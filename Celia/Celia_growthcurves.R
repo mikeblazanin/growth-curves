@@ -765,12 +765,19 @@ ggplot(data = sum_sims2, aes(x = log10(b), y = maxtime,
   facet_grid(. ~ tau)
 
 #Plot maxtime using contours
-ggplot(data = sum_sims2, aes(x = log10(b), 
-                             y = log10(tau), 
+ggplot(data = sum_sims2, aes(y = log10(b), 
+                             x = log10(tau), 
                              z = -maxtime)) +
   geom_contour_filled() +
   facet_grid(~a) +
-  ggtitle("maxtime")
+  labs(title = "maxtime", subtitle = "a")
+
+ggplot(data = sum_sims2, aes(y = b, 
+                             x = tau, 
+                             z = -maxtime)) +
+  geom_contour_filled() +
+  facet_grid(~a) +
+  labs(title = "maxtime", subtitle = "a")
 
 ggplot(data = sum_sims2, aes(x = log10(tau), 
                              y = log10(a), 
