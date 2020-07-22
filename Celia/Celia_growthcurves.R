@@ -682,7 +682,6 @@ for (my_run in unique(sims2_plot$uniq_run)) {
 
 
 group_sims2 <- dplyr::group_by(sims2, uniq_run, a, b, c, K, tau, r)
-group_sims2
 
 sum_sims2 <- dplyr::summarise(group_sims2, maximum_B = max(B),                
                               maxtime = time[B == maximum_B],
@@ -1365,8 +1364,8 @@ summary(regi_sims4)
 
 
 
-## Let's run sims5, which wil be similar to sims3 but with new values of tradeslope
-## and tradeintercept
+## Let's run sims5 ----
+## It'll be similar to sims3 but with new values of tradeslope and tradeintercept
 # To calculate the values of tau evenly spaced from 11 to 120, we'll use the
 # following command:
 seq(from = 11, to = 120, length.out = 10)
@@ -1394,7 +1393,7 @@ colnames(bvals) <- c("tau", "tradeintercept", "tradeslope", "b")
 bvals
 class(bvals)
 
-bvals <- bvals <- subset(bvals, b > 0)
+bvals <- subset(bvals, b > 0)
 bvals
 
 # Now, we caculate it with the names changed
@@ -1489,3 +1488,22 @@ ggplot(data = sum_sims5, aes(x = tradeslope, y = average_optimal_tau,
   geom_point(size = 3, alpha = 1/2) +
   geom_line(data = sum_sims5, aes(x = tradeslope, y = average_optimal_tau, 
                                       color = as.factor(tradeintercept)))
+
+
+
+# Plot maxtime using colors + regression lines from sims5
+sum_sims6 <- subset(sum_sims2, a == 10**-10)
+sum_sims6
+
+ggplot(data = sum_sims6, aes(x = b, 
+                             y = tau, 
+                             z = -maxtime)) +
+  geom_contour_filled() +
+  ggtitle("maxtime") +
+  geom_abline(data = sum_sims5, 
+              mapping = aes(slope = tradeslope, intercept = tradeintercept) +
+  geom_line(sum_sims5, 
+            mapping = aes(x = average_optimal_tau, y = minmaxtime))) +
+  NULL
+
+sum_sims5
