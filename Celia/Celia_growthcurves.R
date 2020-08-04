@@ -20,7 +20,7 @@ derivs <- function(t, y, parms) {
   
   #Issue warning about too small/negative yvals (if warnings is 1)
   if (parms["warnings"]==1 & any(y < parms["thresh_min_dens"])) {
-    warning(paste("pop(s)", paste(which(y < parms["thresh_min_dens"]),
+    warning(paste("population(s)", paste(which(y < parms["thresh_min_dens"]),
                                   collapse = ","), 
                   "below thresh_min_dens, treating as 0"))
   }
@@ -29,38 +29,38 @@ derivs <- function(t, y, parms) {
   y[y < parms["thresh_min_dens"]] <- 0
   
   #Create output vector
-  dY <- c(S = 0, I = 0, P = 0)
+  dY <- c(Susceptible = 0, Infected = 0, Phage = 0)
   
   ##Calculate dS
   
-  #V3 (logistic dS/dt) (including competition from I pop)
+  #V3 (logistic dS/dt) (including competition from I population)
   #dS/dt = rS((K-S-c*I)/K) - aSP
-  dY["S"] <- parms["r"] * y["S"] *
-    ((parms["K"] - y["S"] - parms["c"] * y["I"])/parms["K"]) -
-    parms["a"] * y["S"] * y["P"]
+  dY["Susceptible"] <- parms["r"] * y["Susceptible"] *
+    ((parms["K"] - y["Susceptible"] - parms["c"] * y["Infected"])/parms["K"]) -
+    parms["a"] * y["Susceptible"] * y["Phage"]
   
   ##Calculate dI
   #dI/dt = aSP - aS(t-tau)P(t-tau)
   if (t < parms["tau"]) {
-    dY["I"] <- parms["a"] * y["S"] * y["P"]
+    dY["Infected"] <- parms["a"] * y["Susceptible"] * y["Phage"]
   } else {
-    dY["I"] <- parms["a"] * y["S"]*y["P"] -
+    dY["Infected"] <- parms["a"] * y["Susceptible"]*y["Phage"] -
       parms["a"] * lagvalue(t - parms["tau"], 1)*lagvalue(t - parms["tau"], 3)
   }
   
   ##Calculate dP
   #dP/dt = baS(t-tau)P(t-tau) - aSP
   if (t < parms["tau"]) {
-    dY["P"] <- -parms["a"] * y["S"] * y["P"]
+    dY["Phage"] <- -parms["a"] * y["Susceptible"] * y["Phage"]
   } else {
-    dY["P"] <- parms["b"] * parms["a"] *
+    dY["Phage"] <- parms["b"] * parms["a"] *
       lagvalue(t-parms["tau"], 1)*lagvalue(t-parms["tau"], 3) -
-      parms["a"]*y["S"]*y["P"]
+      parms["a"]*y["Susceptible"]*y["Phage"]
   }
   
-  #Issue warning about too large pop (if warnings is TRUE)
+  #Issue warning about too large population (if warnings is TRUE)
   if (parms["warnings"]==1 & any(y > 10**100)) {
-    warning(paste("pop(s)",paste(which(y > 10**100), collapse = ","), 
+    warning(paste("population(s)",paste(which(y > 10**100), collapse = ","), 
                   "exceed max limit, 10^100, returning dY = 0"))
   }
   dY[y > 10**100] <- 0
@@ -167,7 +167,7 @@ run_sims <- function(rvals,
   ybig <- data.frame("uniq_run" = rep(NA, 5*(1+init_time/init_stepsize)*num_sims),
                      "r" = NA, "a" = NA, "b" = NA, "tau" = NA, "K" = NA,
                      "c" = NA, "init_bact_dens" = NA, "init_moi" = NA,
-                     "equil" = NA, "time" = NA, "Pop" = as.character(NA), 
+                     "equil" = NA, "Time" = NA, "Population" = as.character(NA), 
                      "Density" = NA, stringsAsFactors = F)
   
   for (i in 1:nrow(param_combos)) { #i acts as the uniq_run counter
@@ -181,9 +181,9 @@ run_sims <- function(rvals,
     my_moi <- param_combos$init_moi_vals[i]
     
     #Define pops & parameters
-    yinit <- c(S = my_init_bact,
-               I = 0,
-               P = my_init_bact*my_moi)
+    yinit <- c(Susceptible = my_init_bact,
+               Infected = 0,
+               Phage = my_init_bact*my_moi)
     params <- c(r = myr, a = mya, b = myb, tau = mytau,
                 K = myk, c = myc,
                 warnings = 0, thresh_min_dens = 10**-100)
@@ -247,23 +247,23 @@ run_sims <- function(rvals,
         #If it was successful, check for equilibrium
       } else if (yout_list[[1]] == 0) {
         #First drop all rows with nan
-        yout_list[[2]] <- yout_list[[2]][!(is.nan(yout_list[[2]]$S) |
-                                             is.nan(yout_list[[2]]$I) |
-                                             is.nan(yout_list[[2]]$P)), ]
+        yout_list[[2]] <- yout_list[[2]][!(is.nan(yout_list[[2]]$Susceptible) |
+                                             is.nan(yout_list[[2]]$Infected) |
+                                             is.nan(yout_list[[2]]$Phage)), ]
         
         #S and I both at equil, we're done
-        if (yout_list[[2]]$S[nrow(yout_list[[2]])] < min_dens & 
-            yout_list[[2]]$I[nrow(yout_list[[2]])] < min_dens) {
+        if (yout_list[[2]]$Susceptible[nrow(yout_list[[2]])] < min_dens & 
+            yout_list[[2]]$Infected[nrow(yout_list[[2]])] < min_dens) {
           keep_running <- FALSE
           at_equil <- TRUE
           #S not at equil, need more time
-        } else if (yout_list[[2]]$S[nrow(yout_list[[2]])] >= min_dens) { 
+        } else if (yout_list[[2]]$Susceptible[nrow(yout_list[[2]])] >= min_dens) { 
           j <- j+1
           #I not at equil (but S is because above check failed),
           #   first we'll lengthen the simulation
           #    (to make sure it was long enough to catch the last burst)
           #   then we'll start shrinking our step size
-        } else if (yout_list[[2]]$I[nrow(yout_list[[2]])] >= min_dens) {
+        } else if (yout_list[[2]]$Infected[nrow(yout_list[[2]])] >= min_dens) {
           if (i_only_pos_times < 1) {
             j <- j+1
             i_only_pos_times <- i_only_pos_times+1
@@ -277,9 +277,9 @@ run_sims <- function(rvals,
     #Once end conditions triggered, if run succeeded
     if(yout_list[[1]] == 0 | yout_list[[1]] == 2) {
       #Calculate all bacteria (B)
-      yout_list[[2]]$B <- yout_list[[2]]$S + yout_list[[2]]$I
+      yout_list[[2]]$All <- yout_list[[2]]$Susceptible + yout_list[[2]]$Infected
       #Calculate all phage (PI)
-      yout_list[[2]]$PI <- yout_list[[2]]$P + yout_list[[2]]$I
+      yout_list[[2]]$PhageInfected <- yout_list[[2]]$Phage + yout_list[[2]]$Infected
       
       #Reshape, add parameters, and fill into ybig in right rows
       ybig[((i-1)*5*(1+init_time/init_stepsize)+1):
@@ -291,7 +291,7 @@ run_sims <- function(rvals,
               data.table::melt(data = data.table::as.data.table(yout_list[[2]]), 
                                id.vars = c("time"),
                                value.name = "Density", 
-                               variable.name = "Pop",
+                               variable.name = "Population",
                                variable.factor = FALSE))
       
       #If the run failed
@@ -332,18 +332,18 @@ run_sims <- function(rvals,
   
   #Code for visualizing while debugging
   # if (F) {
-  #   #Code for plotting population sizes over time
+  #   #Code for plotting population sizes over Time
   #   ymelt <- reshape2::melt(data = as.data.frame(yout_list[[2]]), 
-  #                           id = c("time"),
+  #                           id = c("Time"),
   #                           value.name = "Density", 
-  #                           variable.name = "Pop")
+  #                           variable.name = "Population")
   #   
   #   ggplot(data = ymelt, 
-  #          aes(x = time, y = Density+10, color = Pop)) +
+  #          aes(x = Time, y = Density+10, color = Population)) +
   #     geom_line(lwd = 1.5, alpha = 1) + 
   #     scale_y_continuous(trans = "log10") +
-  #     scale_x_continuous(breaks = seq(from = 0, to = max(ymelt$time), 
-  #                                     by = round(max(ymelt$time)/10))) +
+  #     scale_x_continuous(breaks = seq(from = 0, to = max(ymelt$Time), 
+  #                                     by = round(max(ymelt$Time)/10))) +
   #     geom_hline(yintercept = 10, lty = 2) +
   #     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   #     NULL
@@ -423,7 +423,7 @@ class(bigFINAL_plot)
 
 #This pivot_wider is a stopgap because the original simulations were
 # not run using run_sims and were analyzed in the wider format
-bigFINAL <- pivot_wider(bigFINAL_plot, names_from = Pop, values_from = Density)
+bigFINAL <- pivot_wider(bigFINAL_plot, names_from = Population, values_from = Density)
 
 #Make plots
 for (my_run in unique(bigFINAL_plot$uniq_run)) {
@@ -431,8 +431,8 @@ for (my_run in unique(bigFINAL_plot$uniq_run)) {
   tiff(paste("./Celia/bigFINAL_plots/", my_run, ".tiff", sep = ""),
              width = 4, height = 4, units = "in", res = 200)
   print(ggplot(data = bigFINAL_plot[bigFINAL_plot$uniq_run == my_run &
-                                      bigFINAL_plot$Pop != "PI", ],
-               aes(x = time, y = Density + 10, color = Pop)) +
+                                      bigFINAL_plot$Population != "PI", ],
+               aes(x = time, y = Density + 10, color = Population)) +
           geom_line(lwd = 1.5, alpha = 1/2) +
           scale_color_manual(values = my_cols[c(8, 2, 3, 1)]) +
           scale_y_continuous(trans = "log10") +
@@ -513,9 +513,8 @@ length(sims1)
 # When we use [] means that the output will be a list, while when we use [[]], means
 # that it'll be a dataframe (explanation with trains and their cars).
 class(sims1[[1]])
-sims1[1]
-sims1[[1]]
-table(sims1[[1]]$Pop)
+sims1
+table(sims1[[1]]$Population)
 
 # By chencking group 2 and 3 we see if there has been any error: simulations that 
 # didn'r reach the equilibrium (2), and simulations that failed (3).
@@ -524,25 +523,31 @@ sims1[[3]]
 
 ## Notice that the summarize will be slightly different since the data has been
 ## pivot_longer'd. So, we have to use the density column and make a subset where 
-## "Pop" = B
+## "Population" = B
 sims1_plot <- sims1[[1]]
 class(sims1_plot)
 #This pivot_wider is a stopgap because the original simulations were
 # not run using run_sims and were analyzed in the wider format
-sims1 <- pivot_wider(sims1_plot, names_from = Pop, values_from = Density)
+sims1 <- pivot_wider(sims1_plot, names_from = Population, values_from = Density)
 
+#Rearrange the legend in the order we want
+sims1_plot$Population <- factor(sims1_plot$Population, levels = c("Susceptible",
+                                                                  "Infected",
+                                                                  "Phage",
+                                                                  "All"))
+View(sims1_plot)
 #Make plots
 for (my_run in unique(sims1_plot$uniq_run)) {
   dir.create("./Celia/sims1_plots/", showWarnings = FALSE)
   tiff(paste("./Celia/sims1_plots/", my_run, ".tiff", sep = ""),
        width = 4, height = 4, units = "in", res = 200)
   print(ggplot(data = sims1_plot[sims1_plot$uniq_run == my_run &
-                                      sims1_plot$Pop != "PI", ],
-               aes(x = time, y = Density + 10, color = Pop)) +
+                                      sims1_plot$Population != "PhageInfected", ],
+               aes(x = Time, y = Density + 10, color = Population)) +
           geom_line(lwd = 1.5, alpha = 1/2) +
           scale_color_manual(values = my_cols[c(8, 2, 3, 1)]) +
           scale_y_continuous(trans = "log10") +
-          ggtitle(paste("Run #", my_run, sep = "")))
+          theme_bw())
   dev.off()
 }
 
@@ -552,14 +557,14 @@ group_sims1 <- dplyr::group_by(sims1, uniq_run, b, tau, a, r, K, c)
 group_sims1
 class(group_sims1)
 
-sum_sims1 <- dplyr::summarise(group_sims1, maximum_B = max(B),                
-                              maxtime = time[B == maximum_B],
-                              extin_time = time[min(which(time > maxtime & B < 10**4))],
-                              slope = lm(log10(B[time < maxtime & B < 0.1*K]) ~ 
-                                           time[time < maxtime & B < 0.1*K])$coefficients[2],
-                              intercept = lm(log10(B[time < maxtime & B < 0.1*K]) ~ 
-                                               time[time < maxtime & B < 0.1*K])$coefficients[1])
-sum_sims1
+sum_sims1 <- dplyr::summarise(group_sims1, maximum_B = max(All),                
+                              maxtime = Time[All == maximum_B],
+                              extin_time = Time[min(which(Time > maxtime & All < 10**4))],
+                              slope = lm(log10(All[Time < maxtime & All < 0.1*K]) ~ 
+                                           Time[Time < maxtime & All < 0.1*K])$coefficients[2],
+                              intercept = lm(log10(All[Time < maxtime & All < 0.1*K]) ~ 
+                                               Time[Time < maxtime & All < 0.1*K])$coefficients[1])
+View(sum_sims1)
 
 for (row in 1:nrow(sum_sims1)) {
   bigfinal_rows <- which(sum_sims1$b[row] == group_sims1$b & 
@@ -572,7 +577,7 @@ for (row in 1:nrow(sum_sims1)) {
   tiff(paste("./Celia/Sims1_slopeplots/", sum_sims1[row, "uniq_run"], ".tiff", sep = ""),
        width = 6, height = 6, units = "cm", res = 150)
   print(ggplot(data = group_sims1[bigfinal_rows, ],
-               aes(x = time, y = B)) +
+               aes(x = Time, y = All)) +
           geom_line() +
           scale_y_continuous(trans = "log10") +
           geom_abline(slope = sum_sims1$slope[row], intercept = sum_sims1$intercept[row],
@@ -690,7 +695,7 @@ sum_sims2 <- dplyr::summarise(group_sims2, maximum_B = max(B),
                                            time[time < maxtime & B < 0.1*K])$coefficients[2],
                               intercept = lm(log10(B[time < maxtime & B < 0.1*K]) ~ 
                                                time[time < maxtime & B < 0.1*K])$coefficients[1])
-sum_sims2
+View(sum_sims2)
 
 for (row in 1:nrow(sum_sims2)) {
   bigfinal_rows <- which(sum_sims2$b[row] == group_sims2$b & 
@@ -719,11 +724,16 @@ for (row in 1:nrow(sum_sims2)) {
 }
 
 ## Let's make the ggplot for this data
-ggplot(data = sum_sims2, aes(x = log10(tau), y = extin_time, color = as.factor(a),
-                             shape = as.factor(K))) +
-  geom_point(size = 3, alpha = 1/2) +
-  facet_grid(b ~ .) +
-  geom_smooth(method = "lm")
+ggplot(data = sum_sims2, aes(x = tau, y = extin_time, color = as.factor(b))) +
+  geom_point(size = 2.5, alpha = 1) +
+  facet_grid(. ~ a) +
+  theme(legend.title = element_text("Burst Size")) +
+  xlab("Lysis Time") +
+  ylab("Extinction Time") +
+  theme_bw() +
+  scale_x_continuous(trans = "log10") +
+  scale_color_manual(values = my_cols) +
+  NULL
 
 # How to see how the parameters affect maxtime as if they were INDEPENDENT from 
 # each other?
@@ -745,25 +755,30 @@ summary(regi_sims2)
 # Read data set
 sum_sims2
 # Create multiple linear regressions
-lm_fit <- lm(extin_time ~ log10(b)*log10(a)*log10(tau), data = sum_sims2)
+lm_fit <- lm(maxtime ~ log10(b)*log10(a)*log10(tau), data = sum_sims2)
 summary(lm_fit)
 # Save predictions of the model in the new data frame together with the variable
 # you want to plot against
-sum_sims2_predicted <- data.frame(extin_time_pred = predict(lm_fit, sum_sims2),
+sum_sims2_predicted <- data.frame(maxtime_pred = predict(lm_fit, sum_sims2),
                                   tau = sum_sims2$tau,
                                   b = sum_sims2$b,
                                   a = sum_sims2$a)
 sum_sims2_predicted
 
 # This is the predicted line of multiple linear regressions
-ggplot(data = sum_sims2, aes(x = log10(b), y = maxtime, 
-                             color = as.factor(log10(a)))) +
-  geom_point() +
-  geom_line(data = sum_sims2_predicted, aes(x = log10(b), y = extin_time_pred, 
-                                            color = as.factor(log10(a)))) +
-  facet_grid(. ~ tau)
+ggplot(data = sum_sims2, aes(x = log10(tau), y = maxtime, 
+                             color = as.factor(b))) +
+  geom_point(size = 2.5, alpha = 0.7) +
+  geom_line(data = sum_sims2_predicted, aes(x = log10(tau), y = maxtime_pred, 
+                                            color = as.factor(b))) +
+  facet_grid(. ~ a) +
+  theme(legend.title = element_text("Burst Size")) +
+  xlab("Lysis Time") +
+  ylab("Maximum Time") +
+  theme_bw()
 
 #Plot maxtime using contours
+
 ggplot(data = sum_sims2, aes(y = log10(b), 
                              x = log10(tau), 
                              z = -maxtime)) +
@@ -771,48 +786,69 @@ ggplot(data = sum_sims2, aes(y = log10(b),
   facet_grid(~a) +
   labs(title = "maxtime", subtitle = "a")
 
+#1
 ggplot(data = sum_sims2, aes(y = b, 
-                             x = tau, 
-                             z = -maxtime)) +
-  geom_contour_filled() +
+                             x = tau)) +
+  geom_contour_filled(aes(z = - maxtime)) +
   facet_grid(~a) +
-  labs(title = "maxtime", subtitle = "a")
-
-ggplot(data = sum_sims2, aes(x = log10(tau), 
-                             y = log10(a), 
-                             z = -maxtime)) +
-  geom_contour_filled() +
+  theme_bw() +
+  labs(title = "Maximum Time", subtitle = "Infection Rate") +
+  ylab("Burst Size") +
+  xlab("Lysis Time") +
+  NULL
+  
+#2
+ggplot(data = sum_sims2, aes(x = tau, 
+                             y = log10(a))) +
+  geom_contour_filled(aes(z = - maxtime)) +
   facet_grid(~b) +
-  ggtitle("maxtime")
+  theme_bw() +
+  labs(title = "Maximum Time", subtitle = "Burst Size") +
+  ylab("Infectio Rate") +
+  xlab("Lysis Time") +
+  NULL
 
-ggplot(data = sum_sims2, aes(x = log10(a), 
-                             y = log10(b), 
-                             z = -maxtime)) +
-  geom_contour_filled() +
+#3
+ggplot(data = sum_sims2, aes(y = b, 
+                             x = log10(a))) +
+  geom_contour_filled(aes(z = maxtime)) +
   facet_grid(~tau) +
-  ggtitle("maxtime")
+  labs(title = "Maximum Time", subtitle = "Lysis Time") +
+  ylab("Busrt Size") +
+  xlab("Infection Rate") +
+  #scale_x_continuous(trans = "log10")
+  NULL
 
 #Plot extin time using contours
-ggplot(data = sum_sims2, aes(x = log10(b), 
-                             y = log10(tau), 
-                             z = -log10(extin_time))) +
-  geom_contour_filled() +
+#1
+ggplot(data = sum_sims2, aes(y = b, 
+                             x = tau)) +
+  geom_contour_filled(aes(z = log10(extin_time))) +
   facet_grid(~a) +
-  ggtitle("extinction time")
+  labs(title = "Extinction Time", subtitle = "Infection Rate") +
+  ylab("Burst Size") +
+  xlab("Lysis Time") +
+  NULL
 
-ggplot(data = sum_sims2, aes(x = log10(tau), 
-                             y = log10(a), 
-                             z = -log10(extin_time))) +
-  geom_contour_filled() +
+#2
+ggplot(data = sum_sims2, aes(x = tau, 
+                             y = log10(a))) +
+  geom_contour_filled(aes(z = log10(extin_time))) +
   facet_grid(~b) +
-  ggtitle("extinction time")
+  labs(title = "Extinction Time", subtitle = "Burst Size") +
+  ylab("Infection Rate") +
+  xlab("Lysis Time") +
+  NULL
 
+#3
 ggplot(data = sum_sims2, aes(x = log10(a), 
-                             y = log10(b), 
-                             z = -log10(extin_time))) +
-  geom_contour_filled() +
+                             y = b)) +
+  geom_contour_filled(aes(z = log10(extin_time))) +
   facet_grid(~tau) +
-  ggtitle("extinction time")
+  labs(title = "Extinction Time", subtitle = "Lysis Time") +
+  ylab("Burst Size") +
+  xlab("Infection Rate") +
+  NULL
 
 
 ## Let's run sims3 ----
@@ -871,7 +907,7 @@ sims3.1[[2]]
 sims3.1[[3]]
 
 ## Let's group_by these simulations
-sub_sims3.1 <- subset(sims3.1[[1]], Pop == "B")
+sub_sims3.1 <- subset(sims3.1[[1]], Population == "B")
 class(sub_sims3.1)
 
 group_sims3.1 <- dplyr::group_by(sub_sims3.1, uniq_run, a, b, c, K, tau, r)
@@ -948,7 +984,7 @@ sims3.2[[2]]
 sims3.2[[3]]
 
 ## Let's group_by these simulations
-sub_sims3.2 <- subset(sims3.2[[1]], Pop == "B")
+sub_sims3.2 <- subset(sims3.2[[1]], Population == "B")
 class(sub_sims3.2)
 
 group_sims3.2 <- dplyr::group_by(sub_sims3.2, uniq_run, a, b, c, K, tau, r)
@@ -1024,7 +1060,7 @@ sims3.3[[2]]
 sims3.3[[3]]
 
 ## Let's group_by these simulations
-sub_sims3.3 <- subset(sims3.3[[1]], Pop == "B")
+sub_sims3.3 <- subset(sims3.3[[1]], Population == "B")
 class(sub_sims3.3)
 
 group_sims3.3 <- dplyr::group_by(sub_sims3.3, uniq_run, a, b, c, K, tau, r)
@@ -1180,7 +1216,7 @@ sims3BIG2_plot <- sims3BIG2[[1]]
 class(sims3BIG2_plot)
 #This pivot_wider is a stopgap because the original simulations were
 # not run using run_sims and were analyzed in the wider format
-sims3BIG2 <- pivot_wider(sims3BIG2_plot, names_from = Pop, values_from = Density)
+sims3BIG2 <- pivot_wider(sims3BIG2_plot, names_from = Population, values_from = Density)
 
 #Make plots
 for (my_run in unique(sims3BIG2_plot$uniq_run)) {
@@ -1188,8 +1224,8 @@ for (my_run in unique(sims3BIG2_plot$uniq_run)) {
   tiff(paste("./Celia/sims3BIG2_plots/", my_run, ".tiff", sep = ""),
        width = 4, height = 4, units = "in", res = 200)
   print(ggplot(data = sims3BIG2_plot[sims3BIG2_plot$uniq_run == my_run &
-                                   sims3BIG2_plot$Pop != "PI", ],
-               aes(x = time, y = Density + 10, color = Pop)) +
+                                   sims3BIG2_plot$Population != "PI", ],
+               aes(x = time, y = Density + 10, color = Population)) +
           geom_line(lwd = 1.5, alpha = 1/2) +
           scale_color_manual(values = my_cols[c(8, 2, 3, 1)]) +
           scale_y_continuous(trans = "log10") +
@@ -1208,8 +1244,8 @@ sum_sims3BIG2 <- dplyr::summarise(group_sims3BIG2, maximum_B = max(B),
 bvals$tau <- round(bvals$tau, digits = 2)
 sum_sims3BIG2$tau <- round(sum_sims3BIG2$tau, digits = 2)
 
-bvals$b <- round(bvals$b, digits = 3)
-sum_sims3BIG2$b <- round(sum_sims3BIG2$b, digits = 3)
+bvals$b <- round(bvals$b, digits = 2)
+sum_sims3BIG2$b <- round(sum_sims3BIG2$b, digits = 2)
 
 class(sum_sims3BIG2$tau)
 
@@ -1282,14 +1318,14 @@ length(sims4)
 sims4[[1]]
 sims4[[2]]
 sims4[[3]]
-table(sims4[[1]]$Pop)
+table(sims4[[1]]$Population)
 
 ## Now that we're sure that everything went well, we'll strat summarizing the data
 sims4_plot <- sims4[[1]]
 class(sims4_plot)
 #This pivot_wider is a stopgap because the original simulations were
 # not run using run_sims and were analyzed in the wider format
-sims4 <- pivot_wider(sims4_plot, names_from = Pop, values_from = Density)
+sims4 <- pivot_wider(sims4_plot, names_from = Population, values_from = Density)
 
 #Make plots
 for (my_run in unique(sims4_plot$uniq_run)) {
@@ -1297,8 +1333,8 @@ for (my_run in unique(sims4_plot$uniq_run)) {
   tiff(paste("./Celia/sims4_plots/", my_run, ".tiff", sep = ""),
        width = 4, height = 4, units = "in", res = 200)
   print(ggplot(data = sims4_plot[sims4_plot$uniq_run == my_run &
-                                   sims4_plot$Pop != "PI", ],
-               aes(x = time, y = Density + 10, color = Pop)) +
+                                   sims4_plot$Population != "PI", ],
+               aes(x = time, y = Density + 10, color = Population)) +
           geom_line(lwd = 1.5, alpha = 1/2) +
           scale_color_manual(values = my_cols[c(8, 2, 3, 1)]) +
           scale_y_continuous(trans = "log10") +
@@ -1444,7 +1480,7 @@ for (my_run in unique(sims5_plot$uniq_run)) {
   tiff(paste("./Celia/sims5_plots/", my_run, ".tiff", sep = ""),
        width = 4, height = 4, units = "in", res = 200)
   print(ggplot(data = sims5_plot[sims5_plot$uniq_run == my_run &
-                                       sims5_plot$Pop != "PI", ],
+                                       sims5_plot$Po != "PI", ],
                aes(x = time, y = Density + 10, color = Pop)) +
           geom_line(lwd = 1.5, alpha = 1/2) +
           scale_color_manual(values = my_cols[c(8, 2, 3, 1)]) +
@@ -1457,7 +1493,18 @@ group_sims5 <- dplyr::group_by(sims5, uniq_run, a, b, c, K, tau, r)
 group_sims5
 
 sum_sims5 <- dplyr::summarise(group_sims5, maximum_B = max(B),
-                                  maxtime = time[B == maximum_B])
+                                  maxtime = time[B == maximum_B],
+                              extin_time = time[min(which(time > maxtime & B < 10**4))])
+## What we do next is to have the same number of digits in the columns tau and b
+## from both dataframes bvals and sum_sims3BIG2. Otherwise, there's a rounding
+## error
+bvals$tau <- round(bvals$tau, digits = 2)
+sum_sims5$tau <- round(sum_sims5$tau, digits = 2)
+
+bvals$b <- round(bvals$b, digits = 3)
+sum_sims5$b <- round(sum_sims5$b, digits = 3)
+
+class(sum_sims5$tau)
 
 # This step is useful to combine to data frames that have interesting columns
 # that we want to plot together
@@ -1465,28 +1512,36 @@ joined_sims5 <- left_join(sum_sims5, bvals)
 View(joined_sims5)
 
 ## Plot joined_sims3BIG2
-ggplot(data = joined_sims5, aes(x = tau, y = maxtime, colour = log10(b))) +
+ggplot(data = joined_sims5, aes(x = tau, y = extin_time, colour = log10(b))) +
   geom_point(size = 3, alpha = 1/2) +
-  facet_grid(tradeslope ~ tradeintercept)
+  facet_grid(tradeslope ~ tradeintercept) +
+  theme_bw() +
+  xlab("Lysis Time") +
+  ylab("Extintion Time") +
+  theme(legend.title = element_text("Burst Size"))
 #scale_y_continuous(trans = "log10")
 
 # Let's find the minimum maxtime and the average optimal tau for this plot
 group_sims5 <- dplyr::group_by(joined_sims5, tradeintercept, tradeslope)
 sum_sims5 <- dplyr::summarise(group_sims5, minmaxtime = min(maxtime),
                                   average_optimal_tau = mean(tau[maxtime == minmaxtime]),
-                                  slope = lm(maxtime[tau > minmaxtime] ~
-                                               tau[tau > minmaxtime])$coefficients[2],
-                                  intercept = lm(maxtime[tau > minmaxtime] ~
-                                                   tau[tau > minmaxtime])$coefficients[1])
+                              slope = lm(extin_time[tau > 40] ~
+                                           tau[tau > 40])$coefficients[2],
+                              intercept = lm(extin_time[tau > 40] ~
+                                               tau[tau > 40])$coefficients[1])
 
 sum_sims5
 
 #Let's plot sum_sims3BIG2 with its slope
-ggplot(data = joined_sims5, aes(x = tau, y = maxtime, colour = log10(b))) +
+ggplot(data = joined_sims5, aes(x = tau, y = extin_time, colour = log10(b), 
+                                theme(legend.title = element_text("Burst Size")))) +
   geom_point(size = 3, alpha = 1/2) +
   geom_abline(data = sum_sims5, 
               mapping = aes(slope = slope, intercept = intercept)) +
-  facet_grid(tradeslope ~ tradeintercept)
+  facet_grid(tradeslope ~ tradeintercept) +
+  theme_bw() +
+  xlab("Tau") +
+  ylab("Extintion Time") 
 #scale_y_continuous(trans = "log10") +
 
 #Let's plot the different columns in sum_sims3BIG2
@@ -1496,21 +1551,54 @@ ggplot(data = sum_sims5, aes(x = tradeslope, y = average_optimal_tau,
   geom_line(data = sum_sims5, aes(x = tradeslope, y = average_optimal_tau, 
                                       color = as.factor(tradeintercept)))
 
+# Let's add a column to sum_sims5 that gives us the value of average_optimal_b. ----
+# We'll calculate it by using the formula b = slope*(tau-intercept).
 
+sum_sims5$average_optimal_b <- 
+  sum_sims5$tradeslope*(sum_sims5$average_optimal_tau - sum_sims5$tradeintercept)
+sum_sims5
 
 # Plot maxtime using colors + regression lines from sims5
 sum_sims6 <- subset(sum_sims2, a == 10**-10)
 sum_sims6
 
-ggplot(data = sum_sims6, aes(x = b, 
-                             y = tau, 
-                             z = -maxtime)) +
-  geom_contour_filled() +
+ggplot(data = sum_sims6, aes(x = tau, 
+                             y = b)) +
+  geom_contour_filled(aes(z = maxtime)) +
+  scale_fill_viridis_d(direction = -1, alpha = 0.85) +
   ggtitle("maxtime") +
   geom_abline(data = sum_sims5, 
-              mapping = aes(slope = tradeslope, intercept = tradeintercept) +
-  geom_line(sum_sims5, 
-            mapping = aes(x = average_optimal_tau, y = minmaxtime))) +
+              mapping = aes(slope = tradeslope, intercept = (-tradeintercept)*tradeslope, 
+                            color = as.factor(tradeintercept)), size = 1) +
+  geom_point(data = sum_sims5, 
+            mapping = aes(x = average_optimal_tau, y = average_optimal_b,
+                          color = as.factor(tradeintercept)), size = 3) +
+  scale_color_manual(values = my_cols[c(8, 6, 4)]) +
+  theme_bw() +
+  xlab("Lysis Time") +
+  ylab("Burst Size") +
+  #ylim(-600, 800) +
+  #xlim(0, NA) +
   NULL
 
-sum_sims5
+# Let's do the same but plotting extintion time using colors + regression lines
+# from sims5
+ggplot(data = sum_sims6, aes(x = tau, 
+                             y = b)) +
+  geom_contour_filled(aes(z = extin_time)) +
+  scale_fill_viridis_d(direction = -1, alpha = 0.85) +
+  ggtitle("extintion time") +
+  geom_abline(data = sum_sims5, 
+              mapping = aes(slope = tradeslope, intercept = (-tradeintercept)*tradeslope, 
+                            color = as.factor(tradeintercept)), size = 1) +
+  geom_point(data = sum_sims5, 
+             mapping = aes(x = average_optimal_tau, y = average_optimal_b,
+                           color = as.factor(tradeintercept)), size = 3) +
+  scale_color_manual(values = my_cols[c(8, 6, 4)]) +
+  theme_bw() +
+  theme(legend.title = element_text("Extintion Time")) +
+  xlab("Lysis Time") +
+  ylab("Burst Size") +
+  #ylim(-600, 800) +
+  #xlim(0, NA) +
+  NULL
