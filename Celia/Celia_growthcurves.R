@@ -784,7 +784,18 @@ ggplot(data = sum_sims2, aes(y = log10(b),
                              z = -maxtime)) +
   geom_contour_filled() +
   facet_grid(~a) +
-  labs(title = "maxtime", subtitle = "a")
+  labs(title = "maxtime", subtitle = "a") +
+  #scale_fill_brewer(type = "div", palette = 1)
+  NULL
+
+ggplot(data = sum_sims2, aes(y = log10(b), 
+                             x = log10(tau), 
+                             z = -extin_time)) +
+  geom_contour_filled() +
+  facet_grid(~a) +
+  labs(title = "extin time", subtitle = "a") +
+  #scale_fill_brewer(type = "div", palette = 1)
+  NULL
 
 #1
 ggplot(data = sum_sims2, aes(y = b, 

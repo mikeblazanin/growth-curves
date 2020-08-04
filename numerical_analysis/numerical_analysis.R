@@ -36,6 +36,9 @@
 # Measure amount of time I is above S (and so I is more of B) – should be correlated w/ tau
 # Run w 2 P pops in competition. Compare outcome to indiv grow curves
 # Celia lab meeting?
+# Think about similar approach as Wang et al ’96 for our model
+# Think about superinfection parameter being included
+#   (simply a rescaling of a for already-infected cells)
 
 ## Import libraries ----
 
