@@ -824,6 +824,7 @@ ggplot(data = sum_sims2, aes(y = b,
                              x = log10(a))) +
   geom_contour_filled(aes(z = maxtime)) +
   facet_grid(~tau) +
+  theme_bw() +
   labs(title = "Maximum Time", subtitle = "Lysis Time") +
   ylab("Busrt Size") +
   xlab("Infection Rate") +
@@ -836,6 +837,7 @@ ggplot(data = sum_sims2, aes(y = b,
                              x = tau)) +
   geom_contour_filled(aes(z = log10(extin_time))) +
   facet_grid(~a) +
+  theme_bw() +
   labs(title = "Extinction Time", subtitle = "Infection Rate") +
   ylab("Burst Size") +
   xlab("Lysis Time") +
@@ -846,6 +848,7 @@ ggplot(data = sum_sims2, aes(x = tau,
                              y = log10(a))) +
   geom_contour_filled(aes(z = log10(extin_time))) +
   facet_grid(~b) +
+  theme_bw() +
   labs(title = "Extinction Time", subtitle = "Burst Size") +
   ylab("Infection Rate") +
   xlab("Lysis Time") +
@@ -856,6 +859,7 @@ ggplot(data = sum_sims2, aes(x = log10(a),
                              y = b)) +
   geom_contour_filled(aes(z = log10(extin_time))) +
   facet_grid(~tau) +
+  theme_bw() +
   labs(title = "Extinction Time", subtitle = "Lysis Time") +
   ylab("Burst Size") +
   xlab("Infection Rate") +
