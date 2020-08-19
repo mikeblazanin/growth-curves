@@ -535,7 +535,6 @@ sims1_plot$Population <- factor(sims1_plot$Population, levels = c("Susceptible",
                                                                   "Infected",
                                                                   "Phage",
                                                                   "All"))
-View(sims1_plot)
 #Make plots
 for (my_run in unique(sims1_plot$uniq_run)) {
   dir.create("./Celia/sims1_plots/", showWarnings = FALSE)
@@ -545,7 +544,7 @@ for (my_run in unique(sims1_plot$uniq_run)) {
                                       sims1_plot$Population != "PhageInfected", ],
                aes(x = Time, y = Density + 10, color = Population)) +
           geom_line(lwd = 1.5, alpha = 1/2) +
-          scale_color_manual(values = my_cols[c(8, 2, 3, 1)]) +
+          scale_color_manual(values = my_cols[c(2, 3, 1, 8)]) +
           scale_y_continuous(trans = "log10") +
           theme_bw())
   dev.off()
@@ -800,69 +799,88 @@ ggplot(data = sum_sims2, aes(y = log10(b),
 #1
 ggplot(data = sum_sims2, aes(y = b, 
                              x = tau)) +
-  geom_contour_filled(aes(z = - maxtime)) +
+  geom_contour_filled(aes(z = maxtime)) +
+  scale_fill_viridis_d(direction = -1) +
   facet_grid(~a) +
   theme_bw() +
   labs(title = "Maximum Time", subtitle = "Infection Rate") +
   ylab("Burst Size") +
   xlab("Lysis Time") +
+  scale_x_continuous(trans = "log10") +
+  scale_y_continuous(trans = "log10") +
   NULL
   
 #2
 ggplot(data = sum_sims2, aes(x = tau, 
-                             y = log10(a))) +
-  geom_contour_filled(aes(z = - maxtime)) +
+                             y = a)) +
+  geom_contour_filled(aes(z = maxtime)) +
+  scale_fill_viridis_d(direction = -1) +
   facet_grid(~b) +
   theme_bw() +
   labs(title = "Maximum Time", subtitle = "Burst Size") +
   ylab("Infectio Rate") +
   xlab("Lysis Time") +
+  scale_x_continuous(trans = "log10") +
+  scale_y_continuous(trans = "log10") +
   NULL
 
 #3
 ggplot(data = sum_sims2, aes(y = b, 
-                             x = log10(a))) +
+                             x = a)) +
   geom_contour_filled(aes(z = maxtime)) +
+  scale_fill_viridis_d(direction = -1) +
   facet_grid(~tau) +
   theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(title = "Maximum Time", subtitle = "Lysis Time") +
   ylab("Busrt Size") +
   xlab("Infection Rate") +
-  #scale_x_continuous(trans = "log10")
+  scale_x_continuous(trans = "log10") +
+  scale_y_continuous(trans = "log10") +
   NULL
 
 #Plot extin time using contours
 #1
 ggplot(data = sum_sims2, aes(y = b, 
                              x = tau)) +
-  geom_contour_filled(aes(z = log10(extin_time))) +
+  geom_contour_filled(aes(z = extin_time)) +
+  scale_fill_viridis_d(direction = -1) +
   facet_grid(~a) +
   theme_bw() +
   labs(title = "Extinction Time", subtitle = "Infection Rate") +
   ylab("Burst Size") +
   xlab("Lysis Time") +
+  scale_x_continuous(trans = "log10") +
+  scale_y_continuous(trans = "log10") +
   NULL
 
 #2
 ggplot(data = sum_sims2, aes(x = tau, 
-                             y = log10(a))) +
-  geom_contour_filled(aes(z = log10(extin_time))) +
+                             y = a)) +
+  geom_contour_filled(aes(z = extin_time)) +
+  scale_fill_viridis_d(direction = -1) +
   facet_grid(~b) +
   theme_bw() +
   labs(title = "Extinction Time", subtitle = "Burst Size") +
   ylab("Infection Rate") +
   xlab("Lysis Time") +
+  scale_x_continuous(trans = "log10") +
+  scale_y_continuous(trans = "log10") +
   NULL
 
 #3
-ggplot(data = sum_sims2, aes(x = log10(a), 
+ggplot(data = sum_sims2, aes(x = a, 
                              y = b)) +
-  geom_contour_filled(aes(z = log10(extin_time))) +
+  geom_contour_filled(aes(z = extin_time)) +
+  scale_fill_viridis_d(direction = -1) +
   facet_grid(~tau) +
   theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(title = "Extinction Time", subtitle = "Lysis Time") +
   ylab("Burst Size") +
   xlab("Infection Rate") +
+  scale_x_continuous(trans = "log10") +
+  scale_y_continuous(trans = "log10") +
   NULL
 
 
@@ -1527,14 +1545,15 @@ joined_sims5 <- left_join(sum_sims5, bvals)
 View(joined_sims5)
 
 ## Plot joined_sims3BIG2
-ggplot(data = joined_sims5, aes(x = tau, y = extin_time, colour = log10(b))) +
+ggplot(data = joined_sims5, aes(x = tau, y = maxtime, colour = b)) +
+  scale_color_continuous(trans = "log10") +
   geom_point(size = 3, alpha = 1/2) +
   facet_grid(tradeslope ~ tradeintercept) +
   theme_bw() +
   xlab("Lysis Time") +
-  ylab("Extintion Time") +
-  theme(legend.title = element_text("Burst Size"))
-#scale_y_continuous(trans = "log10")
+  ylab("Maximum Time") +
+  theme(legend.title = element_text("Burst Size")) +
+  NULL
 
 # Let's find the minimum maxtime and the average optimal tau for this plot
 group_sims5 <- dplyr::group_by(joined_sims5, tradeintercept, tradeslope)
