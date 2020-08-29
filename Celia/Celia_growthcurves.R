@@ -1,10 +1,130 @@
+# ONLY-BACTERIA curve
+## Define derivatives function ----
+derivs <- function(t, y, parms) {
+  #The derivs function must return the derivative of all the variables at a
+  # given time, in a list
+  
+  #Issue warning about too small/negative yvals (if warnings is 1)
+  if (parms["warnings"]==1 & any(y < parms["thresh_min_dens"])) {
+    warning(paste("pop(s)",
+                  paste(which(y < parms["thresh_min_dens"]), collapse = ","),
+                  "below thresh_min_dens, treating as 0"))
+  }
+  
+  #Set small/negative y values to 0 so they don't affect the dN's
+  y[y < parms["thresh_min_dens"]] <- 0
+  
+  #Create output vector
+  dY <- c(S = 0, I = 0, P = 0)
+  
+  ##Calculate dS
+  
+  #V3 (logistic dS/dt) (including competition from I pop)
+  #dS/dt = rS((K-S-c*I)/K) - aSP
+  dY["S"] <- parms["r"] * y["S"] * 
+    ((parms["K"] - y["S"] - parms["c"] * y["I"])/parms["K"]) - 
+    parms["a"] * y["S"] * y["P"]
+  
+  ##Calculate dI
+  #dI/dt = aSP - aS(t-tau)P(t-tau)
+  if (t < parms["tau"]) {
+    dY["I"] <- parms["a"] * y["S"] * y["P"]
+  } else {
+    dY["I"] <- parms["a"] * y["S"]*y["P"] - 
+      parms["a"] * lagvalue(t - parms["tau"], 1)*lagvalue(t - parms["tau"], 3)
+  }
+  
+  ##Calculate dP
+  #dP/dt = baS(t-tau)P(t-tau) - aSP
+  if (t < parms["tau"]) {
+    dY["P"] <- -parms["a"] * y["S"] * y["P"]
+  } else {
+    dY["P"] <- parms["b"] * parms["a"] * 
+      lagvalue(t-parms["tau"], 1)*lagvalue(t-parms["tau"], 3) - 
+      parms["a"]*y["S"]*y["P"]
+  }
+  
+  #Issue warning about too large pop (if warnings is TRUE)
+  if (parms["warnings"]==1 & any(y > 10**100)) {
+    warning(paste("pop(s)",
+                  paste(which(y > 10**100), collapse = ","),
+                  "exceed max limit, 10^100, returning dY = 0"))
+  }
+  dY[y > 10**100] <- 0
+  
+  #From documentation: The return value of func should be a list, whose first 
+  #element is a vector containing the derivatives of y with respect to time
+  return(list(dY))
+}
+
+yinit <- c(S = 10**6,
+           I = 0,
+           P = 0)
+params <- c(r = 0.04, 
+            a = 10**-10, 
+            b = 50, 
+            tau = 10,
+            K = 10**9,
+            c = 1,
+            warnings = 0, 
+            thresh_min_dens = 10**-100)
+times <- seq(from = 0, to = 500, by = 1)
+yout <- as.data.frame(
+  dede(y = yinit, times = times, func = derivs, parms = params))
+
+##Plot results ----
+head(yout)
+tidyr::pivot_longer(yout, c(S, I, P), names_to = "Population", values_to = "Density")
+# Fisrt, I tried this command above, but R said that Population and Density didn't exist
+# when trying to plot. That's why I tried what's below and it worked.
+
+library(tidyr)
+yout_plot <- pivot_longer(yout, c(S, I, P), names_to = "Population", values_to = "Density + 10")
+
+
+##We've reshaped the data. Now, we'll plot the density of the three populations over time
+tiff(paste("./Celia/", sep = ""),
+     width = 4, height = 4, units = "in", res = 200)
+print(ggplot(data = yout_plot, aes(x = time, y = Density + 10, color = Population)) +
+  geom_line(lwd = 1.5, alpha = 1/2) +
+  scale_color_manual(values = c("#56B4E9", "#009E73", "#E69F00", "#000000")) +
+    theme_bw() +
+  scale_y_continuous(trans = "log10")) +
+xlab("Time")
+dev.off()
+
+
+
+
+
+
+tiff(paste("./Celia/bigFINAL_plots/", my_run, ".tiff", sep = ""),
+     width = 4, height = 4, units = "in", res = 200)
+print(ggplot(data = bigFINAL_plot[bigFINAL_plot$uniq_run == my_run &
+                                    bigFINAL_plot$Population != "PI", ],
+             aes(x = time, y = Density + 10, color = Population)) +
+        geom_line(lwd = 1.5, alpha = 1/2) +
+        scale_color_manual(values = my_cols[c(8, 2, 3, 1)]) +
+        scale_y_continuous(trans = "log10") +
+        ggtitle(paste("Run #", my_run, sep = "")))
+dev.off()
+
+
+
+
+
+
+
+
+
+
+
 #Okabe and Ito 2008 colorblind-safe qualitative color scale ----
 my_cols <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
              "#D55E00", "#CC79A7", "#000000")
 scales::show_col(my_cols)
 
 ## Import libraries ----
-
 library(deSolve)
 library(tidyr)
 library(ggplot2)
@@ -801,9 +921,9 @@ ggplot(data = sum_sims2, aes(y = b,
                              x = tau)) +
   geom_contour_filled(aes(z = maxtime)) +
   scale_fill_viridis_d(direction = -1) +
-  facet_grid(~a) +
+  facet_grid(a~.) +
   theme_bw() +
-  labs(title = "Maximum Time", subtitle = "Infection Rate") +
+  labs(title = "Peak Time", subtitle = "Infection Rate") +
   ylab("Burst Size") +
   xlab("Lysis Time") +
   scale_x_continuous(trans = "log10") +
@@ -815,9 +935,9 @@ ggplot(data = sum_sims2, aes(x = tau,
                              y = a)) +
   geom_contour_filled(aes(z = maxtime)) +
   scale_fill_viridis_d(direction = -1) +
-  facet_grid(~b) +
+  facet_grid(b~.) +
   theme_bw() +
-  labs(title = "Maximum Time", subtitle = "Burst Size") +
+  labs(title = "Peak Time", subtitle = "Burst Size") +
   ylab("Infectio Rate") +
   xlab("Lysis Time") +
   scale_x_continuous(trans = "log10") +
@@ -829,10 +949,10 @@ ggplot(data = sum_sims2, aes(y = b,
                              x = a)) +
   geom_contour_filled(aes(z = maxtime)) +
   scale_fill_viridis_d(direction = -1) +
-  facet_grid(~tau) +
+  facet_grid(tau~.) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(title = "Maximum Time", subtitle = "Lysis Time") +
+  labs(title = "Peak Time", subtitle = "Lysis Time") +
   ylab("Busrt Size") +
   xlab("Infection Rate") +
   scale_x_continuous(trans = "log10") +
@@ -845,7 +965,7 @@ ggplot(data = sum_sims2, aes(y = b,
                              x = tau)) +
   geom_contour_filled(aes(z = extin_time)) +
   scale_fill_viridis_d(direction = -1) +
-  facet_grid(~a) +
+  facet_grid(a~.) +
   theme_bw() +
   labs(title = "Extinction Time", subtitle = "Infection Rate") +
   ylab("Burst Size") +
@@ -859,7 +979,7 @@ ggplot(data = sum_sims2, aes(x = tau,
                              y = a)) +
   geom_contour_filled(aes(z = extin_time)) +
   scale_fill_viridis_d(direction = -1) +
-  facet_grid(~b) +
+  facet_grid(b~.) +
   theme_bw() +
   labs(title = "Extinction Time", subtitle = "Burst Size") +
   ylab("Infection Rate") +
@@ -873,7 +993,7 @@ ggplot(data = sum_sims2, aes(x = a,
                              y = b)) +
   geom_contour_filled(aes(z = extin_time)) +
   scale_fill_viridis_d(direction = -1) +
-  facet_grid(~tau) +
+  facet_grid(tau~.) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(title = "Extinction Time", subtitle = "Lysis Time") +
@@ -1609,6 +1729,7 @@ ggplot(data = sum_sims6, aes(x = tau,
                           color = as.factor(tradeintercept)), size = 3) +
   scale_color_manual(values = my_cols[c(8, 6, 4)]) +
   theme_bw() +
+  theme(legend.title = element_text("Peak Time")) +
   xlab("Lysis Time") +
   ylab("Burst Size") +
   #ylim(-600, 800) +
