@@ -48,6 +48,9 @@ library(data.table)
 library(ggplot2)
 library(dplyr)
 
+#Setwd
+setwd("./numerical_analysis/")
+
 #Okabe and Ito 2008 colorblind-safe qualitative color scale
 my_cols <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
              "#D55E00", "#CC79A7", "#000000")
@@ -414,6 +417,50 @@ run_sims <- function(rvals,
   # }
 }
 
+##Define file save/load wrapper for run_sims ----
+run_sims_filewrapper <- function(name, dir = ".",
+                                 read_file = TRUE, write_file = TRUE,
+                                 ...) {
+  if (!read_file & !write_file) {
+    warning("simulation will be run and no files will be read or written")
+  }
+  
+  #Check to see if results have previously been simulated & saved
+  # if so, load them
+  if (read_file == TRUE &
+      paste(name, "_1.csv", sep = "") %in% list.files(dir)) {
+    temp <- list(NULL, NULL, NULL)
+    temp[[1]] <- read.csv(paste(dir, "/", name, "_1.csv", sep = ""),
+                          stringsAsFactors = F)
+    if (paste(name, "_2.csv", sep = "") %in% list.files(dir)) {
+      temp[[2]] <- read.csv(paste(dir, "/", name, "_2.csv", sep = ""), 
+                            stringsAsFactors = F)
+    }
+    if (paste(name, "_3.csv", sep = "") %in% list.files(dir)) {
+      temp[[3]] <- read.csv(paste(dir, "/", name, "_3.csv", sep = ""), 
+                            stringsAsFactors = F)
+    }
+  } else {
+    #Run simulations (if files don't exist)
+    temp <- run_sims(...)
+    #Save results so they can be re-loaded in future
+    if (write_file) {
+      #Save results so they can be re-loaded in future
+      write.csv(temp[[1]], row.names = F,
+                paste(dir, "/", name, "_1.csv", sep = ""))
+      if (!is.null(temp[[2]])) {
+        write.csv(temp[[2]], row.names = F,
+                  paste(dir, "/", name, "_2.csv", sep = ""))
+      }
+      if (!is.null(temp[[3]])) {
+        write.csv(temp[[2]], row.names = F,
+                  paste(dir, "/", name, "_3.csv", sep = ""))
+      }
+    }
+  }
+  return(temp)
+}
+  
 ## Define function that calculates derivatives ----
 calc_deriv <- function(density, percapita = FALSE,
                        subset_by = NULL, time = NULL,
@@ -470,36 +517,20 @@ calc_deriv <- function(density, percapita = FALSE,
 #Lysis time ranges from 10 to 105 mins
 #Burst size ranges from 4.5 to 1000
 
-## Run #1 ----
-
-if (F) {
-  run1 <- run_sims(rvals = c(0.023), #(30 min doubling time)
-                   kvals = c(10**9),
-                   avals = 10**seq(from = -12, to = -8, by = 1),
-                   tauvals = signif(10**seq(from = 1, to = 2, by = 0.25), 3),
-                   bvals = signif(5*10**seq(from = 0, to = 2, by = 0.5), 3),
-                   cvals = 1,
-                   init_bact_dens_vals = 10**6,
-                   init_moi_vals = 10**-2,
-                   min_dens = 0.1,
-                   init_time = 100,
-                   init_stepsize = 1,
-                   print_info = TRUE)
-  #Save results so they can be re-loaded in future
-  write.csv(run1[[1]], "run1_1.csv", row.names = F)
-  if (!is.null(run1[[2]])) {write.csv(run1[[2]], "run1_2.csv", row.names = F)}
-  if (!is.null(run1[[3]])) {write.csv(run1[[3]], "run1_3.csv", row.names = F)}
-} else {
-  #Load results previously simulated
-  temp1 <- read.csv("run1_1.csv", stringsAsFactors = F)
-  if ("run1_2.csv" %in% list.files()) {
-    temp2 <- read.csv("run1_2.csv", stringsAsFactors = F)
-  } else {temp2 <- NULL}
-  if ("run1_3.csv" %in% list.files()) {
-    temp3 <- read.csv("run1_3.csv", stringsAsFactors = F)
-  } else {temp3 <- NULL}
-  run1 <- list(temp1, temp2, temp3)
-}
+## Run #1: a, b, tau ----
+run1 <- run_sims_filewrapper(name = "run1",
+                             rvals = c(0.023), #(30 min doubling time)
+                             kvals = c(10**9),
+                             avals = 10**seq(from = -12, to = -8, by = 1),
+                             tauvals = signif(10**seq(from = 1, to = 2, by = 0.25), 3),
+                             bvals = signif(5*10**seq(from = 0, to = 2, by = 0.5), 3),
+                             cvals = 1,
+                             init_bact_dens_vals = 10**6,
+                             init_moi_vals = 10**-2,
+                             min_dens = 0.1,
+                             init_time = 100,
+                             init_stepsize = 1,
+                             print_info = TRUE)
 
 #Find peaks & extinction via summarize
 ybig1 <- group_by_at(run1[[1]], .vars = 1:9)
@@ -849,35 +880,20 @@ ggplot(data = ybig1[ybig1$Pop == "B" &
   ggtitle("a (top), tau (side)")
 dev.off()
 
-## Run #2 ----
-if (F) {
-  run2 <- run_sims(rvals = signif(0.04*10**seq(from = 0, to = -0.7, by = -0.175), 3),
-                   kvals = c(10**9),
-                   avals = 10**seq(from = -12, to = -8, by = 1),
-                   tauvals = signif(10**seq(from = 1, to = 2, by = 0.25), 3),
-                   bvals = signif(5*10**seq(from = 0, to = 2, by = 0.5), 3),
-                   cvals = 1,
-                   init_bact_dens_vals = 10**6,
-                   init_moi_vals = 10**-2,
-                   min_dens = 0.1,
-                   init_time = 100,
-                   init_stepsize = 1,
-                   print_info = TRUE)
-  #Save results so they can be re-loaded in future
-  write.csv(run2[[1]], "run2_1.csv", row.names = F)
-  if (!is.null(run2[[2]])) {write.csv(run2[[2]], "run2_2.csv", row.names = F)}
-  if (!is.null(run2[[3]])) {write.csv(run2[[3]], "run2_3.csv", row.names = F)}
-} else {
-  #Load results previously simulated
-  temp1 <- read.csv("run2_1.csv", stringsAsFactors = F)
-  if ("run2_2.csv" %in% list.files()) {
-    temp2 <- read.csv("run2_2.csv", stringsAsFactors = F)
-  } else {temp2 <- NULL}
-  if ("run2_3.csv" %in% list.files()) {
-    temp3 <- read.csv("run2_3.csv", stringsAsFactors = F)
-  } else {temp3 <- NULL}
-  run2 <- list(temp1, temp2, temp3)
-}
+## Run #2: r, a, b, tau ----
+run2 <- run_sims_filewrapper(name = "run2",
+                             rvals = signif(0.04*10**seq(from = 0, to = -0.7, by = -0.175), 3),
+                             kvals = c(10**9),
+                             avals = 10**seq(from = -12, to = -8, by = 1),
+                             tauvals = signif(10**seq(from = 1, to = 2, by = 0.25), 3),
+                             bvals = signif(5*10**seq(from = 0, to = 2, by = 0.5), 3),
+                             cvals = 1,
+                             init_bact_dens_vals = 10**6,
+                             init_moi_vals = 10**-2,
+                             min_dens = 0.1,
+                             init_time = 100,
+                             init_stepsize = 1,
+                             print_info = TRUE)
 
 #Check fails/no equils
 run2[[2]]
@@ -1135,36 +1151,20 @@ for (myr in unique(y_summarized2$r)) {
   i <- i+1
 }
 
-##Run #3 ----
-
-if (F) {
-  run3 <- run_sims(rvals = c(0.04, 0.0179),
-                 kvals = c(10**9),
-                 avals = 10**seq(from = -12, to = -8, by = 2),
-                 tauvals = signif(20**seq(from = 1, to = 1.5, by = 0.5), 3),
-                 bvals = signif(5*10**seq(from = 1, to = 2, by = 1), 3),
-                 cvals = 1,
-                 init_bact_dens_vals = c(10**4, 10**5, 10**6),
-                 init_moi_vals = c(10**-2, 10**-1, 1),
-                 min_dens = 0.1,
-                 init_time = 100,
-                 init_stepsize = 1,
-                 print_info = TRUE)
-  #Save results so they can be re-loaded in future
-  write.csv(run3[[1]], "run3_1.csv", row.names = F)
-  if (!is.null(run3[[2]])) {write.csv(run3[[2]], "run3_2.csv", row.names = F)}
-  if (!is.null(run3[[3]])) {write.csv(run3[[3]], "run3_3.csv", row.names = F)}
-} else {
-  #Load results previously simulated
-  temp1 <- read.csv("run3_1.csv", stringsAsFactors = F)
-  if ("run3_2.csv" %in% list.files()) {
-    temp2 <- read.csv("run3_2.csv", stringsAsFactors = F)
-  } else {temp2 <- NULL}
-  if ("run3_3.csv" %in% list.files()) {
-    temp3 <- read.csv("run3_3.csv", stringsAsFactors = F)
-  } else {temp3 <- NULL}
-  run3 <- list(temp1, temp2, temp3)
-}
+##Run #3: r, a, b, tau, init_dens, init_moi ----
+run3 <- run_sims_filewrapper(name = "run3",
+                             rvals = c(0.04, 0.0179),
+                             kvals = c(10**9),
+                             avals = 10**seq(from = -12, to = -8, by = 2),
+                             tauvals = signif(20**seq(from = 1, to = 1.5, by = 0.5), 3),
+                             bvals = signif(5*10**seq(from = 1, to = 2, by = 1), 3),
+                             cvals = 1,
+                             init_bact_dens_vals = c(10**4, 10**5, 10**6),
+                             init_moi_vals = c(10**-2, 10**-1, 1),
+                             min_dens = 0.1,
+                             init_time = 100,
+                             init_stepsize = 1,
+                             print_info = TRUE)
 
 #Check fails/no equils
 run3[[2]]
@@ -1313,37 +1313,21 @@ for (myr in unique(y_summarized3$r)) {
   dev.off()
 }
 
-###Run #4 ----
-
-if (F) {
-  run4 <- run_sims(rvals = signif(0.04*10**seq(from = 1, to = -2, by = -0.67), 3),
-                   kvals = c(10**9),
-                   avals = 10**seq(from = -14, to = -6, by = 2),
-                   tauvals = signif(10**seq(from = 0, to = 3, by = 0.75), 3),
-                   bvals = signif(5*10**seq(from = -1, to = 3, by = 1), 3),
-                   cvals = 1,
-                   init_bact_dens_vals = 10**6,
-                   init_moi_vals = 10**-2,
-                   min_dens = 0.1,
-                   init_time = 100,
-                   init_stepsize = 1,
-                   print_info = TRUE)
-  #Save results so they can be re-loaded in future
-  write.csv(run4[[1]], "run4_1.csv", row.names = F)
-  if (!is.null(run4[[2]])) {write.csv(run4[[2]], "run4_2.csv", row.names = F)}
-  if (!is.null(run4[[3]])) {write.csv(run4[[3]], "run4_3.csv", row.names = F)}
-} else {
-  #Load results previously simulated
-  temp1 <- read.csv("run4_1.csv", stringsAsFactors = F)
-  if ("run4_2.csv" %in% list.files()) {
-    temp2 <- read.csv("run4_2.csv", stringsAsFactors = F)
-  } else {temp2 <- NULL}
-  if ("run4_3.csv" %in% list.files()) {
-    temp3 <- read.csv("run4_3.csv", stringsAsFactors = F)
-  } else {temp3 <- NULL}
-  run4 <- list(temp1, temp2, temp3)
-}
-
+###Run #4: r, a, b, tau ----
+run4 <- run_sims_filewrapper(name = "run4",
+                             rvals = signif(0.04*10**seq(from = 1, to = -2, by = -0.67), 3),
+                             kvals = c(10**9),
+                             avals = 10**seq(from = -14, to = -6, by = 2),
+                             tauvals = signif(10**seq(from = 0, to = 3, by = 0.75), 3),
+                             bvals = signif(5*10**seq(from = -1, to = 3, by = 1), 3),
+                             cvals = 1,
+                             init_bact_dens_vals = 10**6,
+                             init_moi_vals = 10**-2,
+                             min_dens = 0.1,
+                             init_time = 100,
+                             init_stepsize = 1,
+                             print_info = TRUE)
+                             
 #Check fails/no equils
 run4[[2]]
 
