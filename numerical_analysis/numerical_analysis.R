@@ -1429,7 +1429,99 @@ run5 <- run_sims_filewrapper(name = "run5",
                              init_stepsize = 1,
                              print_info = TRUE)
 
+run5[[2]]
 
+run5[[3]]
+
+ybig5 <- group_by_at(run5[[1]], .vars = 1:9)
+y_summarized5 <- summarize(ybig5,
+                           max_dens = max(Density[Pop == "B"]),
+                           max_time = time[Pop == "B" & 
+                                             Density[Pop == "B"] == max_dens],
+                           extin_index = min(which(Pop == "B" &
+                                                     Density <= 9.99*10**3)),
+                           extin_dens = Density[extin_index],
+                           extin_time = time[extin_index],
+                           extin_time_sincemax = extin_time-max_time,
+                           auc = sum(Density[Pop == "B" & time < extin_time])*
+                             extin_time,
+                           phage_final = max(Density[Pop == "P"]),
+                           phage_extin = Density[Pop == "P" & time == extin_time],
+                           phage_r = (log(phage_final)-
+                                        log(init_bact_dens[1]*init_moi[1]))/
+                             extin_time
+)
+
+ggplot(data = y_summarized5[y_summarized5$K == 10**9 &
+                              y_summarized5$a == 10**-10 &
+                              y_summarized5$b == 63.2 &
+                              y_summarized5$tau == 37.6, ],
+       aes(x = log10(init_bact_dens), 
+           y = log10(init_moi),
+           z = max_time)) +
+  geom_contour_filled() +
+  facet_grid(~r) +
+  ggtitle("r") +
+  scale_fill_viridis_d(direction = -1) +
+  theme_bw() +
+  NULL
+
+ggplot(data = y_summarized5[y_summarized5$r == 0.0179 &
+                              y_summarized5$a == 10**-10 &
+                              y_summarized5$b == 63.2 &
+                              y_summarized5$tau == 37.6, ],
+       aes(x = log10(init_bact_dens), 
+           y = log10(init_moi),
+           z = max_time)) +
+  geom_contour_filled() +
+  facet_grid(~K) +
+  ggtitle("k") +
+  scale_fill_viridis_d(direction = -1) +
+  theme_bw() +
+  NULL
+
+ggplot(data = y_summarized5[y_summarized5$r == 0.0179 &
+                              y_summarized5$K == 10**9 &
+                              y_summarized5$b == 63.2 &
+                              y_summarized5$tau == 37.6, ],
+       aes(x = log10(init_bact_dens), 
+           y = log10(init_moi),
+           z = max_time)) +
+  geom_contour_filled() +
+  facet_grid(~a) +
+  ggtitle("a") +
+  scale_fill_viridis_d(direction = -1) +
+  theme_bw() +
+  NULL
+
+ggplot(data = y_summarized5[y_summarized5$r == 0.0179 &
+                              y_summarized5$K == 10**9 &
+                              y_summarized5$a == 10**-10 &
+                              y_summarized5$tau == 37.6, ],
+       aes(x = log10(init_bact_dens), 
+           y = log10(init_moi),
+           z = max_time)) +
+  geom_contour_filled() +
+  facet_grid(~b) +
+  ggtitle("b") +
+  scale_fill_viridis_d(direction = -1) +
+  theme_bw() +
+  NULL
+
+ggplot(data = y_summarized5[y_summarized5$r == 0.0179 &
+                              y_summarized5$K == 10**9 &
+                              y_summarized5$a == 10**-10 &
+                              y_summarized5$b == 63.2, ],
+       aes(x = log10(init_bact_dens), 
+           y = log10(init_moi),
+           z = max_time)) +
+  geom_contour_filled() +
+  facet_grid(~tau) +
+  ggtitle("tau") +
+  scale_fill_viridis_d(direction = -1) +
+  theme_bw() +
+  NULL
+                              
 
 ###Work in progress below: ----
 
