@@ -1386,6 +1386,49 @@ for (myr in unique(y_sum_melt4$r)) {
   dev.off()
 }
 
+###Run #5: init_dens and init_moi as r,k,a,b,tau indiv ----
+run5_params <- data.frame(matrix(NA, ncol = 7, nrow = 25*5*3))
+colnames(run5_params) <- c("init_bact_dens_vals", "init_moi_vals",
+                           "rvals", "kvals", "avals", "bvals", "tauvals")
+
+run5_params$init_bact_dens_vals <- rep(rep(10**seq(from = 4, to = 6, by = 0.5),
+                                      times = 5),
+                                  times = 5*3)
+run5_params$init_moi_vals <- rep(rep(10**seq(from = -3, to = -1, by = 0.5), 
+                                each = 5),
+                            times = 5*3)
+run5_params$rvals <- c(rep(0.0179, times = 25*0*3),
+                  rep(signif(0.04*10**seq(from = 0, to = -0.7, by = -0.35), 3),
+                      each = 25),
+                  rep(0.0179, times = 25*4*3))
+run5_params$kvals <- c(rep(10**9, times = 25*1*3),
+                   rep(10**c(8, 9, 10), each = 25),
+                   rep(10**9, times = 25*3*3))
+run5_params$avals <- c(rep(10**-10, times = 25*2*3),
+                   rep(10**seq(from = -12, to = -8, by = 2), each = 25),
+                   rep(10**-10, times = 25*2*3))
+run5_params$bvals <- c(rep(63.2, times = 25*3*3),
+                   rep(signif(2*10**seq(from = 1, to = 2, by = 0.5), 3), each = 25),
+                   rep(63.2, times = 25*1*3))
+run5_params$tauvals <- c(rep(37.6, times = 25*4*3),
+                   rep(signif(10**seq(from = 1.25, to = 2, by = 0.325), 3), each = 25),
+                   rep(37.6, times = 25*0*3))
+                             
+run5 <- run_sims_filewrapper(name = "run5",
+                             rvals = run5_params$rvals,
+                             kvals = run5_params$kvals,
+                             avals = run5_params$avals,
+                             tauvals = run5_params$tauvals,
+                             bvals = run5_params$bvals,
+                             init_bact_dens_vals = run5_params$init_bact_dens_vals,
+                             init_moi_vals = run5_params$init_moi_vals,
+                             cvals = 1,
+                             combinatorial = FALSE,
+                             min_dens = 0.1,
+                             init_time = 100,
+                             init_stepsize = 1,
+                             print_info = TRUE)
+
 
 
 ###Work in progress below: ----
