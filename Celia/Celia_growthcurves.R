@@ -93,32 +93,6 @@ print(ggplot(data = yout_plot, aes(x = time, y = Density + 10, color = Populatio
 xlab("Time")
 dev.off()
 
-
-
-
-
-
-tiff(paste("./Celia/bigFINAL_plots/", my_run, ".tiff", sep = ""),
-     width = 4, height = 4, units = "in", res = 200)
-print(ggplot(data = bigFINAL_plot[bigFINAL_plot$uniq_run == my_run &
-                                    bigFINAL_plot$Population != "PI", ],
-             aes(x = time, y = Density + 10, color = Population)) +
-        geom_line(lwd = 1.5, alpha = 1/2) +
-        scale_color_manual(values = my_cols[c(8, 2, 3, 1)]) +
-        scale_y_continuous(trans = "log10") +
-        ggtitle(paste("Run #", my_run, sep = "")))
-dev.off()
-
-
-
-
-
-
-
-
-
-
-
 #Okabe and Ito 2008 colorblind-safe qualitative color scale ----
 my_cols <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
              "#D55E00", "#CC79A7", "#000000")
