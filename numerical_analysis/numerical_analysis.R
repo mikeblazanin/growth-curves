@@ -1,5 +1,4 @@
 #TODO:
-# run curves varying initial density & moi
 # given control curves and curves varying in density & moi,
 #   figure out how one could calculate phage parameters
 #   or phage fitness
@@ -8,6 +7,7 @@
 #     it would really make things faster or not
 # add in the evolution of resistant bacteria
 # fix area-under-curve calculations
+#     doing so requires implementing static timestep reporting
 # use deriv-percap of B to find max decay rate?
 # think about characteristics to be taken when curves are too slow
 #   (e.g. time to grow above some threshold density)
@@ -17,7 +17,6 @@
 #  fit a logistic eq to them and see what they are
 #  (e.g. are they just the bacterial curve when no phage around?)
 # Go back and re-learn multivariate calc
-# Look at b-tau tradeoff and see if we re-create optimal values
 # In theory we should be able to predict how much pfu_final
 #  is above b*max_dens based on auc before max_dens (or similar)
 # Should calculate bacterial decay rate from max_dens to extin_time
@@ -28,14 +27,8 @@
 #  We're kind of idealizing bacterial growth as logistic and phage
 #   growth as logistic and B(t) is just the integrated difference between them
 # Parallelize for running on cluster with much faster walltime
-# Perhaps a B-tau tradeoff will allow us to think only about variation
-#   along two axes: alpha and tau (since B ~ c (intercept) + d*tau (slope))
-# Plot B(t) for dift a, b, tau values. Use regression to predict which sets
-#   of a, b, tau values should give same max time & extin time then plot those
-#   values
 # Measure amount of time I is above S (and so I is more of B) – should be correlated w/ tau
 # Run w 2 P pops in competition. Compare outcome to indiv grow curves
-# Celia lab meeting?
 # Think about similar approach as Wang et al ’96 for our model
 # Think about superinfection parameter being included
 #   (simply a rescaling of a for already-infected cells)
