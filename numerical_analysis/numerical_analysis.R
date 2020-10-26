@@ -1,4 +1,8 @@
 #TODO:
+# figure out how to calculate area-under-curve consistently
+# use netrd (see Scarpino mtg)
+#
+#
 # given control curves and curves varying in density & moi,
 #   figure out how one could calculate phage parameters
 #   or phage fitness
@@ -541,7 +545,8 @@ y_summarized1 <- summarize(ybig1,
                           phage_extin = Density[Pop == "P" & time == extin_time],
                           phage_r = (log(phage_final)-
                                        log(init_bact_dens[1]*init_moi[1]))/
-                            extin_time
+                            extin_time,
+                          run_time = max(time)
 )
                           
 
