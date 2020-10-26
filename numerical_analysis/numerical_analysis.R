@@ -1,7 +1,7 @@
 #TODO:
 # figure out how to calculate area-under-curve consistently
 # use netrd (see Scarpino mtg)
-#
+# fix all calls to run_sims
 #
 # given control curves and curves varying in density & moi,
 #   figure out how one could calculate phage parameters
@@ -69,23 +69,44 @@ derivs <- function(t, y, parms) {
   y[y < parms["thresh_min_dens"]] <- 0
   
   #Create output vector
-  dY <- c(S = 0, I = 0, P = 0)
+  dY <- c(S = 0, I = 0, P = 0, R = 0)
   
   ##Calculate dS
   
-  #V1 (exponential dS/dt)
+  #V1 
+  # note: exponential dS/dt
   #dS/dt = rS - aSP
   #dS <- parms["r"] * y["S"] - a * y["S"] * y["P"]
   
-  #V2 (logistic dS/dt)
+  #V2 
+  # added: changed dS/dt growth from exp to logistic
   #dS/dt = rS((K-S)/K) - aSP
   # dY["S"] <- parms["r"] * y["S"] * ((parms["K"] - y["S"])/parms["K"]) - 
   #   parms["a"] * y["S"] * y["P"]
   
-  #V3 (logistic dS/dt) (including competition from I pop)
+  #V3
+  # added: competition from I pop on S pop
   #dS/dt = rS((K-S-c*I)/K) - aSP
-  dY["S"] <- parms["r"] * y["S"] * 
-      ((parms["K"] - y["S"] - parms["c"] * y["I"])/parms["K"]) - 
+  # dY["S"] <- parms["r"] * y["S"] * 
+  #     ((parms["K"] - y["S"] - parms["c"] * y["I"])/parms["K"]) - 
+  #   parms["a"] * y["S"] * y["P"]
+  #dP/dt = baS(t-tau)P(t-tau) - aSP
+  # if (t < parms["tau"]) {
+  #   dY["P"] <- -parms["a"] * y["S"] * y["P"]
+  # } else {
+  #   dY["P"] <- parms["b"] * parms["a"] * 
+  #     lagvalue(t-parms["tau"], 1)*lagvalue(t-parms["tau"], 3) - 
+  #     parms["a"]*y["S"]*y["P"]
+  # }
+  
+  #V4
+  # added:  superinfection
+  #         resistant population
+  #dS/dt = u_S*S((k_S-S-c_SI*I-c_SR*R)/k_S) - aSP
+  dY["S"] <- parms["u_S"] * y["S"] * 
+    ((parms["k_S"] - y["S"] - 
+        parms["c_SI"]*y["I"] - 
+        parms["c_SR"]*y["R"])/parms["k_S"]) - 
     parms["a"] * y["S"] * y["P"]
   
   ##Calculate dI
@@ -98,15 +119,25 @@ derivs <- function(t, y, parms) {
   }
   
   ##Calculate dP
-  #dP/dt = baS(t-tau)P(t-tau) - aSP
+  #dP/dt = baS(t-tau)P(t-tau) - aSP - azIP
   if (t < parms["tau"]) {
-    dY["P"] <- -parms["a"] * y["S"] * y["P"]
+    dY["P"] <- -parms["a"] * y["S"] * y["P"] -
+      parms["a"] * parms["z"] * y["I"] * y["P"]
   } else {
     dY["P"] <- parms["b"] * parms["a"] * 
       lagvalue(t-parms["tau"], 1)*lagvalue(t-parms["tau"], 3) - 
-      parms["a"]*y["S"]*y["P"]
+      parms["a"]*y["S"]*y["P"] -
+      parms["a"] * parms["z"] * y["I"] * y["P"]
   }
   
+  #Calculate dR
+  #dR/dt = u_R*R((k_R-R-c_RS*S-c_RI*I)/k_R) + m*S
+  dY["R"] <- parms["u_R"] * y["R"] * 
+    ((parms["k_R"] - y["R"] - 
+        parms["c_RS"]*y["S"] - 
+        parms["c_RI"]*y["I"])/parms["k_R"]) + 
+    parms["m"] * y["S"]
+
   #Issue warning about too large pop (if warnings is TRUE)
   if (parms["warnings"]==1 & any(y > 10**100)) {
     warning(paste("pop(s)",
@@ -120,14 +151,23 @@ derivs <- function(t, y, parms) {
   return(list(dY))
 }
 
+
 ## Define function for running simulations across many parameter values ----
-run_sims <- function(rvals,
-                     kvals,
+run_sims <- function(u_Svals,
+                     u_Rvals = 0,
+                     k_Svals,
+                     k_Rvals = 1,
                      avals,
                      tauvals,
                      bvals,
-                     cvals = 1,
-                     init_bact_dens_vals = 10**6,
+                     zvals,
+                     mvals = 0,
+                     c_SIvals = 1,
+                     c_SRvals = 1,
+                     c_RSvals = 1,
+                     c_RIvals = 1,
+                     init_S_dens_vals = 10**6,
+                     init_R_dens_vals = 0,
                      init_moi_vals = 10**-2,
                      min_dens = 0.1,
                      init_time = 100,
@@ -159,41 +199,71 @@ run_sims <- function(rvals,
     warning("init_time is not divisible by init_stepsize, this has not been tested")
   }
   
+  #V3 to V4 argument changes
+  # rvals = u_Svals
+  # kvals = k_Svals
+  # cvals = c_SIvals
+  # zvals (superinfection [0,1] must be specified)
+  # init_bact_dens_vals = init_S_dens_vals
+  # added: u_Rvals, k_Rvals, mvals, c_SRvals, c_RIvals, c_RSvals, init_R_dens_vals
+  
   #Save parameter values provided into dataframe
   # taking all different combinations
   if (combinatorial) {
-    param_combos <- expand.grid(list("rvals" = rvals, "kvals" = kvals, 
+    param_combos <- expand.grid(list("u_Svals" = u_Svals, "u_Rvals" = u_Rvals,
+                                     "k_Svals" = k_Svals, "k_Rvals" = k_Rvals,
                                "avals" = avals, "tauvals" = tauvals, 
-                               "bvals" = bvals, "cvals" = cvals, 
-                               "init_bact_dens_vals" = init_bact_dens_vals, 
+                               "bvals" = bvals, 
+                               "c_SIvals" = c_SIvals, "c_SRvals" = c_SRvals,
+                               "c_RSvals" = c_RSvals, "c_RIvals" = c_RIvals,
+                               "zvals" = zvals, "mvals" = mvals,
+                               "init_S_dens_vals" = init_S_dens_vals, 
+                               "init_R_dens_vals" = init_R_dens_vals,
                                "init_moi_vals" = init_moi_vals),
                           stringsAsFactors = FALSE)
-    num_sims <- nrow(param_combos)
   } else { #not combinatorial
-    num_sims <- max(sapply(X = list(rvals, kvals, avals, tauvals, bvals,
-                                    cvals, init_bact_dens_vals, init_moi_vals), 
+    num_sims <- max(sapply(X = list(u_Svals, u_Rvals, k_Svals, k_Rvals,
+                                    avals, tauvals, bvals, 
+                                    c_SIvals, c_SRvals, c_RSvals, c_RIvals,
+                                    zvals, mvals,
+                                    init_S_dens_vals, init_R_dens_vals,
+                                    init_moi_vals), 
                            FUN = length))
     
     #Check for parameter lengths being non-divisible with the
     # number of simulations inferred from the longest parameter length
-    if (!all(num_sims %% sapply(X = list(rvals, kvals, avals, tauvals, bvals,
-                                         cvals, init_bact_dens_vals, init_moi_vals), 
+    if (!all(num_sims %% sapply(X = list(u_Svals, u_Rvals, k_Svals, k_Rvals,
+                                         avals, tauvals, bvals, 
+                                         c_SIvals, c_SRvals, c_RSvals, c_RIvals,
+                                         zvals, mvals,
+                                         init_S_dens_vals, init_R_dens_vals,
+                                         init_moi_vals), 
                                 FUN = length) == 0)) {
-      warning("Combinatorial is true but longest param vals length is not a multiple of all other param vals lengths")
+      warning("Combinatorial=TRUE but longest param vals length is not a multiple of all other param vals lengths")
     }
     
     #Save parameters into dataframe, replicating shorter parameter
     # vectors as needed to reach # of simulations
-    param_combos <- data.frame("rvals" = rep_len(rvals, num_sims), 
-                         "kvals" = rep_len(kvals, num_sims), 
-                         "avals" = rep_len(avals, num_sims), 
-                         "tauvals" = rep_len(tauvals, num_sims), 
-                         "bvals" = rep_len(bvals, num_sims), 
-                         "cvals" = rep_len(cvals, num_sims), 
-                         "init_bact_dens_vals" = rep_len(init_bact_dens_vals, num_sims), 
-                         "init_moi_vals" = rep_len(init_moi_vals, num_sims),
-                         stringsAsFactors = FALSE)
+    param_combos <- data.frame("u_Svals" = rep_len(u_Svals, num_sims), 
+                               "u_Rvals" = rep_len(u_Rvals, num_sims),
+                               "k_Svals" = rep_len(k_Svals, num_sims), 
+                               "k_Rvals" = rep_len(k_Rvals, num_sims),
+                               "avals" = rep_len(avals, num_sims), 
+                               "tauvals" = rep_len(tauvals, num_sims), 
+                               "bvals" = rep_len(bvals, num_sims), 
+                               "c_SIvals" = rep_len(c_SIvals, num_sims), 
+                               "c_SRvals" = rep_len(c_SRvals, num_sims),
+                               "c_RSvals" = rep_len(c_RSvals, num_sims),
+                               "c_RIvals" = rep_len(c_RIvals, num_sims), 
+                               "zvals" = rep_len(zvals, num_sims), 
+                               "mvals" = rep_len(mvals, num_sims),
+                               "init_S_dens_vals" = rep_len(init_S_dens_vals, num_sims), 
+                               "init_R_dens_vals" = rep_len(init_R_dens_vals, num_sims),
+                               "init_moi_vals" = rep_len(init_moi_vals, num_sims),
+                               stringsAsFactors = FALSE)
   }
+  
+  num_sims <- nrow(param_combos)
   
   #Print number of simulations that will be run
   if(print_info) {
@@ -206,28 +276,55 @@ run_sims <- function(rvals,
   #Make placeholders
   yfail <- NULL #for runs that fail
   #for runs that succeed, pre-allocate ybig now to save on memory/speed
-  ybig <- data.frame("uniq_run" = rep(NA, 5*(1+init_time/init_stepsize)*num_sims),
-                     "r" = NA, "a" = NA, "b" = NA, "tau" = NA, "K" = NA,
-                     "c" = NA, "init_bact_dens" = NA, "init_moi" = NA,
-                     "equil" = NA, "time" = NA, "Pop" = as.character(NA), 
-                     "Density" = NA, stringsAsFactors = F)
+  ybig <- data.frame("uniq_run" = rep(NA, 6*(1+init_time/init_stepsize)*num_sims),
+                     "u_S" = NA, "u_R" = NA, 
+                     "k_S" = NA, "k_R" = NA,
+                     "a" = NA, "tau" = NA, "b" = NA, 
+                     "c_SI" = NA, "c_SR" = NA,
+                     "c_RS" = NA, "c_RI" = NA, 
+                     "z" = NA, "m" = NA,
+                     "init_S_dens" = NA, "init_R_dens" = NA,
+                     "init_moi" = NA,
+                     "equil" = NA, "time" = NA, "Pop" = as.character(NA),
+                     "Density" = NA, stringsAsFactors = FALSE)
                                         
   for (i in 1:nrow(param_combos)) { #i acts as the uniq_run counter
-    myr <- param_combos$rvals[i]
-    myk <- param_combos$kvals[i]
-    mya <- param_combos$avals[i]
-    mytau <- param_combos$tauvals[i]
-    myb <- param_combos$bvals[i]
-    myc <- param_combos$cvals[i]
-    my_init_bact <- param_combos$init_bact_dens_vals[i]
-    my_moi <- param_combos$init_moi_vals[i]
+    #Save values to temporary names for code readability
+    # myu_S <- param_combos$u_Svals[i]
+    # myu_R <- param_combos$u_Rvals[i]
+    # myk_S <- param_combos$k_Svals[i]
+    # myk_R <- param_combos$k_Rvals[i]
+    # mya <- param_combos$avals[i]
+    # mytau <- param_combos$tauvals[i]
+    # myb <- param_combos$bvals[i]
+    # myc_SI <- param_combos$c_SIvals[i]
+    # myc_SR <- param_combos$c_SRvals[i]
+    # myc_RS <- param_combos$c_RSvals[i]
+    # myc_RI <- param_combos$c_RIvals[i]
+    # myz <- param_combos$zvals[i]
+    # mym <- param_combos$mvals[i]
+    # my_init_S <- param_combos$init_S_dens_vals[i]
+    # my_init_R <- param_combos$init_R_dens_vals[i]
+    # my_init_moi <- param_combos$init_moi_vals[i]
     
     #Define pops & parameters
-    yinit <- c(S = my_init_bact,
+    yinit <- c(S = param_combos$init_S_dens_vals[i],
                I = 0,
-               P = my_init_bact*my_moi)
-    params <- c(r = myr, a = mya, b = myb, tau = mytau,
-                K = myk, c = myc,
+               P = param_combos$init_S_dens_vals[i]*param_combos$init_moi_vals[i],
+               R = param_combos$init_R_dens_vals[i])
+    params <- c(u_S = param_combos$u_Svals[i],
+                u_R = param_combos$u_Rvals[i],
+                k_S = param_combos$k_Svals[i],
+                k_R = param_combos$k_Rvals[i],
+                a = param_combos$avals[i],
+                tau = param_combos$tauvals[i],
+                b = param_combos$bvals[i],
+                c_SI = param_combos$c_SIvals[i],
+                c_SR = param_combos$c_SRvals[i],
+                c_RS = param_combos$c_RSvals[i],
+                c_RI = param_combos$c_RIvals[i],
+                z = param_combos$zvals[i],
+                m = param_combos$mvals[i],
                 warnings = 0, thresh_min_dens = 10**-100)
     
     #Run simulation(s) with longer & longer times until equil reached
@@ -319,36 +416,75 @@ run_sims <- function(rvals,
     #Once end conditions triggered, if run succeeded
     if(yout_list[[1]] == 0 | yout_list[[1]] == 2) {
       #Calculate all bacteria (B)
-      yout_list[[2]]$B <- yout_list[[2]]$S + yout_list[[2]]$I
+      yout_list[[2]]$B <- yout_list[[2]]$S + yout_list[[2]]$I + yout_list[[2]]$R
       #Calculate all phage (PI)
       yout_list[[2]]$PI <- yout_list[[2]]$P + yout_list[[2]]$I
       
       #Reshape, add parameters, and fill into ybig in right rows
-      ybig[((i-1)*5*(1+init_time/init_stepsize)+1):
-             ((i)*5*(1+init_time/init_stepsize)), ] <- 
-        cbind(data.frame(uniq_run = i, r = myr, a = mya, 
-                         b = myb, tau = mytau, K = myk, 
-                         c = myc, init_bact_dens = my_init_bact, 
-                         init_moi = my_moi, equil = at_equil),
+      ybig[((i-1)*6*(1+init_time/init_stepsize)+1):
+             ((i)*6*(1+init_time/init_stepsize)), ] <- 
+        cbind(data.frame(uniq_run = i, 
+                         u_S = param_combos$u_Svals[i], 
+                         u_R = param_combos$u_Rvals[i], 
+                         k_S = param_combos$k_Svals[i], 
+                         k_R = param_combos$k_Rvals[i],
+                         a = param_combos$avals[i], 
+                         b = param_combos$bvals[i], 
+                         tau = param_combos$tauvals[i],
+                         c_SI = param_combos$c_SIvals[i],
+                         c_SR = param_combos$c_SRvals[i],
+                         c_RS = param_combos$c_RSvals[i],
+                         c_RI = param_combos$c_RIvals[i],
+                         z = param_combos$zvals[i],
+                         m = param_combos$mvals[i],
+                         init_S_dens = param_combos$init_S_dens_vals[i], 
+                         init_R_dens = param_combos$init_R_dens_vals[i], 
+                         init_moi = param_combos$init_moi_vals[i],
+                         equil = at_equil),
               data.table::melt(data = data.table::as.data.table(yout_list[[2]]), 
                                id.vars = c("time"),
                                value.name = "Density", 
                                variable.name = "Pop",
                                variable.factor = FALSE))
-      
       #If the run failed
     } else {
       if (is.null(yfail)) { #This is the first failed run
-        yfail <- data.frame(uniq_run = i, r = myr, a = mya, 
-                            b = myb, tau = mytau, K = myk,
-                            c = myc, init_bact_dens = my_init_bact, 
-                            init_moi = my_moi, equil = at_equil)
+        yfail <- data.frame(uniq_run = i, 
+                            u_S = param_combos$u_Svals[i], 
+                            u_R = param_combos$u_Rvals[i], 
+                            k_S = param_combos$k_Svals[i], 
+                            k_R = param_combos$k_Rvals[i],
+                            a = param_combos$avals[i], b = param_combos$bvals[i], 
+                            tau = param_combos$tauvals[i],
+                            c_SI = param_combos$c_SIvals[i],
+                            c_SR = param_combos$c_SRvals[i],
+                            c_RS = param_combos$c_RSvals[i],
+                            c_RI = param_combos$c_RIvals[i],
+                            z = param_combos$zvals[i],
+                            m = param_combos$mvals[i],
+                            init_S_dens = param_combos$init_S_dens_vals[i], 
+                            init_R_dens = param_combos$init_R_dens_vals[i], 
+                            init_moi = param_combos$init_moi_vals[i],
+                            equil = at_equil)
       } else { #This is a non-first failed run
         yfail <- rbind(yfail, 
-                       data.frame(uniq_run = i, r = myr, a = mya, 
-                                  b = myb, tau = mytau, K = myk, 
-                                  c = myc, init_bact_dens = my_init_bact, 
-                                  init_moi = my_moi, equil = at_equil))
+                       data.frame(uniq_run = i, 
+                                  u_S = param_combos$u_Svals[i], 
+                                  u_R = param_combos$u_Rvals[i], 
+                                  k_S = param_combos$k_Svals[i], 
+                                  k_R = param_combos$k_Rvals[i],
+                                  a = param_combos$avals[i], b = param_combos$bvals[i], 
+                                  tau = param_combos$tauvals[i],
+                                  c_SI = param_combos$c_SIvals[i],
+                                  c_SR = param_combos$c_SRvals[i],
+                                  c_RS = param_combos$c_RSvals[i],
+                                  c_RI = param_combos$c_RIvals[i],
+                                  z = param_combos$zvals[i],
+                                  m = param_combos$mvals[i],
+                                  init_S_dens = param_combos$init_S_dens_vals[i], 
+                                  init_R_dens = param_combos$init_R_dens_vals[i], 
+                                  init_moi = param_combos$init_moi_vals[i],
+                                  equil = at_equil))
       }
     }
     
@@ -357,16 +493,15 @@ run_sims <- function(rvals,
       print(paste((which(progress_seq == i)-1)*10,
                   "% completed", sep = ""))
     }
-    
   }
   
-  #Pull out all the runs that didn't reach equilibrium
+  #Pull out all the runs that didn't reach equilibrium (just the params)
   y_noequil <- NULL
   for (run in unique(ybig$uniq_run[which(!ybig$equil)])) {
     if (is.null(y_noequil)) {
-      y_noequil <- ybig[min(which(ybig$uniq_run == run)), 1:9]
+      y_noequil <- ybig[min(which(ybig$uniq_run == run)), 1:18]
     } else {
-      y_noequil <- rbind(y_noequil, ybig[min(which(ybig$uniq_run == run)), 1:9])
+      y_noequil <- rbind(y_noequil, ybig[min(which(ybig$uniq_run == run)), 1:18])
     }
   }
   
