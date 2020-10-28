@@ -1164,23 +1164,39 @@ for (myu_S in unique(y_summarized2$u_S)) {
 ##Now selected pairs, looking for underlying functions
 
 #Relating max_dens to max_time
-max_dens_func <- function(t, K, P_0, u) log10(K/(1+((K-P_0)/P_0)*exp(-u*t)))
+max_dens_func <- function(t, K, P_0, u) {K/(1+((K-P_0)/P_0)*exp(-u*t))}
 
-for (myu_S in unique(y_summarized2$u_S)) {
-  tiff(paste("./run2_statplots/maxdens_maxtime_r=", myu_S, ".tiff", sep = ""),
-       width = 5, height = 5, units = "in", res = 300)
-  print(ggplot(data = y_summarized2[y_summarized2$r == myu_S, ],
-               aes(x = max_time, y = max_dens, color = a, shape = b)) +
-          geom_point() +
-          scale_y_continuous(trans = "log10") +
-          stat_function(fun = max_dens_func,
-                        args = list(K = 10**9, P_0 = 1*10**6, r = myu_S),
-                        color = "black", lwd = 1, alpha = 0.1) +
-          ggtitle(paste("u =", myu_S)) +
-          theme_bw()
-  )
-  dev.off()
-}
+y_summarized2$pred_maxdens <- max_dens_func(t = y_summarized2$max_time,
+                                            K = y_summarized2$k_S,
+                                            P_0 = y_summarized2$init_S_dens,
+                                            u = y_summarized2$u_S)
+
+tiff("./run2_statplots/maxdens_maxtime.tiff",
+     width = 6, height = 4, units = "in", res = 300)
+ggplot(data = y_summarized2,
+       aes(x = max_time, y = max_dens, color = a, shape = b)) +
+  geom_point() +
+  facet_grid(~u_S) +
+  scale_y_continuous(trans = "log10") +
+  geom_line(aes(x = max_time, y = pred_maxdens), color = "black", lty = 3) +
+  theme_bw()
+dev.off()
+
+# for (myu_S in unique(y_summarized2$u_S)) {
+#   tiff(paste("./run2_statplots/maxdens_maxtime_r=", myu_S, ".tiff", sep = ""),
+#        width = 5, height = 5, units = "in", res = 300)
+#   print(ggplot(data = y_summarized2[y_summarized2$r == myu_S, ],
+#                aes(x = max_time, y = max_dens, color = a, shape = b)) +
+#           geom_point() +
+#           scale_y_continuous(trans = "log10") +
+#           stat_function(fun = max_dens_func,
+#                         args = list(K = 10**9, P_0 = 1*10**6, r = myu_S),
+#                         color = "black", lwd = 1, alpha = 0.1) +
+#           ggtitle(paste("u =", myu_S)) +
+#           theme_bw()
+#   )
+#   dev.off()
+# }
 
 #Relating phage_final to max_dens and b
 y_summarized2$tau <- as.factor(y_summarized2$tau)
