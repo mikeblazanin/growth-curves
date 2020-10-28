@@ -1,7 +1,6 @@
 #TODO:
 # figure out how to calculate area-under-curve consistently
 # use netrd (see Scarpino mtg)
-# fix all calls to run_sims
 #
 # given control curves and curves varying in density & moi,
 #   figure out how one could calculate phage parameters
@@ -160,7 +159,7 @@ run_sims <- function(u_Svals,
                      avals,
                      tauvals,
                      bvals,
-                     zvals,
+                     zvals = 0,
                      mvals = 0,
                      c_SIvals = 1,
                      c_SRvals = 1,
@@ -203,9 +202,9 @@ run_sims <- function(u_Svals,
   # rvals = u_Svals
   # kvals = k_Svals
   # cvals = c_SIvals
-  # zvals (superinfection [0,1] must be specified)
   # init_bact_dens_vals = init_S_dens_vals
-  # added: u_Rvals, k_Rvals, mvals, c_SRvals, c_RIvals, c_RSvals, init_R_dens_vals
+  # added: zvals (superinfection [0,1]), u_Rvals, k_Rvals, mvals, 
+  # c_SRvals, c_RIvals, c_RSvals, init_R_dens_vals
   
   #Save parameter values provided into dataframe
   # taking all different combinations
@@ -289,24 +288,6 @@ run_sims <- function(u_Svals,
                      "Density" = NA, stringsAsFactors = FALSE)
                                         
   for (i in 1:nrow(param_combos)) { #i acts as the uniq_run counter
-    #Save values to temporary names for code readability
-    # myu_S <- param_combos$u_Svals[i]
-    # myu_R <- param_combos$u_Rvals[i]
-    # myk_S <- param_combos$k_Svals[i]
-    # myk_R <- param_combos$k_Rvals[i]
-    # mya <- param_combos$avals[i]
-    # mytau <- param_combos$tauvals[i]
-    # myb <- param_combos$bvals[i]
-    # myc_SI <- param_combos$c_SIvals[i]
-    # myc_SR <- param_combos$c_SRvals[i]
-    # myc_RS <- param_combos$c_RSvals[i]
-    # myc_RI <- param_combos$c_RIvals[i]
-    # myz <- param_combos$zvals[i]
-    # mym <- param_combos$mvals[i]
-    # my_init_S <- param_combos$init_S_dens_vals[i]
-    # my_init_R <- param_combos$init_R_dens_vals[i]
-    # my_init_moi <- param_combos$init_moi_vals[i]
-    
     #Define pops & parameters
     yinit <- c(S = param_combos$init_S_dens_vals[i],
                I = 0,
@@ -473,7 +454,8 @@ run_sims <- function(u_Svals,
                                   u_R = param_combos$u_Rvals[i], 
                                   k_S = param_combos$k_Svals[i], 
                                   k_R = param_combos$k_Rvals[i],
-                                  a = param_combos$avals[i], b = param_combos$bvals[i], 
+                                  a = param_combos$avals[i], 
+                                  b = param_combos$bvals[i], 
                                   tau = param_combos$tauvals[i],
                                   c_SI = param_combos$c_SIvals[i],
                                   c_SR = param_combos$c_SRvals[i],
@@ -553,6 +535,7 @@ run_sims <- function(u_Svals,
 run_sims_filewrapper <- function(name, dir = ".",
                                  read_file = TRUE, write_file = TRUE,
                                  ...) {
+  
   if (!read_file & !write_file) {
     warning("simulation will be run and no files will be read or written")
   }
@@ -561,6 +544,7 @@ run_sims_filewrapper <- function(name, dir = ".",
   # if so, load them
   if (read_file == TRUE &
       paste(name, "_1.csv", sep = "") %in% list.files(dir)) {
+    warning("Does not check if current param inputs are same as existing data")
     temp <- list(NULL, NULL, NULL)
     temp[[1]] <- read.csv(paste(dir, "/", name, "_1.csv", sep = ""),
                           stringsAsFactors = F)
@@ -585,7 +569,7 @@ run_sims_filewrapper <- function(name, dir = ".",
                   paste(dir, "/", name, "_2.csv", sep = ""))
       }
       if (!is.null(temp[[3]])) {
-        write.csv(temp[[2]], row.names = F,
+        write.csv(temp[[3]], row.names = F,
                   paste(dir, "/", name, "_3.csv", sep = ""))
       }
     }
@@ -651,13 +635,13 @@ calc_deriv <- function(density, percapita = FALSE,
 
 ## Run #1: a, b, tau ----
 run1 <- run_sims_filewrapper(name = "run1",
-                             rvals = c(0.023), #(30 min doubling time)
-                             kvals = c(10**9),
+                             u_Svals = c(0.023), #(30 min doubling time)
+                             k_Svals = c(10**9),
                              avals = 10**seq(from = -12, to = -8, by = 1),
                              tauvals = signif(10**seq(from = 1, to = 2, by = 0.25), 3),
                              bvals = signif(5*10**seq(from = 0, to = 2, by = 0.5), 3),
-                             cvals = 1,
-                             init_bact_dens_vals = 10**6,
+                             c_SIvals = 1,
+                             init_S_dens_vals = 10**6,
                              init_moi_vals = 10**-2,
                              min_dens = 0.1,
                              init_time = 100,
@@ -665,7 +649,7 @@ run1 <- run_sims_filewrapper(name = "run1",
                              print_info = TRUE)
 
 #Find peaks & extinction via summarize
-ybig1 <- group_by_at(run1[[1]], .vars = 1:9)
+ybig1 <- group_by_at(run1[[1]], .vars = 1:17)
 y_summarized1 <- summarize(ybig1,
                           max_dens = max(Density[Pop == "B"]),
                           max_time = time[Pop == "B" & 
@@ -679,7 +663,7 @@ y_summarized1 <- summarize(ybig1,
                           phage_final = max(Density[Pop == "P"]),
                           phage_extin = Density[Pop == "P" & time == extin_time],
                           phage_r = (log(phage_final)-
-                                       log(init_bact_dens[1]*init_moi[1]))/
+                                       log(init_S_dens[1]*init_moi[1]))/
                             extin_time,
                           run_time = max(time)
 )
@@ -700,6 +684,7 @@ ybig1$deriv_percap <- calc_deriv(density = ybig1$Density,
 #Make plots of density against time ----
 dens_offset <- 10
 if (F) {
+  dir.create("run1_dens_curves", showWarnings = FALSE)
   for (run in unique(ybig1$uniq_run)) {
     tiff(paste("./run1_dens_curves/", run, ".tiff", sep = ""),
          width = 5, height = 5, units = "in", res = 300)
@@ -725,11 +710,12 @@ if (F) {
                                         by = round(max(ybig1[ybig1$uniq_run == run &
                                                             ybig1$Pop != "B", 
                                                             "time"])/10))) +
-        scale_color_manual(values = my_cols[c(2, 3, 1)]) +
+        scale_color_manual(limits = c("S", "I", "P"),
+                           values = my_cols[c(2, 3, 1)]) +
         geom_hline(yintercept = 10, lty = 2) +
         theme(axis.text.x = element_text(angle = 45, hjust = 1),
               title = element_text(size = 9)) +
-        ggtitle(paste(ybig1[min(which(ybig1$uniq_run == run)), 2:9],
+        ggtitle(paste(ybig1[min(which(ybig1$uniq_run == run)), 6:8],
                       collapse = ", ")) +
         labs(y = paste("Density +", dens_offset)) +
         NULL
@@ -743,6 +729,7 @@ y_summarized1$b <- as.factor(y_summarized1$b)
 y_summarized1$tau <- as.factor(y_summarized1$tau)
 y_summarized1$a <- as.factor(y_summarized1$a)
 #y_summarized1$r <- as.character(y_summarized1$r)
+dir.create("run1_statplots", showWarnings = FALSE)
 for (stat in c("max_dens", "max_time", "extin_time", 
                "auc", "phage_final", "phage_r")) {
   tiff(paste("./run1_statplots/", stat, ".tiff", sep = ""),
@@ -764,7 +751,7 @@ for (stat in c("max_dens", "max_time", "extin_time",
 }
 
 y_sum_melt1 <- reshape2::melt(y_summarized1,
-                   id.vars = 1:9,
+                   id.vars = 1:17,
                    variable.name = "sum_stat",
                    value.name = "stat_val")
 
@@ -954,17 +941,20 @@ ybig_melt <- data.table::melt(as.data.table(ybig1),
                               measure.vars = c("Density", "deriv", "deriv_percap"),
                               variable.name = "var_measured",
                               value.name = "value")
-for (run in unique(ybig_melt$uniq_run)) {
-  tiff(paste("./run1_dens_and_derivs/", run, ".tiff", sep = ""),
-       width = 4, height = 8, units = "in", res = 300)
-  print(ggplot(data = ybig_melt[ybig_melt$uniq_run == run &
-                                  ybig_melt$Pop == "B" &
-                                  ybig_melt$time > 0, ],
-               aes(x = time, y = value)) +
-          geom_point() +
-          facet_grid(var_measured~., scales = "free_y") +
-          theme_bw())
-  dev.off()
+if (F) {
+  dir.create("run1_dens_and_derivs", showWarnings = FALSE)
+  for (run in unique(ybig_melt$uniq_run)) {
+    tiff(paste("./run1_dens_and_derivs/", run, ".tiff", sep = ""),
+         width = 4, height = 8, units = "in", res = 300)
+    print(ggplot(data = ybig_melt[ybig_melt$uniq_run == run &
+                                    ybig_melt$Pop == "B" &
+                                    ybig_melt$time > 0, ],
+                 aes(x = time, y = value)) +
+            geom_point() +
+            facet_grid(var_measured~., scales = "free_y") +
+            theme_bw())
+    dev.off()
+  }
 }
 
 # Plot multiple B's on same axes ----
@@ -1015,13 +1005,13 @@ dev.off()
 
 ## Run #2: r, a, b, tau ----
 run2 <- run_sims_filewrapper(name = "run2",
-                             rvals = signif(0.04*10**seq(from = 0, to = -0.7, by = -0.175), 3),
-                             kvals = c(10**9),
+                             u_Svals = signif(0.04*10**seq(from = 0, to = -0.7, by = -0.175), 3),
+                             k_Svals = c(10**9),
                              avals = 10**seq(from = -12, to = -8, by = 1),
                              tauvals = signif(10**seq(from = 1, to = 2, by = 0.25), 3),
                              bvals = signif(5*10**seq(from = 0, to = 2, by = 0.5), 3),
-                             cvals = 1,
-                             init_bact_dens_vals = 10**6,
+                             c_SIvals = 1,
+                             init_S_dens_vals = 10**6,
                              init_moi_vals = 10**-2,
                              min_dens = 0.1,
                              init_time = 100,
@@ -1034,7 +1024,7 @@ run2[[2]]
 run2[[3]]
 
 #Find peaks & extinction via summarize
-ybig2 <- group_by_at(run2[[1]], .vars = 1:9)
+ybig2 <- group_by_at(run2[[1]], .vars = 1:17)
 ybig2 <- ybig2[complete.cases(ybig2), ]
 y_summarized2 <- summarize(ybig2,
                            max_dens = max(Density[Pop == "B"]),
@@ -1050,24 +1040,25 @@ y_summarized2 <- summarize(ybig2,
                            phage_final = max(Density[Pop == "P"]),
                            phage_extin = Density[Pop == "P" & time == extin_time],
                            phage_r = (log(phage_final)-
-                                        log(init_bact_dens[1]*init_moi[1]))/
+                                        log(init_S_dens[1]*init_moi[1]))/
                              extin_time,
                            phage_atmaxdens = Density[Pop == "P" & time == max_time]
 )
 
 ## Plot summarized stats ----
 y_sum_melt2 <- reshape2::melt(y_summarized2,
-                              id.vars = 1:9,
+                              id.vars = 1:17,
                               variable.name = "sum_stat",
                               value.name = "stat_val")
 
 y_sum_melt2$b <- as.factor(y_sum_melt2$b)
-for (myr in unique(y_sum_melt2$r)) {
+dir.create("run2_statplots", showWarnings = FALSE)
+for (myu_S in unique(y_sum_melt2$u_S)) {
   tiff(paste("./run2_statplots/all_stats_r=", 
-             formatC(myr, digits = 5, format = "f"), 
+             formatC(myu_S, digits = 5, format = "f"), 
              ".tiff", sep = ""),
        width = 5, height = 7, units = "in", res = 300)
-  print(ggplot(data = y_sum_melt2[y_sum_melt2$r == myr &
+  print(ggplot(data = y_sum_melt2[y_sum_melt2$u_S == myu_S &
                               y_sum_melt2$sum_stat %in% 
                               c("max_dens", "max_time", 
                                 "extin_time", 
@@ -1085,7 +1076,7 @@ for (myr in unique(y_sum_melt2$r)) {
     scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
     theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-    ggtitle(paste("r=", myr, " tau", sep = "")) +
+    ggtitle(paste("r=", myu_S, " tau", sep = "")) +
     NULL
   )
   dev.off()
@@ -1093,18 +1084,18 @@ for (myr in unique(y_sum_melt2$r)) {
 
 ##Just extin_time ----
 ggplot(data = y_summarized2,
-       aes(x = a, y = extin_time, color = b, group = b)) +
+       aes(x = a, y = extin_time, color = as.factor(b), group = as.factor(b))) +
   #geom_point() + 
   geom_line(lwd = 1.25, alpha = 0.8) +
   scale_color_manual(values = my_cols[c(1, 2, 3, 5, 7)]) +
-  facet_grid(r~tau) +
+  facet_grid(u_S~tau) +
   scale_y_continuous(trans = "log10") +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ggplot(data = y_summarized2,
-       aes(x = b, y = extin_time, color = as.factor(r),
-           group = as.factor(r))) +
+       aes(x = b, y = extin_time, color = as.factor(u_S),
+           group = as.factor(u_S))) +
   #geom_point() + 
   geom_line(lwd = 1.25, alpha = 0.8) +
   scale_color_manual(values = my_cols[c(1, 2, 3, 5, 7)]) +
@@ -1114,7 +1105,7 @@ ggplot(data = y_summarized2,
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ggplot(data = y_summarized2,
-       aes(x = r, y = extin_time, color = as.factor(tau),
+       aes(x = u_S, y = extin_time, color = as.factor(tau),
            group = as.factor(tau))) +
   #geom_point() + 
   geom_line(lwd = 1.25, alpha = 0.8) +
@@ -1130,7 +1121,7 @@ ggplot(data = y_summarized2,
   #geom_point() + 
   geom_line(lwd = 1.25, alpha = 0.8) +
   scale_color_manual(values = my_cols[c(1, 2, 3, 5, 7)]) +
-  facet_grid(b~r) +
+  facet_grid(b~u_S) +
   scale_y_continuous(trans = "log10") +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
@@ -1148,13 +1139,13 @@ for (col in c("max_dens", "max_time", "extin_time", "extin_time_sincemax",
 #Make plots
 y_summarized2$a <- as.factor(y_summarized2$a)
 y_summarized2$b <- as.factor(y_summarized2$b)
-for (myr in unique(y_summarized2$r)) {
+for (myu_S in unique(y_summarized2$u_S)) {
   tiff(paste("./run2_statplots/stat_cors_r=", 
-             formatC(myr, digits = 5, format = "f"),
+             formatC(myu_S, digits = 5, format = "f"),
              ".tiff", sep = ""),
        width = 15, height = 15, units = "in", res = 300)
   #Make base figure
-  p <- GGally::ggpairs(y_summarized2[y_summarized2$r == myr, ],
+  p <- GGally::ggpairs(y_summarized2[y_summarized2$u_S == myu_S, ],
                        aes(color = b, shape = a),
                        columns = c("max_dens_log10", "max_time_log10",
                                    "extin_time_log10", 
@@ -1173,18 +1164,19 @@ for (myr in unique(y_summarized2$r)) {
 ##Now selected pairs, looking for underlying functions
 
 #Relating max_dens to max_time
-max_dens_func <- function(t, K, P_0, r) log10(K/(1+((K-P_0)/P_0)*exp(-r*t)))
-for (myr in unique(y_summarized2$r)) {
-  tiff(paste("./run2_statplots/maxdens_maxtime_r=", myr, ".tiff", sep = ""),
+max_dens_func <- function(t, K, P_0, u) log10(K/(1+((K-P_0)/P_0)*exp(-u*t)))
+
+for (myu_S in unique(y_summarized2$u_S)) {
+  tiff(paste("./run2_statplots/maxdens_maxtime_r=", myu_S, ".tiff", sep = ""),
        width = 5, height = 5, units = "in", res = 300)
-  print(ggplot(data = y_summarized2[y_summarized2$r == myr, ],
+  print(ggplot(data = y_summarized2[y_summarized2$r == myu_S, ],
                aes(x = max_time, y = max_dens, color = a, shape = b)) +
           geom_point() +
           scale_y_continuous(trans = "log10") +
           stat_function(fun = max_dens_func,
-                        args = list(K = 10**9, P_0 = 1*10**6, r = myr),
+                        args = list(K = 10**9, P_0 = 1*10**6, r = myu_S),
                         color = "black", lwd = 1, alpha = 0.1) +
-          ggtitle(paste("r =", myr)) +
+          ggtitle(paste("u =", myu_S)) +
           theme_bw()
   )
   dev.off()
@@ -1194,7 +1186,7 @@ for (myr in unique(y_summarized2$r)) {
 y_summarized2$tau <- as.factor(y_summarized2$tau)
 
 #First try fitting a model to the data
-temp <- y_summarized2[y_summarized2$r == 0.00798 &
+temp <- y_summarized2[y_summarized2$u_S == 0.00798 &
                         y_summarized2$max_dens_log10 < 8.95, ]
 model1 <- lm(phage_final_log10 ~ max_dens_log10 + b,
              temp)
@@ -1214,24 +1206,25 @@ phage_final_func <- function(x, a, b, tau) {
 stat_func_list1 <- list()
 i <- 1
 for (myb in unique(y_summarized2$b)) {
-  stat_func_list1[[i]] <- stat_function(fun = phage_final_func,
-                                        args = list(b = as.numeric(as.character(myb))),
-                                        color = colorRampPalette(colors = c("gold", "dark red"))(5)[i])
+  stat_func_list1[[i]] <- 
+    stat_function(fun = phage_final_func,
+                  args = list(b = as.numeric(as.character(myb))),
+                  color = colorRampPalette(colors = c("gold", "dark red"))(5)[i])
   i <- i+1
 }
 
 #Make plots
-for (myr in unique(y_summarized2$r)) {
-#myr <- 0.00798
-  tiff(paste("./run2_statplots/phagefinal_maxdens_r=", myr, ".tiff", sep = ""),
+for (myu_S in unique(y_summarized2$u_S)) {
+#myu_S <- 0.00798
+  tiff(paste("./run2_statplots/phagefinal_maxdens_u=", myu_S, ".tiff", sep = ""),
        width = 5, height = 5, units = "in", res = 300)
-  print(ggplot(data = y_summarized2[y_summarized2$r == myr, ],
+  print(ggplot(data = y_summarized2[y_summarized2$u_S == myu_S, ],
                aes(x = max_dens, y = phage_final, color = b, shape = tau)) +
           geom_point() +
           scale_y_continuous(trans = "log10") +
           scale_x_continuous(trans = "log10") +
           scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-          ggtitle(paste("r =", myr)) +
+          ggtitle(paste("u =", myu_S)) +
           stat_func_list1 +
           theme_bw() +
           NULL
@@ -1241,25 +1234,25 @@ for (myr in unique(y_summarized2$r)) {
 
 #Since max_dens is related to max_time, and phage_final is related to max_dens
 #We can relate phage_final to max_time
-phage_final_func2 <- function(max_time, K, P_0, r, b) {
+phage_final_func2 <- function(max_time, K, P_0, u, b) {
   #note output is in terms of phage_final_log10
-  #log10(phage_final) = log10(K/(1+((K-P_0)/P_0)*exp(-r*max_time))) + log10(b)
-  log10(K/(1+((K-P_0)/P_0)*exp(-r*max_time))) + log10(b)
+  #log10(phage_final) = log10(K/(1+((K-P_0)/P_0)*exp(-u*max_time))) + log10(b)
+  log10(K/(1+((K-P_0)/P_0)*exp(-u*max_time))) + log10(b)
 }
 
 #Pre-define all the stat_functions into a list to add all at once
 # (this is a nested list, the upper level corresponding to different
-# r values, and the inner level to different b values)
+# u values, and the inner level to different b values)
 stat_func_list2 <- list()
 i <- 1
 j <- 1
-for (myr in unique(y_summarized2$r)) {
+for (myu_S in unique(y_summarized2$u_S)) {
   j <- 1
   stat_func_list2[[i]] <- list()
   for (myb in unique(y_summarized2$b)) {
     stat_func_list2[[i]][[j]] <- stat_function(fun = phage_final_func2,
                                           args = list(b = as.numeric(as.character(myb)), 
-                                                      K = 10**9, P_0 = 10**6, r = myr),
+                                                      K = 10**9, P_0 = 10**6, u = myu_S),
                                           color = colorRampPalette(colors = c("gold", "dark red"))(5)[j])
     j <- j+1
   }
@@ -1267,16 +1260,16 @@ for (myr in unique(y_summarized2$r)) {
 }
 
 i <- 1
-for (myr in unique(y_summarized2$r)) {
-#myr <- 0.00798
-  tiff(paste("./run2_statplots/phagefinal_maxtime_r=", myr, ".tiff", sep = ""),
+for (myu_S in unique(y_summarized2$u_S)) {
+#myu_S <- 0.00798
+  tiff(paste("./run2_statplots/phagefinal_maxtime_u=", myu_S, ".tiff", sep = ""),
        width = 5, height = 5, units = "in", res = 300)
-  print(ggplot(data = y_summarized2[y_summarized2$r == myr, ],
+  print(ggplot(data = y_summarized2[y_summarized2$u_S == myu_S, ],
                aes(x = max_time, y = phage_final_log10, color = b, shape = a)) +
           geom_point() +
           stat_func_list2[[i]] +
           scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-          ggtitle(paste("r =", myr)) +
+          ggtitle(paste("u =", myu_S)) +
           theme_bw() +
           NULL
         )
@@ -1286,13 +1279,13 @@ for (myr in unique(y_summarized2$r)) {
 
 ##Run #3: r, a, b, tau, init_dens, init_moi ----
 run3 <- run_sims_filewrapper(name = "run3",
-                             rvals = c(0.04, 0.0179),
-                             kvals = c(10**9),
+                             u_Svals = c(0.04, 0.0179),
+                             k_Svals = c(10**9),
                              avals = 10**seq(from = -12, to = -8, by = 2),
                              tauvals = signif(20**seq(from = 1, to = 1.5, by = 0.5), 3),
                              bvals = signif(5*10**seq(from = 1, to = 2, by = 1), 3),
-                             cvals = 1,
-                             init_bact_dens_vals = c(10**4, 10**5, 10**6),
+                             c_SIvals = 1,
+                             init_S_dens_vals = c(10**4, 10**5, 10**6),
                              init_moi_vals = c(10**-2, 10**-1, 1),
                              min_dens = 0.1,
                              init_time = 100,
@@ -1305,7 +1298,7 @@ run3[[2]]
 run3[[3]]
 
 #Find peaks & extinction via summarize
-ybig3 <- group_by_at(run3[[1]], .vars = 1:9)
+ybig3 <- group_by_at(run3[[1]], .vars = 1:17)
 ybig3 <- ybig3[complete.cases(ybig3), ]
 y_summarized3 <- summarize(ybig3,
                            max_dens = max(Density[Pop == "B"]),
@@ -1321,13 +1314,14 @@ y_summarized3 <- summarize(ybig3,
                            phage_final = max(Density[Pop == "P"]),
                            phage_extin = Density[Pop == "P" & time == extin_time],
                            phage_r = (log(phage_final)-
-                                        log(init_bact_dens[1]*init_moi[1]))/
+                                        log(init_S_dens[1]*init_moi[1]))/
                              extin_time
 )
 
 #Make plots of density against time ----
 dens_offset <- 10
 if (F) {
+  dir.create("run3_dens_curves", showWarnings = FALSE)
   for (run in unique(ybig3$uniq_run)) {
     tiff(paste("./run3_dens_curves/", run, ".tiff", sep = ""),
          width = 5, height = 5, units = "in", res = 300)
@@ -1368,24 +1362,24 @@ if (F) {
 
 ## Plot summarized stats ----
 y_sum_melt3 <- reshape2::melt(y_summarized3,
-                              id.vars = 1:9,
+                              id.vars = 1:17,
                               variable.name = "sum_stat",
                               value.name = "stat_val")
 
 y_sum_melt3$init_moi <- as.factor(y_sum_melt3$init_moi)
-for (myr in unique(y_sum_melt3$r)) {
+for (myu_S in unique(y_sum_melt3$u_S)) {
   for (myb in unique(y_sum_melt3$b)) {
     tiff(paste("./run3_statplots/all_stats_r=", 
-               formatC(myr, digits = 5, format = "f"), 
+               formatC(myu_S, digits = 5, format = "f"), 
                ",b=", myb, ".tiff", sep = ""),
          width = 5, height = 7, units = "in", res = 300)
-    print(ggplot(data = y_sum_melt3[y_sum_melt3$r == myr &
+    print(ggplot(data = y_sum_melt3[y_sum_melt3$r == myu_S &
                                       y_sum_melt3$b == myb &
                                       y_sum_melt3$sum_stat %in% 
                                       c("max_dens", "max_time", 
                                         "extin_time", "extin_time_sincemax",
                                         "phage_final", "phage_r"), ],
-                 aes(x = init_bact_dens, y = stat_val, color = init_moi, group = init_moi)) +
+                 aes(x = init_S_dens, y = stat_val, color = init_moi, group = init_moi)) +
             geom_point(size = 2, alpha = 0.8) + 
             geom_line(size = 1.1, alpha = 0.6) +
             facet_grid(sum_stat~tau*a, scales = "free_y") +
@@ -1394,7 +1388,7 @@ for (myr in unique(y_sum_melt3$r)) {
             scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
             theme_bw() +
             theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-            ggtitle(paste("r=", myr, " tau", sep = "")) +
+            ggtitle(paste("r=", myu_S, " tau", sep = "")) +
             NULL
     )
     dev.off()
@@ -1403,7 +1397,7 @@ for (myr in unique(y_sum_melt3$r)) {
 
 #Let's focus in on extin_time
 ggplot(data = y_summarized3,
-       aes(x = init_bact_dens, y = extin_time, color = init_moi,
+       aes(x = init_S_dens, y = extin_time, color = init_moi,
            shape = a)) +
   geom_point() +
   facet_grid(r~b*tau) +
@@ -1423,15 +1417,15 @@ for (col in c("max_dens", "max_time", "extin_time", "extin_time_sincemax",
 
 #Make plots
 y_summarized3$init_moi <- as.factor(y_summarized3$init_moi)
-y_summarized3$init_bact_dens <- as.factor(y_summarized3$init_bact_dens)
-for (myr in unique(y_summarized3$r)) {
+y_summarized3$init_S_dens <- as.factor(y_summarized3$init_S_dens)
+for (myu_S in unique(y_summarized3$u_S)) {
   tiff(paste("./run3_statplots/stat_cors_r=", 
-             formatC(myr, digits = 5, format = "f"),
+             formatC(myu_S, digits = 5, format = "f"),
              ".tiff", sep = ""),
        width = 15, height = 15, units = "in", res = 300)
   #Make base figure
-  p <- GGally::ggpairs(y_summarized3[y_summarized3$r == myr, ],
-                       aes(color = init_moi, shape = init_bact_dens),
+  p <- GGally::ggpairs(y_summarized3[y_summarized3$r == myu_S, ],
+                       aes(color = init_moi, shape = init_S_dens),
                        columns = c("max_dens_log10", "max_time_log10",
                                    "extin_time_log10", 
                                    "extin_time_sincemax_log10",
@@ -1448,13 +1442,13 @@ for (myr in unique(y_summarized3$r)) {
 
 ###Run #4: r, a, b, tau ----
 run4 <- run_sims_filewrapper(name = "run4",
-                             rvals = signif(0.04*10**seq(from = 1, to = -2, by = -0.67), 3),
-                             kvals = c(10**9),
+                             u_Svals = signif(0.04*10**seq(from = 1, to = -2, by = -0.67), 3),
+                             k_Svals = c(10**9),
                              avals = 10**seq(from = -14, to = -6, by = 2),
                              tauvals = signif(10**seq(from = 0, to = 3, by = 0.75), 3),
                              bvals = signif(5*10**seq(from = -1, to = 3, by = 1), 3),
-                             cvals = 1,
-                             init_bact_dens_vals = 10**6,
+                             c_SIvals = 1,
+                             init_S_dens_vals = 10**6,
                              init_moi_vals = 10**-2,
                              min_dens = 0.1,
                              init_time = 100,
@@ -1467,7 +1461,7 @@ run4[[2]]
 run4[[3]]
 
 #Find peaks & extinction via summarize
-ybig4 <- group_by_at(run4[[1]], .vars = 1:9)
+ybig4 <- group_by_at(run4[[1]], .vars = 1:17)
 ybig4 <- ybig4[complete.cases(ybig4), ]
 y_summarized4 <- summarize(ybig4,
                            max_dens = max(Density[Pop == "B"]),
@@ -1483,23 +1477,23 @@ y_summarized4 <- summarize(ybig4,
                            phage_final = max(Density[Pop == "P"]),
                            phage_extin = Density[Pop == "P" & time == extin_time],
                            phage_r = (log(phage_final)-
-                                        log(init_bact_dens[1]*init_moi[1]))/
+                                        log(init_S_dens[1]*init_moi[1]))/
                              extin_time
 )
 
 ## Plot summarized stats ----
 y_sum_melt4 <- reshape2::melt(y_summarized4,
-                              id.vars = 1:9,
+                              id.vars = 1:17,
                               variable.name = "sum_stat",
                               value.name = "stat_val")
 
 y_sum_melt4$b <- as.factor(y_sum_melt4$b)
-for (myr in unique(y_sum_melt4$r)) {
+for (myu_S in unique(y_sum_melt4$u_S)) {
   tiff(paste("./run2_statplots/all_stats_r=", 
-             formatC(myr, digits = 5, format = "f"), 
+             formatC(myu_S, digits = 5, format = "f"), 
              ".tiff", sep = ""),
        width = 5, height = 7, units = "in", res = 300)
-  print(ggplot(data = y_sum_melt4[y_sum_melt4$r == myr &
+  print(ggplot(data = y_sum_melt4[y_sum_melt4$r == myu_S &
                                     y_sum_melt4$sum_stat %in% 
                                     c("max_dens", "max_time", 
                                       "extin_time", "extin_time_sincemax",
@@ -1513,7 +1507,7 @@ for (myr in unique(y_sum_melt4$r)) {
           scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
           theme_bw() +
           theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-          ggtitle(paste("r=", myr, " tau", sep = "")) +
+          ggtitle(paste("r=", myu_S, " tau", sep = "")) +
           NULL
   )
   dev.off()
@@ -1521,20 +1515,20 @@ for (myr in unique(y_sum_melt4$r)) {
 
 ###Run #5: init_dens and init_moi as r,k,a,b,tau indiv ----
 run5_params <- data.frame(matrix(NA, ncol = 7, nrow = 25*5*3))
-colnames(run5_params) <- c("init_bact_dens_vals", "init_moi_vals",
-                           "rvals", "kvals", "avals", "bvals", "tauvals")
+colnames(run5_params) <- c("init_S_dens_vals", "init_moi_vals",
+                           "u_Svals", "k_Svals", "avals", "bvals", "tauvals")
 
-run5_params$init_bact_dens_vals <- rep(rep(10**seq(from = 4, to = 6, by = 0.5),
+run5_params$init_S_dens_vals <- rep(rep(10**seq(from = 4, to = 6, by = 0.5),
                                       times = 5),
                                   times = 5*3)
 run5_params$init_moi_vals <- rep(rep(10**seq(from = -3, to = -1, by = 0.5), 
                                 each = 5),
                             times = 5*3)
-run5_params$rvals <- c(rep(0.0179, times = 25*0*3),
+run5_params$u_Svals <- c(rep(0.0179, times = 25*0*3),
                   rep(signif(0.04*10**seq(from = 0, to = -0.7, by = -0.35), 3),
                       each = 25),
                   rep(0.0179, times = 25*4*3))
-run5_params$kvals <- c(rep(10**9, times = 25*1*3),
+run5_params$k_Svals <- c(rep(10**9, times = 25*1*3),
                    rep(10**c(8, 9, 10), each = 25),
                    rep(10**9, times = 25*3*3))
 run5_params$avals <- c(rep(10**-10, times = 25*2*3),
@@ -1548,14 +1542,14 @@ run5_params$tauvals <- c(rep(37.6, times = 25*4*3),
                    rep(37.6, times = 25*0*3))
                              
 run5 <- run_sims_filewrapper(name = "run5",
-                             rvals = run5_params$rvals,
-                             kvals = run5_params$kvals,
+                             u_Svals = run5_params$u_Svals,
+                             k_Svals = run5_params$k_Svals,
                              avals = run5_params$avals,
                              tauvals = run5_params$tauvals,
                              bvals = run5_params$bvals,
-                             init_bact_dens_vals = run5_params$init_bact_dens_vals,
+                             init_S_dens_vals = run5_params$init_S_dens_vals,
                              init_moi_vals = run5_params$init_moi_vals,
-                             cvals = 1,
+                             c_SIvals = 1,
                              combinatorial = FALSE,
                              min_dens = 0.1,
                              init_time = 100,
@@ -1566,7 +1560,7 @@ run5[[2]]
 
 run5[[3]]
 
-ybig5 <- group_by_at(run5[[1]], .vars = 1:9)
+ybig5 <- group_by_at(run5[[1]], .vars = 1:17)
 y_summarized5 <- summarize(ybig5,
                            max_dens = max(Density[Pop == "B"]),
                            max_time = time[Pop == "B" & 
@@ -1581,7 +1575,7 @@ y_summarized5 <- summarize(ybig5,
                            phage_final = max(Density[Pop == "P"]),
                            phage_extin = Density[Pop == "P" & time == extin_time],
                            phage_r = (log(phage_final)-
-                                        log(init_bact_dens[1]*init_moi[1]))/
+                                        log(init_S_dens[1]*init_moi[1]))/
                              extin_time
 )
 
@@ -1589,7 +1583,7 @@ ggplot(data = y_summarized5[y_summarized5$K == 10**9 &
                               y_summarized5$a == 10**-10 &
                               y_summarized5$b == 63.2 &
                               y_summarized5$tau == 37.6, ],
-       aes(x = log10(init_bact_dens), 
+       aes(x = log10(init_S_dens), 
            y = log10(init_moi),
            z = max_time)) +
   geom_contour_filled() +
@@ -1603,7 +1597,7 @@ ggplot(data = y_summarized5[y_summarized5$r == 0.0179 &
                               y_summarized5$a == 10**-10 &
                               y_summarized5$b == 63.2 &
                               y_summarized5$tau == 37.6, ],
-       aes(x = log10(init_bact_dens), 
+       aes(x = log10(init_S_dens), 
            y = log10(init_moi),
            z = max_time)) +
   geom_contour_filled() +
@@ -1617,7 +1611,7 @@ ggplot(data = y_summarized5[y_summarized5$r == 0.0179 &
                               y_summarized5$K == 10**9 &
                               y_summarized5$b == 63.2 &
                               y_summarized5$tau == 37.6, ],
-       aes(x = log10(init_bact_dens), 
+       aes(x = log10(init_S_dens), 
            y = log10(init_moi),
            z = max_time)) +
   geom_contour_filled() +
@@ -1631,7 +1625,7 @@ ggplot(data = y_summarized5[y_summarized5$r == 0.0179 &
                               y_summarized5$K == 10**9 &
                               y_summarized5$a == 10**-10 &
                               y_summarized5$tau == 37.6, ],
-       aes(x = log10(init_bact_dens), 
+       aes(x = log10(init_S_dens), 
            y = log10(init_moi),
            z = max_time)) +
   geom_contour_filled() +
@@ -1645,7 +1639,7 @@ ggplot(data = y_summarized5[y_summarized5$r == 0.0179 &
                               y_summarized5$K == 10**9 &
                               y_summarized5$a == 10**-10 &
                               y_summarized5$b == 63.2, ],
-       aes(x = log10(init_bact_dens), 
+       aes(x = log10(init_S_dens), 
            y = log10(init_moi),
            z = max_time)) +
   geom_contour_filled() +
@@ -1655,6 +1649,26 @@ ggplot(data = y_summarized5[y_summarized5$r == 0.0179 &
   theme_bw() +
   NULL
                               
+##Run #6: showing peak density uselessness ----
+
+
+
+run6 <- run_sims_filewrapper(name = "run6",
+                             u_Svals = ,
+                             k_Svals = run5_params$k_Svals,
+                             avals = run5_params$avals,
+                             tauvals = run5_params$tauvals,
+                             bvals = run5_params$bvals,
+                             init_S_dens_vals = run5_params$init_S_dens_vals,
+                             init_moi_vals = run5_params$init_moi_vals,
+                             c_SIvals = 1,
+                             combinatorial = FALSE,
+                             min_dens = 0.1,
+                             init_time = 100,
+                             init_stepsize = 1,
+                             print_info = TRUE)
+
+
 
 ###Work in progress below: ----
 
