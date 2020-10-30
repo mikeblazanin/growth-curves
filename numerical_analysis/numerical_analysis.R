@@ -1827,6 +1827,91 @@ cowplot::plot_grid(p1 + theme(legend.position = "none"),
                    nrow = 2)
 dev.off()
 
+##Run 7: r, k, a, b, tau +/- coinfection ----
+
+###TODO: check all the errors & see what's the cause
+###       also figure out why the predict function is making two lines????
+
+run7 <- 
+  run_sims_filewrapper(name = "run7",
+                       u_Svals = signif(0.04*10**c(0, -0.7), 3),
+                       k_Svals = signif(10**c(8, 10), 3),
+                       avals = 10**seq(from = -12, to = -8, by = 2),
+                       tauvals = signif(10**seq(from = 1, to = 2, by = 0.5), 3),
+                       bvals = signif(5*10**seq(from = 0, to = 2, by = 1), 3),
+                       init_S_dens_vals = 10**6,
+                       init_moi_vals = 10**-2,
+                       c_SIvals = 1,
+                       zvals = c(0, 1),
+                       combinatorial = TRUE,
+                       min_dens = 0.1,
+                       init_time = 100,
+                       init_stepsize = 1,
+                       print_info = TRUE)
+
+#Find peaks & extinction via summarize
+ybig7 <- group_by_at(run7[[1]], .vars = 1:17)
+y_summarized7 <- summarize(ybig7,
+                           equil = max(equil),
+                           max_dens = max(Density[Pop == "B"]),
+                           max_time = time[Pop == "B" & 
+                                             Density[Pop == "B"] == max_dens],
+                           extin_index = min(which(Pop == "B" &
+                                                     Density <= 10**4)),
+                           extin_dens = Density[extin_index],
+                           extin_time = time[extin_index],
+                           auc = sum(Density[Pop == "B" & time < extin_time])*
+                             extin_time,
+                           phage_final = max(Density[Pop == "P"]),
+                           phage_extin = Density[Pop == "P" & time == extin_time],
+                           phage_r = (log(phage_final)-
+                                        log(init_S_dens[1]*init_moi[1]))/
+                             extin_time,
+                           run_time = max(time)
+)
+
+dir.create("run7_statplots", showWarnings = FALSE)
+
+#Relating max_dens to max_time
+max_dens_func <- function(t, K, P_0, u) {K/(1+((K-P_0)/P_0)*exp(-u*t))}
+
+y_summarized7$pred_maxdens <- max_dens_func(t = y_summarized7$max_time,
+                                            K = y_summarized7$k_S,
+                                            P_0 = y_summarized7$init_S_dens,
+                                            u = y_summarized7$u_S)
+
+tiff("./run7_statplots/maxdens_maxtime.tiff",
+     width = 8, height = 4, units = "in", res = 300)
+ggplot(data = y_summarized7[y_summarized7$equil == TRUE &
+                              complete.cases(y_summarized7), ],
+       aes(x = max_time, y = max_dens, color = as.factor(a), shape = as.factor(b))) +
+  geom_point() +
+  facet_grid(k_S ~ z*u_S, scales = "free") +
+  scale_y_continuous(trans = "log10") +
+  geom_line(aes(x = max_time, y = pred_maxdens), color = "black", lty = 3) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  NULL
+dev.off()
+
+##Run 8: r, k, a, b, tau +/- (costless) resistance ----
+# run8 <- 
+#   run_sims_filewrapper(name = "run8",
+#                        u_Svals = signif(0.04*10**c(0, -0.7), 3),
+#                        k_Svals = signif(10**c(8, 10), 3),
+#                        avals = 10**seq(from = -12, to = -8, by = 2),
+#                        tauvals = signif(10**seq(from = 1, to = 2, by = 0.5), 3),
+#                        bvals = signif(5*10**seq(from = 0, to = 2, by = 1), 3),
+#                        init_S_dens_vals = 10**6,
+#                        init_moi_vals = 10**-2,
+#                        c_SIvals = 1,
+#                        zvals = 0,
+#                        combinatorial = TRUE,
+#                        min_dens = 0.1,
+#                        init_time = 100,
+#                        init_stepsize = 1,
+#                        print_info = TRUE)
+
 
 ###Work in progress below: ----
 
