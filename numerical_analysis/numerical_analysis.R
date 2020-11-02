@@ -2072,7 +2072,7 @@ run7 <-
                        print_info = TRUE)
 
 #Find peaks & extinction via summarize
-ybig7 <- group_by_at(run7[[1]], .vars = 1:17)
+ybig7 <- group_by_at(run7[[1]][!is.na(run7[[1]]$uniq_run), ], .vars = 1:17)
 y_summarized7 <- summarize(ybig7,
                            equil = max(equil),
                            max_dens = max(Density[Pop == "B"]),
@@ -2085,12 +2085,57 @@ y_summarized7 <- summarize(ybig7,
                            auc = sum(Density[Pop == "B" & time < extin_time])*
                              extin_time,
                            phage_final = max(Density[Pop == "P"]),
-                           phage_extin = Density[Pop == "P" & time == extin_time],
+                           phage_extin = max(Density[Pop == "P" & time <= extin_time]),
                            phage_r = (log(phage_final)-
                                         log(init_S_dens[1]*init_moi[1]))/
                              extin_time,
                            run_time = max(time)
 )
+
+#Make plots of density against time ----
+dens_offset <- 10
+if (F) {
+  dir.create("run7_dens_curves", showWarnings = FALSE)
+  for (run in unique(ybig7$uniq_run)) {
+    tiff(paste("./run7_dens_curves/", run, ".tiff", sep = ""),
+         width = 5, height = 5, units = "in", res = 300)
+    print(
+      ggplot(data = ybig7[ybig7$uniq_run == run &
+                            ybig7$Pop %in% c("S", "I", "P", "R"),], 
+             aes(x = time, y = Density+dens_offset, color = Pop)) +
+        geom_line(lwd = 1.5, alpha = 1) + 
+        geom_line(data = ybig7[ybig7$uniq_run == run &
+                                 ybig7$Pop == "B",], 
+                  aes(x = time, y = Density+dens_offset),
+                  color = "black", alpha = 0.5, lwd = 1.1) +
+        geom_line(data = ybig7[ybig7$uniq_run == run &
+                                 ybig7$Pop == "PI",],
+                  aes(x = time, y = Density+dens_offset),
+                  color = "black", alpha = 0.5, lwd = 1, lty = 3) +
+        geom_point(data = y_summarized7[y_summarized7$uniq_run == run, ],
+                   aes(x = max_time, y = max_dens+dens_offset), color = "black") +
+        geom_point(data = y_summarized7[y_summarized7$uniq_run == run, ],
+                   aes(x = extin_time, y = extin_dens+dens_offset), color = "black") +
+        scale_y_continuous(trans = "log10") +
+        # scale_x_continuous(breaks = seq(from = 0, to = max(ybig7$time), 
+        #                                 by = round(max(ybig7[ybig7$uniq_run == run &
+        #                                                        ybig7$Pop != "B", 
+        #                                                      "time"])/10))) +
+        scale_color_manual(limits = c("S", "I", "P", "R"),
+                           values = my_cols[c(2, 3, 1, 7)]) +
+        geom_hline(yintercept = 10, lty = 2) +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1),
+              title = element_text(size = 9)) +
+        ggtitle(paste(ybig7[min(which(ybig7$uniq_run == run)), 6:8],
+                      collapse = ", ")) +
+        labs(y = paste("Density +", dens_offset)) +
+        NULL
+    )
+    dev.off()
+  }
+}
+
+
 
 dir.create("run7_statplots", showWarnings = FALSE)
 
@@ -2101,38 +2146,119 @@ y_summarized7$pred_maxdens <- max_dens_func(t = y_summarized7$max_time,
                                             K = y_summarized7$k_S,
                                             P_0 = y_summarized7$init_S_dens,
                                             u = y_summarized7$u_S)
+y_summarized7 <- y_summarized7[order(y_summarized7$pred_maxdens),]
 
 tiff("./run7_statplots/maxdens_maxtime.tiff",
      width = 8, height = 4, units = "in", res = 300)
 ggplot(data = y_summarized7[y_summarized7$equil == TRUE &
                               complete.cases(y_summarized7), ],
-       aes(x = max_time, y = max_dens, color = as.factor(a), shape = as.factor(b))) +
+       aes(x = max_time, y = max_dens, color = as.factor(a), shape = as.factor(b),
+           group = k_S*z*u_S)) +
   geom_point() +
   facet_grid(k_S ~ z*u_S, scales = "free") +
   scale_y_continuous(trans = "log10") +
-  geom_line(aes(x = max_time, y = pred_maxdens), color = "black", lty = 3) +
+  geom_line(aes(x = max_time, y = pred_maxdens), color = "black", lty = 2) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   NULL
 dev.off()
 
 ##Run 8: r, k, a, b, tau +/- (costless) resistance ----
-# run8 <- 
-#   run_sims_filewrapper(name = "run8",
-#                        u_Svals = signif(0.04*10**c(0, -0.7), 3),
-#                        k_Svals = signif(10**c(8, 10), 3),
-#                        avals = 10**seq(from = -12, to = -8, by = 2),
-#                        tauvals = signif(10**seq(from = 1, to = 2, by = 0.5), 3),
-#                        bvals = signif(5*10**seq(from = 0, to = 2, by = 1), 3),
-#                        init_S_dens_vals = 10**6,
-#                        init_moi_vals = 10**-2,
-#                        c_SIvals = 1,
-#                        zvals = 0,
-#                        combinatorial = TRUE,
-#                        min_dens = 0.1,
-#                        init_time = 100,
-#                        init_stepsize = 1,
-#                        print_info = TRUE)
+run8_params <- expand.grid(u_vals = signif(0.04*10**c(0, -0.7), 3),
+                           k_vals = signif(10**c(8, 10), 3),
+                           avals = 10**seq(from = -12, to = -8, by = 4),
+                           tauvals = signif(10**seq(from = 1, to = 2, by = 1), 3),
+                           bvals = signif(5*10**seq(from = 0, to = 2, by = 2), 3),
+                           mvals = signif(10**c(-4, -5.5, -7), 3))
+                          
+run8 <-
+  run_sims_filewrapper(name = "run8",
+                       u_Svals = run8_params$u_vals,
+                       u_Rvals = run8_params$u_vals,
+                       k_Svals = run8_params$k_vals,
+                       k_Rvals = run8_params$k_vals,
+                       avals = run8_params$avals,
+                       tauvals = run8_params$tauvals,
+                       bvals = run8_params$bvals,
+                       init_S_dens_vals = 10**6,
+                       init_moi_vals = 10**-2,
+                       c_SIvals = 1,
+                       zvals = 0,
+                       mvals = run8_params$mvals,
+                       combinatorial = FALSE,
+                       min_dens = 0.1,
+                       init_time = 100,
+                       init_stepsize = 1,
+                       print_info = TRUE)
+
+run8[[2]]
+run8[[3]]
+
+#Find peaks & extinction via summarize
+ybig8 <- group_by_at(run8[[1]], .vars = 1:17)
+y_summarized8 <- summarize(ybig8,
+                           max_index = find_local_extrema(values = Density[Pop == "B"],
+                                                        return_minima = FALSE,
+                                                        width_limit = 3)[1],
+                           max_dens = Density[Pop == "B"][max_index],
+                           max_time = time[Pop == "B"][max_index],
+                           extin_index = find_local_extrema(values = Density[Pop == "B"],
+                                                            return_maxima = FALSE,
+                                                            width_limit = 3)[1],
+                           extin_dens = Density[Pop == "B"][extin_index],
+                           extin_time = time[Pop == "B"][extin_index],
+                           auc = sum(Density[Pop == "B" & time < extin_time])*
+                             extin_time,
+                           phage_final = max(Density[Pop == "P"]),
+                           phage_extin = Density[Pop == "P" & time == extin_time],
+                           phage_r = (log(phage_final)-
+                                        log(init_S_dens[1]*init_moi[1]))/
+                             extin_time,
+                           run_time = max(time)
+)
+
+#Make plots of density against time ----
+dens_offset <- 10
+if (F) {
+  dir.create("run8_dens_curves", showWarnings = FALSE)
+  for (run in unique(ybig8$uniq_run)) {
+    tiff(paste("./run8_dens_curves/", run, ".tiff", sep = ""),
+         width = 5, height = 5, units = "in", res = 300)
+    print(
+      ggplot(data = ybig8[ybig8$uniq_run == run &
+                            ybig8$Pop %in% c("S", "I", "P", "R"),], 
+             aes(x = time, y = Density+dens_offset, color = Pop)) +
+        geom_line(lwd = 1.5, alpha = 1) + 
+        geom_line(data = ybig8[ybig8$uniq_run == run &
+                                 ybig8$Pop == "B",], 
+                  aes(x = time, y = Density+dens_offset),
+                  color = "black", alpha = 0.5, lwd = 1.1) +
+        geom_line(data = ybig8[ybig8$uniq_run == run &
+                                 ybig8$Pop == "PI",],
+                  aes(x = time, y = Density+dens_offset),
+                  color = "black", alpha = 0.5, lwd = 1, lty = 3) +
+        geom_point(data = y_summarized8[y_summarized8$uniq_run == run, ],
+                   aes(x = max_time, y = max_dens+dens_offset), color = "black") +
+        geom_point(data = y_summarized8[y_summarized8$uniq_run == run, ],
+                   aes(x = extin_time, y = extin_dens+dens_offset), color = "black") +
+        scale_y_continuous(trans = "log10") +
+        scale_x_continuous(breaks = seq(from = 0, to = max(ybig8$time), 
+                                        by = round(max(ybig8[ybig8$uniq_run == run &
+                                                               ybig8$Pop != "B", 
+                                                             "time"])/10))) +
+        scale_color_manual(limits = c("S", "I", "P", "R"),
+                           values = my_cols[c(2, 3, 1, 7)]) +
+        geom_hline(yintercept = 10, lty = 2) +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1),
+              title = element_text(size = 9)) +
+        ggtitle(paste(ybig8[min(which(ybig8$uniq_run == run)), 6:8],
+                      collapse = ", ")) +
+        labs(y = paste("Density +", dens_offset)) +
+        NULL
+    )
+    dev.off()
+  }
+}
 
 
 ###Work in progress below: ----
