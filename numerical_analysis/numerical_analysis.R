@@ -1310,7 +1310,7 @@ run2[[3]]
 #Find peaks & extinction via summarize
 ybig2 <- group_by_at(run2[[1]], .vars = 1:17)
 ybig2 <- ybig2[complete.cases(ybig2), ]
-y_summarized2 <- summarize(ybig2,
+y_summarized2 <- dplyr::summarize(ybig2,
                            max_dens = max(Density[Pop == "B"]),
                            max_time = time[Pop == "B" & 
                                              Density[Pop == "B"] == max_dens],
@@ -1483,19 +1483,28 @@ dev.off()
 # }
 
 #Relating phage_final to max_dens and b
+ggplot(data = y_summarized2, 
+       aes(x = max_dens, y = phage_final, 
+           color = as.factor(tau))) +
+  geom_point() +
+  scale_y_continuous(trans = "log10") +
+  scale_x_continuous(trans = "log10")
+
+
 y_summarized2$tau <- as.factor(y_summarized2$tau)
 
 #First try fitting a model to the data
 temp <- y_summarized2[y_summarized2$u_S == 0.00798 &
                         y_summarized2$max_dens_log10 < 8.95, ]
-model1 <- lm(phage_final_log10 ~ max_dens_log10 + b,
+model1 <- lm(phage_final_log10 ~ max_dens_log10 + tau,
              temp)
 summary(model1)
 
 ggplot(data = temp,
-       aes(x = max_dens_log10, y = phage_final_log10, color = b)) +
+       aes(x = max_dens_log10, y = phage_final_log10, 
+           color = b, shape = tau)) +
   geom_point() +
-  geom_line(data = fortify(model2), aes(x = max_dens_log10, y = .fitted))
+  geom_line(data = fortify(model1), aes(x = max_dens_log10, y = .fitted))
 
 #The model seems to suggest the following "true" underlying model:
 phage_final_func <- function(x, a, b, tau) {
@@ -1879,38 +1888,38 @@ y_summarized5 <- summarize(ybig5,
                              extin_time
 )
 
-ggplot(data = y_summarized5[y_summarized5$K == 10**9 &
+ggplot(data = y_summarized5[y_summarized5$k_S == 10**9 &
                               y_summarized5$a == 10**-10 &
-                              y_summarized5$b == 63.2 &
-                              y_summarized5$tau == 37.6, ],
+                              y_summarized5$b == 37.6 &
+                              y_summarized5$tau == 63.2, ],
        aes(x = log10(init_S_dens), 
            y = log10(init_moi),
            z = max_time)) +
   geom_contour_filled() +
-  facet_grid(~r) +
+  facet_grid(~u_S) +
   ggtitle("r") +
   scale_fill_viridis_d(direction = -1) +
   theme_bw() +
   NULL
 
-ggplot(data = y_summarized5[y_summarized5$r == 0.0179 &
+ggplot(data = y_summarized5[y_summarized5$u_S == 0.0179 &
                               y_summarized5$a == 10**-10 &
-                              y_summarized5$b == 63.2 &
-                              y_summarized5$tau == 37.6, ],
+                              y_summarized5$b == 37.6 &
+                              y_summarized5$tau == 63.2, ],
        aes(x = log10(init_S_dens), 
            y = log10(init_moi),
            z = max_time)) +
   geom_contour_filled() +
-  facet_grid(~K) +
+  facet_grid(~k_S) +
   ggtitle("k") +
   scale_fill_viridis_d(direction = -1) +
   theme_bw() +
   NULL
 
-ggplot(data = y_summarized5[y_summarized5$r == 0.0179 &
-                              y_summarized5$K == 10**9 &
-                              y_summarized5$b == 63.2 &
-                              y_summarized5$tau == 37.6, ],
+ggplot(data = y_summarized5[y_summarized5$u_S == 0.0179 &
+                              y_summarized5$k_S == 10**9 &
+                              y_summarized5$b == 37.6 &
+                              y_summarized5$tau == 63.2, ],
        aes(x = log10(init_S_dens), 
            y = log10(init_moi),
            z = max_time)) +
@@ -1921,10 +1930,10 @@ ggplot(data = y_summarized5[y_summarized5$r == 0.0179 &
   theme_bw() +
   NULL
 
-ggplot(data = y_summarized5[y_summarized5$r == 0.0179 &
-                              y_summarized5$K == 10**9 &
+ggplot(data = y_summarized5[y_summarized5$u_S == 0.0179 &
+                              y_summarized5$k_S == 10**9 &
                               y_summarized5$a == 10**-10 &
-                              y_summarized5$tau == 37.6, ],
+                              y_summarized5$tau == 63.2, ],
        aes(x = log10(init_S_dens), 
            y = log10(init_moi),
            z = max_time)) +
@@ -1935,10 +1944,10 @@ ggplot(data = y_summarized5[y_summarized5$r == 0.0179 &
   theme_bw() +
   NULL
 
-ggplot(data = y_summarized5[y_summarized5$r == 0.0179 &
-                              y_summarized5$K == 10**9 &
+ggplot(data = y_summarized5[y_summarized5$u_S == 0.0179 &
+                              y_summarized5$k_S == 10**9 &
                               y_summarized5$a == 10**-10 &
-                              y_summarized5$b == 63.2, ],
+                              y_summarized5$b == 37.6, ],
        aes(x = log10(init_S_dens), 
            y = log10(init_moi),
            z = max_time)) +
@@ -1949,6 +1958,18 @@ ggplot(data = y_summarized5[y_summarized5$r == 0.0179 &
   theme_bw() +
   NULL
                               
+ggplot(data = y_summarized5[y_summarized5$u_S == 0.0179 &
+                              y_summarized5$k_S == 10**9 &
+                              y_summarized5$a == 10**-10 &
+                              y_summarized5$tau == 63.2, ],
+       aes(x = max_dens, y = phage_final, color = as.factor(b),
+           shape = as.factor(init_moi))) +
+  geom_point() +
+  scale_y_continuous(trans = "log10") +
+  scale_x_continuous(trans = "log10")
+  
+
+
 ##Run 6: a, u, k (bacterial traits) ----
 run6 <- 
   run_sims_filewrapper(name = "run6",
@@ -2259,6 +2280,12 @@ if (F) {
     dev.off()
   }
 }
+
+##Run 9: init dens & moi across a few b vals ----
+
+
+
+
 
 
 ###Work in progress below: ----
