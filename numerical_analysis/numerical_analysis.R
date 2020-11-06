@@ -1,4 +1,5 @@
 #TODO:
+# FIX B-TAU mixup!!!
 # figure out how to calculate area-under-curve consistently
 # use netrd (see Scarpino mtg)
 #
@@ -855,6 +856,11 @@ find_local_extrema <- function(values,
 #Phage resistance mutation rate from 10^-8 to 10^-2
 #     with 10^-7 to 10^-4 most common range
 
+## Global Settings ----
+glob_read_files <- TRUE
+glob_make_curveplots <- FALSE
+glob_make_statplots <- TRUE
+
 ## Run #1: a, b, tau (phage traits) ----
 run1 <- run_sims_filewrapper(name = "run1",
                              u_Svals = c(0.023), #(30 min doubling time)
@@ -868,7 +874,8 @@ run1 <- run_sims_filewrapper(name = "run1",
                              min_dens = 0.1,
                              init_time = 100,
                              init_stepsize = 1,
-                             print_info = TRUE)
+                             print_info = TRUE,
+                             read_file = glob_read_files)
 
 #Find peaks & extinction via summarize
 ybig1 <- group_by_at(run1[[1]], .vars = 1:17)
@@ -904,16 +911,16 @@ ybig1$deriv_percap <- calc_deriv(density = ybig1$Density,
                                 time_normalize = 60)
 
 #Make plots of density against time ----
-dens_offset <- 10
-if (F) {
-  dir.create("run1_dens_curves", showWarnings = FALSE)
+dir.create("run1_dens_curves", showWarnings = FALSE)
+if (glob_make_curveplots) {
+  dens_offset <- 10
   for (run in unique(ybig1$uniq_run)) {
     tiff(paste("./run1_dens_curves/", run, ".tiff", sep = ""),
          width = 5, height = 5, units = "in", res = 300)
     print(
       ggplot(data = ybig1[ybig1$uniq_run == run &
                            ybig1$Pop %in% c("S", "I", "P"),], 
-             aes(x = time, y = Density+dens_offset, color = Pop)) +
+             aes(x = time, y = Density+dens_offset, color = as.factor(Pop))) +
               geom_line(lwd = 1.5, alpha = 1) + 
         geom_line(data = ybig1[ybig1$uniq_run == run &
                                 ybig1$Pop == "B",], 
@@ -947,29 +954,28 @@ if (F) {
 }
 
 #Plot summarized statistics ----
-y_summarized1$b <- as.factor(y_summarized1$b)
-y_summarized1$tau <- as.factor(y_summarized1$tau)
-y_summarized1$a <- as.factor(y_summarized1$a)
-#y_summarized1$r <- as.character(y_summarized1$r)
 dir.create("run1_statplots", showWarnings = FALSE)
-for (stat in c("max_dens", "max_time", "extin_time", 
-               "auc", "phage_final", "phage_r")) {
-  tiff(paste("./run1_statplots/", stat, ".tiff", sep = ""),
-       width = 5, height = 5, units = "in", res = 300)
-  print(ggplot(data = y_summarized1,
-               aes(x = a, y = get(stat), color = b, group = b)) + 
-          geom_point(size = 3, alpha = 0.8) + 
-          geom_line(size = 1.1, alpha = 0.6) +
-          facet_grid(~tau) +
-          labs(y = stat) +
-          scale_y_continuous(trans = "log10") +
-          #scale_x_continuous(trans = "log10") +
-          scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-          theme_bw() +
-          theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-          ggtitle("tau") +
-          NULL)
-  dev.off()
+if (glob_make_statplots) {
+  for (stat in c("max_dens", "max_time", "extin_time", 
+                 "auc", "phage_final", "phage_r")) {
+    tiff(paste("./run1_statplots/", stat, ".tiff", sep = ""),
+         width = 5, height = 5, units = "in", res = 300)
+    print(ggplot(data = y_summarized1,
+                 aes(x = a, y = get(stat), color = as.factor(b), 
+                     group = as.factor(b))) + 
+            geom_point(size = 3, alpha = 0.8) + 
+            geom_line(size = 1.1, alpha = 0.6) +
+            facet_grid(~tau) +
+            labs(y = stat) +
+            scale_y_continuous(trans = "log10") +
+            scale_x_continuous(trans = "log10") +
+            scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+            theme_bw() +
+            theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+            ggtitle("tau") +
+            NULL)
+    dev.off()
+  }
 }
 
 y_sum_melt1 <- reshape2::melt(y_summarized1,
@@ -977,59 +983,61 @@ y_sum_melt1 <- reshape2::melt(y_summarized1,
                    variable.name = "sum_stat",
                    value.name = "stat_val")
 
-tiff("./run1_statplots/all_stats.tiff",
-     width = 5, height = 6, units = "in", res = 300)
-ggplot(data = y_sum_melt1[y_sum_melt1$sum_stat %in%
-                            c("max_dens", "max_time", "extin_time", 
-                              #"auc", 
-                              "phage_final", 
-                              "phage_r"
-                              ), ],
-       aes(x = a, y = stat_val, color = b, group = b)) +
-  geom_point(size = 1.5, alpha = 0.8) + 
-  geom_line(size = 1.1, alpha = 0.6) +
-  facet_grid(sum_stat~tau, scales = "free_y") +
-  scale_y_continuous(trans = "log10") +
-  #scale_x_continuous(trans = "log10") +
-  scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        strip.text.y = element_text(size = 10)) +
-  ggtitle("tau") +
-  NULL
-dev.off()
+if (glob_make_statplots) {
+  tiff("./run1_statplots/all_stats.tiff",
+       width = 5, height = 6, units = "in", res = 300)
+  print(ggplot(data = y_sum_melt1[y_sum_melt1$sum_stat %in%
+                              c("max_dens", "max_time", "extin_time", 
+                                #"auc", 
+                                "phage_final", 
+                                "phage_r"
+                                ), ],
+         aes(x = a, y = stat_val, color = as.factor(b), group = as.factor(b))) +
+    geom_point(size = 1.5, alpha = 0.8) + 
+    geom_line(size = 1.1, alpha = 0.6) +
+    facet_grid(sum_stat~tau, scales = "free_y") +
+    scale_y_continuous(trans = "log10") +
+    scale_x_continuous(trans = "log10") +
+    scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          strip.text.y = element_text(size = 10)) +
+    ggtitle("tau") +
+    NULL)
+  dev.off()
 
-tiff("./run1_statplots/all_stats2.tiff",
-     width = 5, height = 5, units = "in", res = 300)
-ggplot(data = y_sum_melt1[y_sum_melt1$sum_stat != "extin_dens", ],
-       aes(x = b, y = stat_val, color = tau, group = tau)) +
-  geom_point(size = 2, alpha = 0.8) + 
-  geom_line(size = 1.1, alpha = 0.6) +
-  facet_grid(sum_stat~a, scales = "free_y") +
-  scale_y_continuous(trans = "log10") +
-  #scale_x_continuous(trans = "log10") +
-  scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  ggtitle("a") +
-  NULL
-dev.off()
+  tiff("./run1_statplots/all_stats2.tiff",
+       width = 5, height = 5, units = "in", res = 300)
+  print(ggplot(data = y_sum_melt1[y_sum_melt1$sum_stat != "extin_dens", ],
+         aes(x = b, y = stat_val, color = as.factor(tau), group = as.factor(tau))) +
+    geom_point(size = 2, alpha = 0.8) + 
+    geom_line(size = 1.1, alpha = 0.6) +
+    facet_grid(sum_stat~a, scales = "free_y") +
+    scale_y_continuous(trans = "log10") +
+    scale_x_continuous(trans = "log10") +
+    scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ggtitle("a") +
+    NULL)
+  dev.off()
 
-tiff("./run1_statplots/all_stats3.tiff",
-     width = 5, height = 5, units = "in", res = 300)
-ggplot(data = y_sum_melt1[y_sum_melt1$sum_stat != "extin_dens", ],
-       aes(x = tau, y = stat_val, color = a, group = a)) +
-  geom_point(size = 2, alpha = 0.8) + 
-  geom_line(size = 1.1, alpha = 0.6) +
-  facet_grid(sum_stat~b, scales = "free_y") +
-  scale_y_continuous(trans = "log10") +
-  #scale_x_continuous(trans = "log10") +
-  scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  ggtitle("b") +
-  NULL
-dev.off()
+  tiff("./run1_statplots/all_stats3.tiff",
+       width = 5, height = 5, units = "in", res = 300)
+  print(ggplot(data = y_sum_melt1[y_sum_melt1$sum_stat != "extin_dens", ],
+         aes(x = tau, y = stat_val, color = as.factor(a), group = as.factor(a))) +
+    geom_point(size = 2, alpha = 0.8) + 
+    geom_line(size = 1.1, alpha = 0.6) +
+    facet_grid(sum_stat~b, scales = "free_y") +
+    scale_y_continuous(trans = "log10") +
+    scale_x_continuous(trans = "log10") +
+    scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ggtitle("b") +
+    NULL)
+  dev.off()
+}
 
 #Plot stats against ea other ----
 
@@ -1039,9 +1047,10 @@ for (col in c("max_dens", "max_time",
   y_summarized1[, paste(col, "_log10", sep = "")] <- log10(y_summarized1[, col])
 }
 
-tiff("./run1_statplots/stat_cors.tiff", width = 10, height = 10, units = "in", res = 300)
-#Make base figure
-p <- GGally::ggpairs(y_summarized1,
+if (glob_make_statplots) {
+  tiff("./run1_statplots/stat_cors.tiff", width = 10, height = 10, units = "in", res = 300)
+  #Make base figure
+  p <- GGally::ggpairs(y_summarized1,
                      aes(color = b, shape = a),
                      columns = c("max_dens_log10", "max_time_log10",
                                  "extin_time_log10", 
@@ -1053,180 +1062,183 @@ p <- GGally::ggpairs(y_summarized1,
   theme_bw() +
   theme(strip.text = element_text(size = 7),
         axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
-print(p)
-dev.off()
+  print(p)
+  dev.off()
 
-#Then make indiv paired plots
-tiff("./run1_statplots/maxdens_maxtime.tiff",
-     width = 5, height = 5, units = "in", res = 300)
-ggplot(data = y_summarized1,
-       aes(x = max_dens, y = max_time, color = b, fill = b, 
-           shape = a)) +
-  geom_point(size = 2.5, alpha = 0.5) +
-  scale_x_continuous(trans = "log10") +
-  scale_y_continuous(trans = "log10") +
-  theme_bw() +
-  scale_shape_manual(values = 21:25) +
-  scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-  scale_fill_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-  NULL
-dev.off()
-
-tiff("./run1_statplots/maxdens_maxtime_facet.tiff",
-     width = 6, height = 4, units = "in", res = 300)
-ggplot(data = y_summarized1,
-       aes(x = max_dens, y = max_time, color = b, fill = b, 
-           shape = a)) +
-  geom_point(size = 2.5, alpha = 0.5) +
-  facet_grid(~tau) +
-  scale_x_continuous(trans = "log10") +
-  scale_y_continuous(trans = "log10") +
-  theme_bw() +
-  scale_shape_manual(values = 21:25) +
-  scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-  scale_fill_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  ggtitle("tau") +
-  NULL
-dev.off()
-
-tiff("./run1_statplots/maxdens_extintime.tiff",
-     width = 5, height = 5, units = "in", res = 300)
-ggplot(data = y_summarized1,
-       aes(x = max_dens, y = extin_time, color = b, fill = b, 
-           shape = a)) +
-  geom_point(size = 2.5, alpha = 0.5) +
-  #facet_grid(tau~.) +
-  scale_x_continuous(trans = "log10") +
-  scale_y_continuous(trans = "log10") +
-  theme_bw() +
-  scale_shape_manual(values = 21:25) +
-  scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-  scale_fill_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-  NULL
-dev.off()
-
-tiff("./run1_statplots/maxdens_extintime_facet.tiff",
-     width = 6, height = 4, units = "in", res = 300)
-ggplot(data = y_summarized1,
-       aes(x = max_dens, y = extin_time, color = b, fill = b, 
-           shape = a)) +
-  geom_point(size = 2.5, alpha = 0.5) +
-  facet_grid(~tau) +
-  scale_x_continuous(trans = "log10") +
-  scale_y_continuous(trans = "log10") +
-  theme_bw() +
-  scale_shape_manual(values = 21:25) +
-  scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-  scale_fill_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  ggtitle("tau") +
-  NULL
-dev.off()
-
-tiff("./run1_statplots/maxtime_extintime.tiff",
-     width = 5, height = 5, units = "in", res = 300)
-ggplot(data = y_summarized1,
-       aes(x = max_time, y = extin_time, color = b, fill = b,
-           shape = a)) +
-  geom_point(size = 2.5, alpha = 0.5) +
-#  facet_grid(tau~.) +
-  scale_x_continuous(trans = "log10") +
-  scale_y_continuous(trans = "log10") +
-  scale_shape_manual(values = 21:25) +
-  theme_bw() +
-  scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-  scale_fill_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-  NULL
-dev.off()
-
-tiff("./run1_statplots/maxtime_extintime_facet.tiff",
-     width = 6, height = 4, units = "in", res = 300)
-ggplot(data = y_summarized1,
-       aes(x = max_time, y = extin_time, color = b, fill = b,
-           shape = a)) +
-  geom_point(size = 2.5, alpha = 0.5) +
-  facet_grid(~tau) +
-  scale_x_continuous(trans = "log10") +
-  scale_y_continuous(trans = "log10") +
-  scale_shape_manual(values = 21:25) +
-  scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-  scale_fill_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  ggtitle("tau") +
-  NULL
-dev.off()
+  #Then make indiv paired plots
+  tiff("./run1_statplots/maxdens_maxtime.tiff",
+       width = 5, height = 5, units = "in", res = 300)
+  print(ggplot(data = y_summarized1,
+         aes(x = max_dens, y = max_time, color = b, fill = b, 
+             shape = a)) +
+    geom_point(size = 2.5, alpha = 0.5) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme_bw() +
+    scale_shape_manual(values = 21:25) +
+    scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+    scale_fill_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+    NULL)
+  dev.off()
+  
+  tiff("./run1_statplots/maxdens_maxtime_facet.tiff",
+       width = 6, height = 4, units = "in", res = 300)
+  print(ggplot(data = y_summarized1,
+         aes(x = max_dens, y = max_time, color = b, fill = b, 
+             shape = a)) +
+    geom_point(size = 2.5, alpha = 0.5) +
+    facet_grid(~tau) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme_bw() +
+    scale_shape_manual(values = 21:25) +
+    scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+    scale_fill_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ggtitle("tau") +
+    NULL)
+  dev.off()
+  
+  tiff("./run1_statplots/maxdens_extintime.tiff",
+       width = 5, height = 5, units = "in", res = 300)
+  print(ggplot(data = y_summarized1,
+         aes(x = max_dens, y = extin_time, color = b, fill = b, 
+             shape = a)) +
+    geom_point(size = 2.5, alpha = 0.5) +
+    #facet_grid(tau~.) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme_bw() +
+    scale_shape_manual(values = 21:25) +
+    scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+    scale_fill_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+    NULL)
+  dev.off()
+  
+  tiff("./run1_statplots/maxdens_extintime_facet.tiff",
+       width = 6, height = 4, units = "in", res = 300)
+  print(ggplot(data = y_summarized1,
+         aes(x = max_dens, y = extin_time, color = b, fill = b, 
+             shape = a)) +
+    geom_point(size = 2.5, alpha = 0.5) +
+    facet_grid(~tau) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme_bw() +
+    scale_shape_manual(values = 21:25) +
+    scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+    scale_fill_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ggtitle("tau") +
+    NULL)
+  dev.off()
+  
+  tiff("./run1_statplots/maxtime_extintime.tiff",
+       width = 5, height = 5, units = "in", res = 300)
+  print(ggplot(data = y_summarized1,
+         aes(x = max_time, y = extin_time, color = b, fill = b,
+             shape = a)) +
+    geom_point(size = 2.5, alpha = 0.5) +
+  #  facet_grid(tau~.) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    scale_shape_manual(values = 21:25) +
+    theme_bw() +
+    scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+    scale_fill_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+    NULL)
+  dev.off()
+  
+  tiff("./run1_statplots/maxtime_extintime_facet.tiff",
+       width = 6, height = 4, units = "in", res = 300)
+  print(ggplot(data = y_summarized1,
+         aes(x = max_time, y = extin_time, color = b, fill = b,
+             shape = a)) +
+    geom_point(size = 2.5, alpha = 0.5) +
+    facet_grid(~tau) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    scale_shape_manual(values = 21:25) +
+    scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+    scale_fill_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ggtitle("tau") +
+    NULL)
+  dev.off()
+}
 
 #Making contour plots ----
-tiff("./run1_statplots/maxtime_contour1.tiff", width = 5, height = 5,
-     units = "in", res = 300)
-p1 <- ggplot(data = y_summarized1, 
-       aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(b)))) +
-  geom_contour_filled(aes(z = max_time)) +
-  facet_grid(~tau) +
-  scale_fill_viridis_d(direction = -1) +
-  scale_x_continuous(trans = "log10") +
-  scale_y_continuous(trans = "log10") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  ylab("Burst Size") +
-  xlab("Infection Rate") +
-  labs(title = "Peak Time", subtitle = "Lysis Time") +
-  NULL
-p1
-dev.off()
-
-tiff("./run1_statplots/maxtime_contour2.tiff", width = 5, height = 5,
-     units = "in", res = 300)
-p2 <- ggplot(data = y_summarized1, 
-       aes(x = as.numeric(as.character(tau)), y = as.numeric(as.character(b)))) +
-  geom_contour_filled(aes(z = max_time)) +
-  facet_grid(~a) +
-  scale_fill_viridis_d(direction = -1) +
-  scale_x_continuous(trans = "log10") +
-  scale_y_continuous(trans = "log10") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  ylab("Burst Size") +
-  xlab("Lysis Time") +
-  labs(title = "Peak Time", subtitle = "Infection Rate") +
-  NULL
-p2
-dev.off()
-
-tiff("./run1_statplots/maxtime_contour3.tiff", width = 5, height = 5,
-     units = "in", res = 300)
-p3 <- ggplot(data = y_summarized1, 
-       aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(tau)))) +
-  geom_contour_filled(aes(z = max_time)) +
-  facet_grid(~b) +
-  scale_fill_viridis_d(direction = -1) +
-  scale_x_continuous(trans = "log10") +
-  scale_y_continuous(trans = "log10") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  ylab("Lysis Time") +
-  xlab("Infection Rate") +
-  labs(title = "Peak Time", subtitle = "Burst Size") +
-  NULL
-p3
-dev.off()
-
-tiff("./run1_statplots/maxtime_contour_all.tiff", width = 8, height = 6,
-     units = "in", res = 300)
-cowplot::plot_grid(p1 + theme(legend.position = "none"), 
-                   p2 + theme(legend.position = "none"), 
-                   p3 + theme(legend.position = "none"),
-                   get_legend(p1),
-                   #rel_widths = c(1, 1, 1, .4),
-                   nrow = 2)
-dev.off()
+if (glob_make_statplots) {
+  tiff("./run1_statplots/maxtime_contour1.tiff", width = 5, height = 5,
+       units = "in", res = 300)
+  p1 <- ggplot(data = y_summarized1, 
+         aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(b)))) +
+    geom_contour_filled(aes(z = max_time)) +
+    facet_grid(~tau) +
+    scale_fill_viridis_d(direction = -1) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ylab("Burst Size") +
+    xlab("Infection Rate") +
+    labs(title = "Peak Time", subtitle = "Lysis Time") +
+    NULL
+  print(p1)
+  dev.off()
+  
+  tiff("./run1_statplots/maxtime_contour2.tiff", width = 5, height = 5,
+       units = "in", res = 300)
+  p2 <- ggplot(data = y_summarized1, 
+         aes(x = as.numeric(as.character(tau)), y = as.numeric(as.character(b)))) +
+    geom_contour_filled(aes(z = max_time)) +
+    facet_grid(~a) +
+    scale_fill_viridis_d(direction = -1) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ylab("Burst Size") +
+    xlab("Lysis Time") +
+    labs(title = "Peak Time", subtitle = "Infection Rate") +
+    NULL
+  print(p2)
+  dev.off()
+  
+  tiff("./run1_statplots/maxtime_contour3.tiff", width = 5, height = 5,
+       units = "in", res = 300)
+  p3 <- ggplot(data = y_summarized1, 
+         aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(tau)))) +
+    geom_contour_filled(aes(z = max_time)) +
+    facet_grid(~b) +
+    scale_fill_viridis_d(direction = -1) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ylab("Lysis Time") +
+    xlab("Infection Rate") +
+    labs(title = "Peak Time", subtitle = "Burst Size") +
+    NULL
+  print(p3)
+  dev.off()
+  
+  tiff("./run1_statplots/maxtime_contour_all.tiff", width = 8, height = 6,
+       units = "in", res = 300)
+  cowplot::plot_grid(p1 + theme(legend.position = "none"), 
+                     p2 + theme(legend.position = "none"), 
+                     p3 + theme(legend.position = "none"),
+                     get_legend(p1),
+                     #rel_widths = c(1, 1, 1, .4),
+                     nrow = 2)
+  dev.off()
+}
 
 #Make plots that include derivs
 ybig_melt <- data.table::melt(as.data.table(ybig1),
                               measure.vars = c("Density", "deriv", "deriv_percap"),
                               variable.name = "var_measured",
                               value.name = "value")
-if (F) {
-  dir.create("run1_dens_and_derivs", showWarnings = FALSE)
+dir.create("run1_dens_and_derivs", showWarnings = FALSE)
+if (glob_make_curveplots) {
   for (run in unique(ybig_melt$uniq_run)) {
     tiff(paste("./run1_dens_and_derivs/", run, ".tiff", sep = ""),
          width = 4, height = 8, units = "in", res = 300)
@@ -1242,50 +1254,49 @@ if (F) {
 }
 
 # Plot multiple B's on same axes ----
-ybig1$a <- as.factor(ybig1$a)
-ybig1$b <- as.factor(ybig1$b)
-ybig1$tau <- as.factor(ybig1$tau)
-tiff("./run1_statplots/B_plots.tiff", width = 10, height = 10, 
-     units = "in", res = 300)
-ggplot(data = ybig1[ybig1$Pop == "B" &
-                     ybig1$Density > 0, ],
-       aes(x = time, y = Density+10, color = a)) +
-  geom_line(lwd = 1, alpha = 0.5) +
-  geom_hline(yintercept = 10, lty = 2) +
-  facet_grid(tau~b, scales = "free") +
-  scale_y_continuous(trans = "log10") +
-  scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-  theme_bw() +
-  ggtitle("b (top), tau (side)")
-dev.off()
+if (glob_make_statplots) {
+  tiff("./run1_statplots/B_plots.tiff", width = 10, height = 10, 
+       units = "in", res = 300)
+  ggplot(data = ybig1[ybig1$Pop == "B" &
+                       ybig1$Density > 0, ],
+         aes(x = time, y = Density+10, color = as.factor(a))) +
+    geom_line(lwd = 1, alpha = 0.5) +
+    geom_hline(yintercept = 10, lty = 2) +
+    facet_grid(tau~b, scales = "free") +
+    scale_y_continuous(trans = "log10") +
+    scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+    theme_bw() +
+    ggtitle("b (top), tau (side)")
+  dev.off()
 
-tiff("./run1_statplots/B_plots2.tiff", width = 10, height = 10, 
-     units = "in", res = 300)
-ggplot(data = ybig1[ybig1$Pop == "B" &
-                     ybig1$Density > 0, ],
-       aes(x = time, y = Density+10, color = tau)) +
-  geom_line(lwd = 1, alpha = 0.5) +
-  geom_hline(yintercept = 10, lty = 2) +
-  facet_grid(b~a, scales = "free") +
-  scale_y_continuous(trans = "log10") +
-  scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-  theme_bw() +
-  ggtitle("a (top), b (side)")
-dev.off()
+  tiff("./run1_statplots/B_plots2.tiff", width = 10, height = 10, 
+       units = "in", res = 300)
+  ggplot(data = ybig1[ybig1$Pop == "B" &
+                       ybig1$Density > 0, ],
+         aes(x = time, y = Density+10, color = as.factor(tau))) +
+    geom_line(lwd = 1, alpha = 0.5) +
+    geom_hline(yintercept = 10, lty = 2) +
+    facet_grid(b~a, scales = "free") +
+    scale_y_continuous(trans = "log10") +
+    scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+    theme_bw() +
+    ggtitle("a (top), b (side)")
+  dev.off()
 
-tiff("./run1_statplots/B_plots3.tiff", width = 10, height = 10, 
-     units = "in", res = 300)
-ggplot(data = ybig1[ybig1$Pop == "B" &
-                     ybig1$Density > 0, ],
-       aes(x = time, y = Density+10, color = b)) +
-  geom_line(lwd = 1, alpha = 0.5) +
-  geom_hline(yintercept = 10, lty = 2) +
-  facet_grid(tau~a, scales = "free") +
-  scale_y_continuous(trans = "log10") +
-  scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-  theme_bw() +
-  ggtitle("a (top), tau (side)")
-dev.off()
+  tiff("./run1_statplots/B_plots3.tiff", width = 10, height = 10, 
+       units = "in", res = 300)
+  ggplot(data = ybig1[ybig1$Pop == "B" &
+                       ybig1$Density > 0, ],
+         aes(x = time, y = Density+10, color = as.factor(b))) +
+    geom_line(lwd = 1, alpha = 0.5) +
+    geom_hline(yintercept = 10, lty = 2) +
+    facet_grid(tau~a, scales = "free") +
+    scale_y_continuous(trans = "log10") +
+    scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+    theme_bw() +
+    ggtitle("a (top), tau (side)")
+  dev.off()
+}
 
 ## Run #2: r, a, b, tau ----
 run2 <- run_sims_filewrapper(name = "run2",
@@ -1300,7 +1311,8 @@ run2 <- run_sims_filewrapper(name = "run2",
                              min_dens = 0.1,
                              init_time = 100,
                              init_stepsize = 1,
-                             print_info = TRUE)
+                             print_info = TRUE,
+                             read_file = glob_read_files)
 
 #Check fails/no equils
 run2[[2]]
@@ -1335,80 +1347,87 @@ y_sum_melt2 <- reshape2::melt(y_summarized2,
                               variable.name = "sum_stat",
                               value.name = "stat_val")
 
-y_sum_melt2$b <- as.factor(y_sum_melt2$b)
 dir.create("run2_statplots", showWarnings = FALSE)
-for (myu_S in unique(y_sum_melt2$u_S)) {
-  tiff(paste("./run2_statplots/all_stats_r=", 
-             formatC(myu_S, digits = 5, format = "f"), 
-             ".tiff", sep = ""),
-       width = 5, height = 7, units = "in", res = 300)
-  print(ggplot(data = y_sum_melt2[y_sum_melt2$u_S == myu_S &
-                              y_sum_melt2$sum_stat %in% 
-                              c("max_dens", "max_time", 
-                                "extin_time", 
-                                #"extin_time_sincemax",
-                                "phage_final", 
-                                "phage_r",
-                                "phage_atmaxdens"
-                                ), ],
-         aes(x = a, y = stat_val, color = b, group = b)) +
-    geom_point(size = 2, alpha = 0.8) + 
-    geom_line(size = 1.1, alpha = 0.6) +
-    facet_grid(sum_stat~tau, scales = "free_y") +
-    scale_y_continuous(trans = "log10") +
-    scale_x_continuous(trans = "log10") +
-    scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-    theme_bw() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-    ggtitle(paste("r=", myu_S, " tau", sep = "")) +
-    NULL
-  )
-  dev.off()
+if (glob_make_statplots) {
+  for (myu_S in unique(y_sum_melt2$u_S)) {
+    tiff(paste("./run2_statplots/all_stats_r=", 
+               formatC(myu_S, digits = 5, format = "f"), 
+               ".tiff", sep = ""),
+         width = 5, height = 7, units = "in", res = 300)
+    print(ggplot(data = y_sum_melt2[y_sum_melt2$u_S == myu_S &
+                                y_sum_melt2$sum_stat %in% 
+                                c("max_dens", "max_time", 
+                                  "extin_time", 
+                                  #"extin_time_sincemax",
+                                  "phage_final", 
+                                  "phage_r",
+                                  "phage_atmaxdens"
+                                  ), ],
+           aes(x = a, y = stat_val, color = b, group = b)) +
+      geom_point(size = 2, alpha = 0.8) + 
+      geom_line(size = 1.1, alpha = 0.6) +
+      facet_grid(sum_stat~tau, scales = "free_y") +
+      scale_y_continuous(trans = "log10") +
+      scale_x_continuous(trans = "log10") +
+      scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+      theme_bw() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+      ggtitle(paste("r=", myu_S, " tau", sep = "")) +
+      NULL
+    )
+    dev.off()
+  }
 }
 
 ##Just extin_time ----
-ggplot(data = y_summarized2,
-       aes(x = a, y = extin_time, color = as.factor(b), group = as.factor(b))) +
-  #geom_point() + 
-  geom_line(lwd = 1.25, alpha = 0.8) +
-  scale_color_manual(values = my_cols[c(1, 2, 3, 5, 7)]) +
-  facet_grid(u_S~tau) +
-  scale_y_continuous(trans = "log10") +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+if (glob_make_statplots) {
+  print(ggplot(data = y_summarized2,
+         aes(x = a, y = extin_time, color = as.factor(b), group = as.factor(b))) +
+    #geom_point() + 
+    geom_line(lwd = 1.25, alpha = 0.8) +
+    scale_color_manual(values = my_cols[c(1, 2, 3, 5, 7)]) +
+    facet_grid(u_S~tau) +
+    scale_y_continuous(trans = "log10") +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    NULL)
 
-ggplot(data = y_summarized2,
-       aes(x = b, y = extin_time, color = as.factor(u_S),
-           group = as.factor(u_S))) +
-  #geom_point() + 
-  geom_line(lwd = 1.25, alpha = 0.8) +
-  scale_color_manual(values = my_cols[c(1, 2, 3, 5, 7)]) +
-  facet_grid(tau~a) +
-  scale_y_continuous(trans = "log10") +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  print(ggplot(data = y_summarized2,
+         aes(x = b, y = extin_time, color = as.factor(u_S),
+             group = as.factor(u_S))) +
+    #geom_point() + 
+    geom_line(lwd = 1.25, alpha = 0.8) +
+    scale_color_manual(values = my_cols[c(1, 2, 3, 5, 7)]) +
+    facet_grid(tau~a) +
+    scale_y_continuous(trans = "log10") +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    NULL)
 
-ggplot(data = y_summarized2,
-       aes(x = u_S, y = extin_time, color = as.factor(tau),
-           group = as.factor(tau))) +
-  #geom_point() + 
-  geom_line(lwd = 1.25, alpha = 0.8) +
-  scale_color_manual(values = my_cols[c(1, 2, 3, 5, 7)]) +
-  facet_grid(a~b) +
-  scale_y_continuous(trans = "log10") +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-ggplot(data = y_summarized2,
-       aes(x = tau, y = extin_time, color = as.factor(a),
-           group = as.factor(a))) +
-  #geom_point() + 
-  geom_line(lwd = 1.25, alpha = 0.8) +
-  scale_color_manual(values = my_cols[c(1, 2, 3, 5, 7)]) +
-  facet_grid(b~u_S) +
-  scale_y_continuous(trans = "log10") +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  print(ggplot(data = y_summarized2,
+         aes(x = u_S, y = extin_time, color = as.factor(tau),
+             group = as.factor(tau))) +
+    #geom_point() + 
+    geom_line(lwd = 1.25, alpha = 0.8) +
+    scale_color_manual(values = my_cols[c(1, 2, 3, 5, 7)]) +
+    facet_grid(a~b) +
+    scale_y_continuous(trans = "log10") +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    NULL)
+  
+  print(ggplot(data = y_summarized2,
+         aes(x = tau, y = extin_time, color = as.factor(a),
+             group = as.factor(a))) +
+    #geom_point() + 
+    geom_line(lwd = 1.25, alpha = 0.8) +
+    scale_color_manual(values = my_cols[c(1, 2, 3, 5, 7)]) +
+    facet_grid(b~u_S) +
+    scale_y_continuous(trans = "log10") +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    NULL)
+}
 
 ###Plot stats against ea other ----
 
@@ -1421,28 +1440,28 @@ for (col in c("max_dens", "max_time", "extin_time", "extin_time_sincemax",
 }
 
 #Make plots
-y_summarized2$a <- as.factor(y_summarized2$a)
-y_summarized2$b <- as.factor(y_summarized2$b)
-for (myu_S in unique(y_summarized2$u_S)) {
-  tiff(paste("./run2_statplots/stat_cors_r=", 
-             formatC(myu_S, digits = 5, format = "f"),
-             ".tiff", sep = ""),
-       width = 15, height = 15, units = "in", res = 300)
-  #Make base figure
-  p <- GGally::ggpairs(y_summarized2[y_summarized2$u_S == myu_S, ],
-                       aes(color = b, shape = a),
-                       columns = c("max_dens_log10", "max_time_log10",
-                                   "extin_time_log10", 
-                                   "extin_time_sincemax_log10",
-                                   "auc_log10", 
-                                   "phage_final_log10", "phage_r_log10"),
-                       lower = list(continuous = "points"),
-                       upper = list(continuous = "points")) +
-    theme_bw() +
-    theme(strip.text = element_text(size = 10),
-          axis.text.x = element_text(angle = 45, hjust = 0))
-  print(p)
-  dev.off()
+if (glob_make_statplots) {
+  for (myu_S in unique(y_summarized2$u_S)) {
+    tiff(paste("./run2_statplots/stat_cors_r=", 
+               formatC(myu_S, digits = 5, format = "f"),
+               ".tiff", sep = ""),
+         width = 15, height = 15, units = "in", res = 300)
+    #Make base figure
+    p <- GGally::ggpairs(y_summarized2[y_summarized2$u_S == myu_S, ],
+                         aes(color = as.factor(b), shape = as.factor(a)),
+                         columns = c("max_dens_log10", "max_time_log10",
+                                     "extin_time_log10", 
+                                     "extin_time_sincemax_log10",
+                                     "auc_log10", 
+                                     "phage_final_log10", "phage_r_log10"),
+                         lower = list(continuous = "points"),
+                         upper = list(continuous = "points")) +
+      theme_bw() +
+      theme(strip.text = element_text(size = 10),
+            axis.text.x = element_text(angle = 45, hjust = 0))
+    print(p)
+    dev.off()
+  }
 }
 
 ##Now selected pairs, looking for underlying functions
@@ -1455,56 +1474,54 @@ y_summarized2$pred_maxdens <- max_dens_func(t = y_summarized2$max_time,
                                             P_0 = y_summarized2$init_S_dens,
                                             u = y_summarized2$u_S)
 
-tiff("./run2_statplots/maxdens_maxtime.tiff",
-     width = 6, height = 4, units = "in", res = 300)
-ggplot(data = y_summarized2,
-       aes(x = max_time, y = max_dens, color = a, shape = b)) +
-  geom_point() +
-  facet_grid(~u_S) +
-  scale_y_continuous(trans = "log10") +
-  geom_line(aes(x = max_time, y = pred_maxdens), color = "black", lty = 3) +
-  theme_bw()
-dev.off()
+if (glob_make_statplots) {
+  tiff("./run2_statplots/maxdens_maxtime.tiff",
+       width = 6, height = 4, units = "in", res = 300)
+  print(ggplot(data = y_summarized2,
+         aes(x = max_time, y = max_dens, color = a, shape = b)) +
+    geom_point() +
+    facet_grid(~u_S) +
+    scale_y_continuous(trans = "log10") +
+    geom_line(aes(x = max_time, y = pred_maxdens), color = "black", lty = 3) +
+    theme_bw() +
+    NULL)
+  dev.off()
 
-# for (myu_S in unique(y_summarized2$u_S)) {
-#   tiff(paste("./run2_statplots/maxdens_maxtime_r=", myu_S, ".tiff", sep = ""),
-#        width = 5, height = 5, units = "in", res = 300)
-#   print(ggplot(data = y_summarized2[y_summarized2$r == myu_S, ],
-#                aes(x = max_time, y = max_dens, color = a, shape = b)) +
-#           geom_point() +
-#           scale_y_continuous(trans = "log10") +
-#           stat_function(fun = max_dens_func,
-#                         args = list(K = 10**9, P_0 = 1*10**6, r = myu_S),
-#                         color = "black", lwd = 1, alpha = 0.1) +
-#           ggtitle(paste("u =", myu_S)) +
-#           theme_bw()
-#   )
-#   dev.off()
-# }
+  # for (myu_S in unique(y_summarized2$u_S)) {
+  #   tiff(paste("./run2_statplots/maxdens_maxtime_r=", myu_S, ".tiff", sep = ""),
+  #        width = 5, height = 5, units = "in", res = 300)
+  #   print(ggplot(data = y_summarized2[y_summarized2$r == myu_S, ],
+  #                aes(x = max_time, y = max_dens, color = a, shape = b)) +
+  #           geom_point() +
+  #           scale_y_continuous(trans = "log10") +
+  #           stat_function(fun = max_dens_func,
+  #                         args = list(K = 10**9, P_0 = 1*10**6, r = myu_S),
+  #                         color = "black", lwd = 1, alpha = 0.1) +
+  #           ggtitle(paste("u =", myu_S)) +
+  #           theme_bw()
+  #   )
+  #   dev.off()
+  # }
+}
 
 #Relating phage_final to max_dens and b
-ggplot(data = y_summarized2, 
-       aes(x = max_dens, y = phage_final, 
-           color = as.factor(tau))) +
-  geom_point() +
-  scale_y_continuous(trans = "log10") +
-  scale_x_continuous(trans = "log10")
-
-
-y_summarized2$tau <- as.factor(y_summarized2$tau)
 
 #First try fitting a model to the data
 temp <- y_summarized2[y_summarized2$u_S == 0.00798 &
                         y_summarized2$max_dens_log10 < 8.95, ]
-model1 <- lm(phage_final_log10 ~ max_dens_log10 + tau,
+model1 <- lm(phage_final_log10 ~ max_dens_log10 + as.factor(tau),
              temp)
 summary(model1)
 
-ggplot(data = temp,
-       aes(x = max_dens_log10, y = phage_final_log10, 
-           color = b, shape = tau)) +
-  geom_point() +
-  geom_line(data = fortify(model1), aes(x = max_dens_log10, y = .fitted))
+if (glob_make_statplots) {
+  print(ggplot(data = temp,
+               aes(x = max_dens_log10, y = phage_final_log10, 
+                   color = b, shape = tau)) +
+          geom_point() +
+          geom_line(data = fortify(model1), 
+                    aes(x = max_dens_log10, y = .fitted)) +
+          NULL)
+}
 
 #The model seems to suggest the following "true" underlying model:
 phage_final_func <- function(x, a, b, tau) {
@@ -1523,22 +1540,24 @@ for (myb in unique(y_summarized2$b)) {
 }
 
 #Make plots
-for (myu_S in unique(y_summarized2$u_S)) {
-#myu_S <- 0.00798
-  tiff(paste("./run2_statplots/phagefinal_maxdens_u=", myu_S, ".tiff", sep = ""),
-       width = 5, height = 5, units = "in", res = 300)
-  print(ggplot(data = y_summarized2[y_summarized2$u_S == myu_S, ],
-               aes(x = max_dens, y = phage_final, color = b, shape = tau)) +
-          geom_point() +
-          scale_y_continuous(trans = "log10") +
-          scale_x_continuous(trans = "log10") +
-          scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-          ggtitle(paste("u =", myu_S)) +
-          stat_func_list1 +
-          theme_bw() +
-          NULL
-  )
-  dev.off()
+if (glob_make_statplots) {
+  for (myu_S in unique(y_summarized2$u_S)) {
+  #myu_S <- 0.00798
+    tiff(paste("./run2_statplots/phagefinal_maxdens_u=", myu_S, ".tiff", sep = ""),
+         width = 5, height = 5, units = "in", res = 300)
+    print(ggplot(data = y_summarized2[y_summarized2$u_S == myu_S, ],
+                 aes(x = max_dens, y = phage_final, color = b, shape = tau)) +
+            geom_point() +
+            scale_y_continuous(trans = "log10") +
+            scale_x_continuous(trans = "log10") +
+            scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+            ggtitle(paste("u =", myu_S)) +
+            stat_func_list1 +
+            theme_bw() +
+            NULL
+    )
+    dev.off()
+  }
 }
 
 #Since max_dens is related to max_time, and phage_final is related to max_dens
@@ -1569,21 +1588,23 @@ for (myu_S in unique(y_summarized2$u_S)) {
 }
 
 i <- 1
-for (myu_S in unique(y_summarized2$u_S)) {
-#myu_S <- 0.00798
-  tiff(paste("./run2_statplots/phagefinal_maxtime_u=", myu_S, ".tiff", sep = ""),
-       width = 5, height = 5, units = "in", res = 300)
-  print(ggplot(data = y_summarized2[y_summarized2$u_S == myu_S, ],
-               aes(x = max_time, y = phage_final_log10, color = b, shape = a)) +
-          geom_point() +
-          stat_func_list2[[i]] +
-          scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-          ggtitle(paste("u =", myu_S)) +
-          theme_bw() +
-          NULL
-        )
-  dev.off()
-  i <- i+1
+if (glob_make_statplots) {
+  for (myu_S in unique(y_summarized2$u_S)) {
+  #myu_S <- 0.00798
+    tiff(paste("./run2_statplots/phagefinal_maxtime_u=", myu_S, ".tiff", sep = ""),
+         width = 5, height = 5, units = "in", res = 300)
+    print(ggplot(data = y_summarized2[y_summarized2$u_S == myu_S, ],
+                 aes(x = max_time, y = phage_final_log10, color = b, shape = a)) +
+            geom_point() +
+            stat_func_list2[[i]] +
+            scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+            ggtitle(paste("u =", myu_S)) +
+            theme_bw() +
+            NULL
+          )
+    dev.off()
+    i <- i+1
+  }
 }
 
 ##Run #3: r, a, b, tau, init_dens, init_moi ----
@@ -1599,7 +1620,8 @@ run3 <- run_sims_filewrapper(name = "run3",
                              min_dens = 0.1,
                              init_time = 100,
                              init_stepsize = 1,
-                             print_info = TRUE)
+                             print_info = TRUE,
+                             read_file = glob_read_files)
 
 #Check fails/no equils
 run3[[2]]
@@ -1628,9 +1650,9 @@ y_summarized3 <- summarize(ybig3,
 )
 
 #Make plots of density against time ----
-dens_offset <- 10
-if (F) {
-  dir.create("run3_dens_curves", showWarnings = FALSE)
+dir.create("run3_dens_curves", showWarnings = FALSE)
+if (glob_make_curveplots) {
+  dens_offset <- 10
   for (run in unique(ybig3$uniq_run)) {
     tiff(paste("./run3_dens_curves/", run, ".tiff", sep = ""),
          width = 5, height = 5, units = "in", res = 300)
@@ -1674,45 +1696,46 @@ y_sum_melt3 <- reshape2::melt(y_summarized3,
                               id.vars = 1:17,
                               variable.name = "sum_stat",
                               value.name = "stat_val")
-
-y_sum_melt3$init_moi <- as.factor(y_sum_melt3$init_moi)
-for (myu_S in unique(y_sum_melt3$u_S)) {
-  for (myb in unique(y_sum_melt3$b)) {
-    tiff(paste("./run3_statplots/all_stats_r=", 
-               formatC(myu_S, digits = 5, format = "f"), 
-               ",b=", myb, ".tiff", sep = ""),
-         width = 5, height = 7, units = "in", res = 300)
-    print(ggplot(data = y_sum_melt3[y_sum_melt3$r == myu_S &
-                                      y_sum_melt3$b == myb &
-                                      y_sum_melt3$sum_stat %in% 
-                                      c("max_dens", "max_time", 
-                                        "extin_time", "extin_time_sincemax",
-                                        "phage_final", "phage_r"), ],
-                 aes(x = init_S_dens, y = stat_val, color = init_moi, group = init_moi)) +
-            geom_point(size = 2, alpha = 0.8) + 
-            geom_line(size = 1.1, alpha = 0.6) +
-            facet_grid(sum_stat~tau*a, scales = "free_y") +
-            scale_y_continuous(trans = "log10") +
-            scale_x_continuous(trans = "log10") +
-            scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-            theme_bw() +
-            theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-            ggtitle(paste("r=", myu_S, " tau", sep = "")) +
-            NULL
-    )
-    dev.off()
+if (glob_make_statplots) {
+  for (myu_S in unique(y_sum_melt3$u_S)) {
+    for (myb in unique(y_sum_melt3$b)) {
+      tiff(paste("./run3_statplots/all_stats_r=", 
+                 formatC(myu_S, digits = 5, format = "f"), 
+                 ",b=", myb, ".tiff", sep = ""),
+           width = 5, height = 7, units = "in", res = 300)
+      print(ggplot(data = y_sum_melt3[y_sum_melt3$r == myu_S &
+                                        y_sum_melt3$b == myb &
+                                        y_sum_melt3$sum_stat %in% 
+                                        c("max_dens", "max_time", 
+                                          "extin_time", "extin_time_sincemax",
+                                          "phage_final", "phage_r"), ],
+                   aes(x = init_S_dens, y = stat_val, 
+                       color = as.factor(init_moi), group = as.factor(init_moi))) +
+              geom_point(size = 2, alpha = 0.8) + 
+              geom_line(size = 1.1, alpha = 0.6) +
+              facet_grid(sum_stat~tau*a, scales = "free_y") +
+              scale_y_continuous(trans = "log10") +
+              scale_x_continuous(trans = "log10") +
+              scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+              theme_bw() +
+              theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+              ggtitle(paste("r=", myu_S, " tau", sep = "")) +
+              NULL
+      )
+      dev.off()
+    }
   }
-}
 
-#Let's focus in on extin_time
-ggplot(data = y_summarized3,
-       aes(x = init_S_dens, y = extin_time, color = init_moi,
-           shape = a)) +
-  geom_point() +
-  facet_grid(r~b*tau) +
-#  geom_line() +
-  theme_bw() +
-  NULL
+  #Let's focus in on extin_time
+  print(ggplot(data = y_summarized3,
+         aes(x = init_S_dens, y = extin_time, color = init_moi,
+             shape = a)) +
+    geom_point() +
+    facet_grid(r~b*tau) +
+  #  geom_line() +
+    theme_bw() +
+    NULL)
+}
 
 ###Plot stats against ea other ----
 
@@ -1725,28 +1748,29 @@ for (col in c("max_dens", "max_time", "extin_time", "extin_time_sincemax",
 }
 
 #Make plots
-y_summarized3$init_moi <- as.factor(y_summarized3$init_moi)
-y_summarized3$init_S_dens <- as.factor(y_summarized3$init_S_dens)
-for (myu_S in unique(y_summarized3$u_S)) {
-  tiff(paste("./run3_statplots/stat_cors_r=", 
-             formatC(myu_S, digits = 5, format = "f"),
-             ".tiff", sep = ""),
-       width = 15, height = 15, units = "in", res = 300)
-  #Make base figure
-  p <- GGally::ggpairs(y_summarized3[y_summarized3$r == myu_S, ],
-                       aes(color = init_moi, shape = init_S_dens),
-                       columns = c("max_dens_log10", "max_time_log10",
-                                   "extin_time_log10", 
-                                   "extin_time_sincemax_log10",
-                                   "auc_log10", 
-                                   "phage_final_log10", "phage_r_log10"),
-                       lower = list(continuous = "points"),
-                       upper = list(continuous = "points")) +
-    theme_bw() +
-    theme(strip.text = element_text(size = 10),
-          axis.text.x = element_text(angle = 45, hjust = 0))
-  print(p)
-  dev.off()
+if (glob_make_statplots) {
+  for (myu_S in unique(y_summarized3$u_S)) {
+    tiff(paste("./run3_statplots/stat_cors_r=", 
+               formatC(myu_S, digits = 5, format = "f"),
+               ".tiff", sep = ""),
+         width = 15, height = 15, units = "in", res = 300)
+    #Make base figure
+    p <- GGally::ggpairs(y_summarized3[y_summarized3$r == myu_S, ],
+                         aes(color = as.factor(init_moi), 
+                             shape = as.factor(init_S_dens)),
+                         columns = c("max_dens_log10", "max_time_log10",
+                                     "extin_time_log10", 
+                                     "extin_time_sincemax_log10",
+                                     "auc_log10", 
+                                     "phage_final_log10", "phage_r_log10"),
+                         lower = list(continuous = "points"),
+                         upper = list(continuous = "points")) +
+      theme_bw() +
+      theme(strip.text = element_text(size = 10),
+            axis.text.x = element_text(angle = 45, hjust = 0))
+    print(p)
+    dev.off()
+  }
 }
 
 ###Run #4: r, a, b, tau ----
@@ -1762,7 +1786,8 @@ run4 <- run_sims_filewrapper(name = "run4",
                              min_dens = 0.1,
                              init_time = 100,
                              init_stepsize = 1,
-                             print_info = TRUE)
+                             print_info = TRUE,
+                             read_file = glob_read_files)
                              
 #Check fails/no equils
 run4[[2]]
@@ -1796,30 +1821,32 @@ y_sum_melt4 <- reshape2::melt(y_summarized4,
                               variable.name = "sum_stat",
                               value.name = "stat_val")
 
-y_sum_melt4$b <- as.factor(y_sum_melt4$b)
-for (myu_S in unique(y_sum_melt4$u_S)) {
-  tiff(paste("./run2_statplots/all_stats_r=", 
-             formatC(myu_S, digits = 5, format = "f"), 
-             ".tiff", sep = ""),
-       width = 5, height = 7, units = "in", res = 300)
-  print(ggplot(data = y_sum_melt4[y_sum_melt4$r == myu_S &
-                                    y_sum_melt4$sum_stat %in% 
-                                    c("max_dens", "max_time", 
-                                      "extin_time", "extin_time_sincemax",
-                                      "phage_final", "phage_r"), ],
-               aes(x = a, y = stat_val, color = b, group = b)) +
-          geom_point(size = 2, alpha = 0.8) + 
-          geom_line(size = 1.1, alpha = 0.6) +
-          facet_grid(sum_stat~tau, scales = "free_y") +
-          scale_y_continuous(trans = "log10") +
-          scale_x_continuous(trans = "log10") +
-          scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-          theme_bw() +
-          theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-          ggtitle(paste("r=", myu_S, " tau", sep = "")) +
-          NULL
-  )
-  dev.off()
+if (glob_make_statplots) {
+  for (myu_S in unique(y_sum_melt4$u_S)) {
+    tiff(paste("./run2_statplots/all_stats_r=", 
+               formatC(myu_S, digits = 5, format = "f"), 
+               ".tiff", sep = ""),
+         width = 5, height = 7, units = "in", res = 300)
+    print(ggplot(data = y_sum_melt4[y_sum_melt4$r == myu_S &
+                                      y_sum_melt4$sum_stat %in% 
+                                      c("max_dens", "max_time", 
+                                        "extin_time", "extin_time_sincemax",
+                                        "phage_final", "phage_r"), ],
+                 aes(x = a, y = stat_val, 
+                     color = as.factor(b), group = as.factor(b))) +
+            geom_point(size = 2, alpha = 0.8) + 
+            geom_line(size = 1.1, alpha = 0.6) +
+            facet_grid(sum_stat~tau, scales = "free_y") +
+            scale_y_continuous(trans = "log10") +
+            scale_x_continuous(trans = "log10") +
+            scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+            theme_bw() +
+            theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+            ggtitle(paste("r=", myu_S, " tau", sep = "")) +
+            NULL
+    )
+    dev.off()
+  }
 }
 
 ###Run #5: init_dens and init_moi as r,k,a,b,tau indiv ----
@@ -1863,7 +1890,8 @@ run5 <- run_sims_filewrapper(name = "run5",
                              min_dens = 0.1,
                              init_time = 100,
                              init_stepsize = 1,
-                             print_info = TRUE)
+                             print_info = TRUE,
+                             read_file = glob_read_files)
 
 run5[[2]]
 
@@ -1888,86 +1916,88 @@ y_summarized5 <- summarize(ybig5,
                              extin_time
 )
 
-ggplot(data = y_summarized5[y_summarized5$k_S == 10**9 &
-                              y_summarized5$a == 10**-10 &
-                              y_summarized5$b == 37.6 &
-                              y_summarized5$tau == 63.2, ],
-       aes(x = log10(init_S_dens), 
-           y = log10(init_moi),
-           z = max_time)) +
-  geom_contour_filled() +
-  facet_grid(~u_S) +
-  ggtitle("r") +
-  scale_fill_viridis_d(direction = -1) +
-  theme_bw() +
-  NULL
-
-ggplot(data = y_summarized5[y_summarized5$u_S == 0.0179 &
-                              y_summarized5$a == 10**-10 &
-                              y_summarized5$b == 37.6 &
-                              y_summarized5$tau == 63.2, ],
-       aes(x = log10(init_S_dens), 
-           y = log10(init_moi),
-           z = max_time)) +
-  geom_contour_filled() +
-  facet_grid(~k_S) +
-  ggtitle("k") +
-  scale_fill_viridis_d(direction = -1) +
-  theme_bw() +
-  NULL
-
-ggplot(data = y_summarized5[y_summarized5$u_S == 0.0179 &
-                              y_summarized5$k_S == 10**9 &
-                              y_summarized5$b == 37.6 &
-                              y_summarized5$tau == 63.2, ],
-       aes(x = log10(init_S_dens), 
-           y = log10(init_moi),
-           z = max_time)) +
-  geom_contour_filled() +
-  facet_grid(~a) +
-  ggtitle("a") +
-  scale_fill_viridis_d(direction = -1) +
-  theme_bw() +
-  NULL
-
-ggplot(data = y_summarized5[y_summarized5$u_S == 0.0179 &
-                              y_summarized5$k_S == 10**9 &
-                              y_summarized5$a == 10**-10 &
-                              y_summarized5$tau == 63.2, ],
-       aes(x = log10(init_S_dens), 
-           y = log10(init_moi),
-           z = max_time)) +
-  geom_contour_filled() +
-  facet_grid(~b) +
-  ggtitle("b") +
-  scale_fill_viridis_d(direction = -1) +
-  theme_bw() +
-  NULL
-
-ggplot(data = y_summarized5[y_summarized5$u_S == 0.0179 &
-                              y_summarized5$k_S == 10**9 &
-                              y_summarized5$a == 10**-10 &
-                              y_summarized5$b == 37.6, ],
-       aes(x = log10(init_S_dens), 
-           y = log10(init_moi),
-           z = max_time)) +
-  geom_contour_filled() +
-  facet_grid(~tau) +
-  ggtitle("tau") +
-  scale_fill_viridis_d(direction = -1) +
-  theme_bw() +
-  NULL
-                              
-ggplot(data = y_summarized5[y_summarized5$u_S == 0.0179 &
-                              y_summarized5$k_S == 10**9 &
-                              y_summarized5$a == 10**-10 &
-                              y_summarized5$tau == 63.2, ],
-       aes(x = max_dens, y = phage_final, color = as.factor(b),
-           shape = as.factor(init_moi))) +
-  geom_point() +
-  scale_y_continuous(trans = "log10") +
-  scale_x_continuous(trans = "log10")
+if (glob_make_statplots) {
+  print(ggplot(data = y_summarized5[y_summarized5$k_S == 10**9 &
+                                      y_summarized5$a == 10**-10 &
+                                      y_summarized5$b == 37.6 &
+                                      y_summarized5$tau == 63.2, ],
+               aes(x = log10(init_S_dens), 
+                   y = log10(init_moi),
+                   z = max_time)) +
+          geom_contour_filled() +
+          facet_grid(~u_S) +
+          ggtitle("r") +
+          scale_fill_viridis_d(direction = -1) +
+          theme_bw() +
+          NULL)
   
+  print(ggplot(data = y_summarized5[y_summarized5$u_S == 0.0179 &
+                                      y_summarized5$a == 10**-10 &
+                                      y_summarized5$b == 37.6 &
+                                      y_summarized5$tau == 63.2, ],
+               aes(x = log10(init_S_dens), 
+                   y = log10(init_moi),
+                   z = max_time)) +
+          geom_contour_filled() +
+          facet_grid(~k_S) +
+          ggtitle("k") +
+          scale_fill_viridis_d(direction = -1) +
+          theme_bw() +
+          NULL)
+  
+  print(ggplot(data = y_summarized5[y_summarized5$u_S == 0.0179 &
+                                      y_summarized5$k_S == 10**9 &
+                                      y_summarized5$b == 37.6 &
+                                      y_summarized5$tau == 63.2, ],
+               aes(x = log10(init_S_dens), 
+                   y = log10(init_moi),
+                   z = max_time)) +
+          geom_contour_filled() +
+          facet_grid(~a) +
+          ggtitle("a") +
+          scale_fill_viridis_d(direction = -1) +
+          theme_bw() +
+          NULL)
+  
+  print(ggplot(data = y_summarized5[y_summarized5$u_S == 0.0179 &
+                                      y_summarized5$k_S == 10**9 &
+                                      y_summarized5$a == 10**-10 &
+                                      y_summarized5$tau == 63.2, ],
+               aes(x = log10(init_S_dens), 
+                   y = log10(init_moi),
+                   z = max_time)) +
+          geom_contour_filled() +
+          facet_grid(~b) +
+          ggtitle("b") +
+          scale_fill_viridis_d(direction = -1) +
+          theme_bw() +
+          NULL)
+  
+  print(ggplot(data = y_summarized5[y_summarized5$u_S == 0.0179 &
+                                      y_summarized5$k_S == 10**9 &
+                                      y_summarized5$a == 10**-10 &
+                                      y_summarized5$b == 37.6, ],
+               aes(x = log10(init_S_dens), 
+                   y = log10(init_moi),
+                   z = max_time)) +
+          geom_contour_filled() +
+          facet_grid(~tau) +
+          ggtitle("tau") +
+          scale_fill_viridis_d(direction = -1) +
+          theme_bw() +
+          NULL)
+  
+  print(ggplot(data = y_summarized5[y_summarized5$u_S == 0.0179 &
+                                      y_summarized5$k_S == 10**9 &
+                                      y_summarized5$a == 10**-10 &
+                                      y_summarized5$tau == 63.2, ],
+               aes(x = max_dens, y = phage_final, color = as.factor(b),
+                   shape = as.factor(init_moi))) +
+          geom_point() +
+          scale_y_continuous(trans = "log10") +
+          scale_x_continuous(trans = "log10") +
+          NULL)
+}
 
 
 ##Run 6: a, u, k (bacterial traits) ----
@@ -1985,7 +2015,8 @@ run6 <-
                        min_dens = 0.1,
                        init_time = 100,
                        init_stepsize = 1,
-                       print_info = TRUE)
+                       print_info = TRUE,
+                       read_file = glob_read_files)
 
 ybig6 <- group_by_at(run6[[1]], .vars = 1:17)
 y_summarized6 <- summarize(ybig6,
@@ -2007,68 +2038,69 @@ y_summarized6 <- summarize(ybig6,
 )
 
 dir.create("run6_statplots", showWarnings = FALSE)
+if (glob_make_statplots) {
+  #Making contour plots
+  tiff("./run6_statplots/maxtime_contour1.tiff", width = 5, height = 5,
+       units = "in", res = 300)
+  p1 <- ggplot(data = y_summarized6, 
+               aes(x = as.numeric(as.character(u_S)), y = as.numeric(as.character(k_S)))) +
+    geom_contour_filled(aes(z = max_time)) +
+    facet_grid(~a) +
+    scale_fill_viridis_d(direction = -1) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ylab("Carrying Capacity") +
+    xlab("Growth Rate") +
+    labs(title = "Peak Time", subtitle = "Infection Rate") +
+    NULL
+  print(p1)
+  dev.off()
 
-#Making contour plots
-tiff("./run6_statplots/maxtime_contour1.tiff", width = 5, height = 5,
-     units = "in", res = 300)
-p1 <- ggplot(data = y_summarized6, 
-             aes(x = as.numeric(as.character(u_S)), y = as.numeric(as.character(k_S)))) +
-  geom_contour_filled(aes(z = max_time)) +
-  facet_grid(~a) +
-  scale_fill_viridis_d(direction = -1) +
-  scale_x_continuous(trans = "log10") +
-  scale_y_continuous(trans = "log10") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  ylab("Carrying Capacity") +
-  xlab("Growth Rate") +
-  labs(title = "Peak Time", subtitle = "Infection Rate") +
-  NULL
-p1
-dev.off()
+  tiff("./run6_statplots/maxtime_contour2.tiff", width = 5, height = 5,
+       units = "in", res = 300)
+  p2 <- ggplot(data = y_summarized6, 
+               aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(k_S)))) +
+    geom_contour_filled(aes(z = max_time)) +
+    facet_grid(~u_S) +
+    scale_fill_viridis_d(direction = -1) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ylab("Carrying Capacity") +
+    xlab("Infection Rate") +
+    labs(title = "Peak Time", subtitle = "Growth Rate") +
+    NULL
+  print(p2)
+  dev.off()
 
-tiff("./run6_statplots/maxtime_contour2.tiff", width = 5, height = 5,
-     units = "in", res = 300)
-p2 <- ggplot(data = y_summarized6, 
-             aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(k_S)))) +
-  geom_contour_filled(aes(z = max_time)) +
-  facet_grid(~u_S) +
-  scale_fill_viridis_d(direction = -1) +
-  scale_x_continuous(trans = "log10") +
-  scale_y_continuous(trans = "log10") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  ylab("Carrying Capacity") +
-  xlab("Infection Rate") +
-  labs(title = "Peak Time", subtitle = "Growth Rate") +
-  NULL
-p2
-dev.off()
+  tiff("./run6_statplots/maxtime_contour3.tiff", width = 5, height = 5,
+       units = "in", res = 300)
+  p3 <- ggplot(data = y_summarized6, 
+               aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(u_S)))) +
+    geom_contour_filled(aes(z = max_time)) +
+    facet_grid(~k_S) +
+    scale_fill_viridis_d(direction = -1) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ylab("Growth Rate") +
+    xlab("Infection Rate") +
+    labs(title = "Peak Time", subtitle = "Carrying Capacity") +
+    NULL
+  print(p3)
+  dev.off()
 
-tiff("./run6_statplots/maxtime_contour3.tiff", width = 5, height = 5,
-     units = "in", res = 300)
-p3 <- ggplot(data = y_summarized6, 
-             aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(u_S)))) +
-  geom_contour_filled(aes(z = max_time)) +
-  facet_grid(~k_S) +
-  scale_fill_viridis_d(direction = -1) +
-  scale_x_continuous(trans = "log10") +
-  scale_y_continuous(trans = "log10") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  ylab("Growth Rate") +
-  xlab("Infection Rate") +
-  labs(title = "Peak Time", subtitle = "Carrying Capacity") +
-  NULL
-p3
-dev.off()
-
-tiff("./run6_statplots/maxtime_contour_all.tiff", width = 8, height = 6,
-     units = "in", res = 300)
-cowplot::plot_grid(p1 + theme(legend.position = "none"), 
-                   p2 + theme(legend.position = "none"), 
-                   p3 + theme(legend.position = "none"),
-                   get_legend(p1),
-                   #rel_widths = c(1, 1, 1, .4),
-                   nrow = 2)
-dev.off()
+  tiff("./run6_statplots/maxtime_contour_all.tiff", width = 8, height = 6,
+       units = "in", res = 300)
+  print(cowplot::plot_grid(p1 + theme(legend.position = "none"), 
+                     p2 + theme(legend.position = "none"), 
+                     p3 + theme(legend.position = "none"),
+                     get_legend(p1),
+                     #rel_widths = c(1, 1, 1, .4),
+                     nrow = 2))
+  dev.off()
+}
 
 ##Run 7: r, k, a, b, tau +/- coinfection ----
 
@@ -2090,7 +2122,8 @@ run7 <-
                        min_dens = 0.1,
                        init_time = 100,
                        init_stepsize = 1,
-                       print_info = TRUE)
+                       print_info = TRUE,
+                       read_file = glob_read_files)
 
 #Find peaks & extinction via summarize
 ybig7 <- group_by_at(run7[[1]][!is.na(run7[[1]]$uniq_run), ], .vars = 1:17)
@@ -2114,9 +2147,9 @@ y_summarized7 <- summarize(ybig7,
 )
 
 #Make plots of density against time ----
-dens_offset <- 10
-if (F) {
-  dir.create("run7_dens_curves", showWarnings = FALSE)
+dir.create("run7_dens_curves", showWarnings = FALSE)
+if (glob_make_curveplots) {
+  dens_offset <- 10
   for (run in unique(ybig7$uniq_run)) {
     tiff(paste("./run7_dens_curves/", run, ".tiff", sep = ""),
          width = 5, height = 5, units = "in", res = 300)
@@ -2156,8 +2189,6 @@ if (F) {
   }
 }
 
-
-
 dir.create("run7_statplots", showWarnings = FALSE)
 
 #Relating max_dens to max_time
@@ -2169,20 +2200,21 @@ y_summarized7$pred_maxdens <- max_dens_func(t = y_summarized7$max_time,
                                             u = y_summarized7$u_S)
 y_summarized7 <- y_summarized7[order(y_summarized7$pred_maxdens),]
 
-tiff("./run7_statplots/maxdens_maxtime.tiff",
-     width = 8, height = 4, units = "in", res = 300)
-ggplot(data = y_summarized7[y_summarized7$equil == TRUE &
-                              complete.cases(y_summarized7), ],
-       aes(x = max_time, y = max_dens, color = as.factor(a), shape = as.factor(b),
-           group = k_S*z*u_S)) +
-  geom_point() +
-  facet_grid(k_S ~ z*u_S, scales = "free") +
-  scale_y_continuous(trans = "log10") +
-  geom_line(aes(x = max_time, y = pred_maxdens), color = "black", lty = 2) +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  NULL
-dev.off()
+if (glob_make_statplots) {
+  tiff("./run7_statplots/maxdens_maxtime.tiff",
+       width = 8, height = 4, units = "in", res = 300)
+  print(ggplot(data = y_summarized7[y_summarized7$equil == TRUE &
+                                complete.cases(y_summarized7), ],
+         aes(x = max_time, y = max_dens, color = as.factor(a), shape = as.factor(b),
+             group = k_S*z*u_S)) +
+    geom_point() +
+    facet_grid(k_S ~ z*u_S, scales = "free") +
+    scale_y_continuous(trans = "log10") +
+    geom_line(aes(x = max_time, y = pred_maxdens), color = "black", lty = 2) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    NULL)
+  dev.off()
 
 ##Run 8: r, k, a, b, tau +/- (costless) resistance ----
 run8_params <- expand.grid(u_vals = signif(0.04*10**c(0, -0.7), 3),
@@ -2210,7 +2242,8 @@ run8 <-
                        min_dens = 0.1,
                        init_time = 100,
                        init_stepsize = 1,
-                       print_info = TRUE)
+                       print_info = TRUE,
+                       read_file = glob_read_files)
 
 run8[[2]]
 run8[[3]]
@@ -2239,9 +2272,9 @@ y_summarized8 <- summarize(ybig8,
 )
 
 #Make plots of density against time ----
-dens_offset <- 10
-if (F) {
-  dir.create("run8_dens_curves", showWarnings = FALSE)
+dir.create("run8_dens_curves", showWarnings = FALSE)
+if (glob_make_curveplots) {
+  dens_offset <- 10
   for (run in unique(ybig8$uniq_run)) {
     tiff(paste("./run8_dens_curves/", run, ".tiff", sep = ""),
          width = 5, height = 5, units = "in", res = 300)
