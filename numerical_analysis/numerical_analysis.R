@@ -841,7 +841,7 @@ find_local_extrema <- function(values,
 #     with 10^-7 to 10^-4 most common range
 
 ## Global Settings ----
-glob_read_files <- TRUE
+glob_read_files <- FALSE
 glob_make_curveplots <- FALSE
 glob_make_statplots <- TRUE
 
@@ -2316,161 +2316,161 @@ if (glob_make_curveplots) {
 #Could also look into something where the percap growth rate
 # grows then decays with distance to midpoint or something like that
 
-#Define squared percent errors function
-sq_err_func <- function(params, x_vals, y_vals) {
-  #first input is a vector containing all the parameters
-  # 1 - r
-  # 2 - K
-  # 3 - P_0
-  #second input is the vector of x values
-  r <- params["r"]
-  K <- params["K"]
-  P_0 <- params["P_0"]
-  pred_vals <- K/(1+((K-P_0)/P_0)*exp(-r*x_vals))
- # return(sum((100*(pred_vals-y_vals))**2))
-  return(sum((100*(log10(pred_vals)-log10(y_vals)))**2))
-  #return(sum((100*(pred_vals-y_vals)/y_vals)**2))
-}
-
-#this stuff is producing warnings even when not run:
-# Warning messages:
-#   1: Unknown or uninitialised column: 'par'
-
-# #Find fits
-# fit_output <- data.frame(myr = numeric(), r = numeric(), 
-#                          K = numeric(), P_0 = numeric())
-# # for (myr in unique(y_summarized2$r)) {
+# #Define squared percent errors function
+# sq_err_func <- function(params, x_vals, y_vals) {
+#   #first input is a vector containing all the parameters
+#   # 1 - r
+#   # 2 - K
+#   # 3 - P_0
+#   #second input is the vector of x values
+#   r <- params["r"]
+#   K <- params["K"]
+#   P_0 <- params["P_0"]
+#   pred_vals <- K/(1+((K-P_0)/P_0)*exp(-r*x_vals))
+#  # return(sum((100*(pred_vals-y_vals))**2))
+#   return(sum((100*(log10(pred_vals)-log10(y_vals)))**2))
+#   #return(sum((100*(pred_vals-y_vals)/y_vals)**2))
+# }
+# 
+# #this stuff is producing warnings even when not run:
+# # Warning messages:
+# #   1: Unknown or uninitialised column: 'par'
+# 
+# # #Find fits
+# # fit_output <- data.frame(myr = numeric(), r = numeric(), 
+# #                          K = numeric(), P_0 = numeric())
+# # # for (myr in unique(y_summarized2$r)) {
+# #   myr <- 0.00798
+# #   temp <- optim(fn = sq_err_func,
+# #                 #par = c(r = myr, K = 10**9, P_0 = 10**6), 
+# #                 x_vals = y_summarized2$extin_time[y_summarized2$r == myr],
+# #                 y_vals = y_summarized2$max_dens[y_summarized2$r == myr],
+# #                 method = "BFGS")
+# #   fit_output <- rbind(fit_output,
+# #                       data.frame(myr = myr,
+# #                                  r = temp$par["r"],
+# #                                  K = temp$par["K"],
+# #                                  P_0 = temp$par["P_0"]))
+# # # }
+# 
+# #Calc ratio of logistic curve's fit r to the r in the simulations (myr)
+# fit_output$r_divby_myr <- fit_output$r/fit_output$myr
+# 
+# #Relating max_dens to extin_time
+# max_dens_func2 <- function(extin_time, K, P_0, r) {
+#   log10(K/(1+((K-P_0)/P_0)*exp(-r*extin_time)))
+# }
+#   
+# #for (myr in unique(y_summarized2$r)) {
 #   myr <- 0.00798
-#   temp <- optim(fn = sq_err_func,
-#                 #par = c(r = myr, K = 10**9, P_0 = 10**6), 
-#                 x_vals = y_summarized2$extin_time[y_summarized2$r == myr],
-#                 y_vals = y_summarized2$max_dens[y_summarized2$r == myr],
-#                 method = "BFGS")
-#   fit_output <- rbind(fit_output,
-#                       data.frame(myr = myr,
-#                                  r = temp$par["r"],
-#                                  K = temp$par["K"],
-#                                  P_0 = temp$par["P_0"]))
-# # }
-
-#Calc ratio of logistic curve's fit r to the r in the simulations (myr)
-fit_output$r_divby_myr <- fit_output$r/fit_output$myr
-
-#Relating max_dens to extin_time
-max_dens_func2 <- function(extin_time, K, P_0, r) {
-  log10(K/(1+((K-P_0)/P_0)*exp(-r*extin_time)))
-}
-  
-#for (myr in unique(y_summarized2$r)) {
-  myr <- 0.00798
-  myrow <- which(fit_output$myr == myr)
-  print(ggplot(data = y_summarized2[y_summarized2$r == myr, ],
-               aes(x = extin_time, y = max_dens, color = b, shape = a)) +
-          geom_point() +
-          # stat_function(fun = max_dens_func2,
-          #               args = list(K = fit_output$K[myrow], 
-          #                           P_0 = fit_output$P_0[myrow], 
-          #                           r = fit_output$r[myrow]),
-          #               color = "black", alpha = 0.1, lwd = 1) +
-          # stat_function(fun = max_dens_func2,
-          #               args = list(K = 10**9, 
-          #                           P_0 = 7*10**5, 
-          #                           r = .007),
-          #               color = "black", alpha = 0.1, lwd = 1) +
-          scale_y_continuous(trans = "log10") +
-          scale_x_continuous(trans = "log10") +
-          ggtitle(paste("r =", myr)) +
-          theme_bw() +
-          NULL
-        )
-#}
-
-##Relating phage_r to extin_time
-y_summarized2$tau <- as.factor(y_summarized2$tau)
-
-phage_r_model1 <- lm(phage_r_log10 ~ extin_time_log10 + 
-                       a + a:extin_time_log10 + 
-                       b + b:extin_time_log10 +
-                       tau + tau:extin_time_log10,
-                     y_summarized2)
-anova(phage_r_model1)
-summary(phage_r_model1)
-
-  #for (myr in unique(y_summarized2$r)) {
-  myr <- 0.00798
-  print(ggplot(data = y_summarized2[y_summarized2$max_dens_log10 < 8.95, ],
-               aes(x = extin_time_log10, y = phage_r_log10, 
-                   color = a, shape = tau)) +
-          geom_point(alpha = 0.5) +
-#          facet_grid(~b) +
-          # stat_function(fun = max_dens_func2,
-          #               args = list(K = 10**9, P_0 = 10**6, r = myr)) +
-#          scale_y_continuous(trans = "log10") +
-#          ggtitle(paste("r =", myr)) +
-          NULL)
-  #}
-
-for (myr in unique(y_summarized2$r)) {
-  #myr <- 0.00798
-  tiff(paste("./run2_statplots/phager_extintime_r=", myr, ".tiff", sep = ""),
-       width = 6, height = 5, units = "in", res = 300)
-  print(ggplot(data = y_summarized2[y_summarized2$r == myr, ],
-               aes(x = extin_time, y = phage_r, 
-                   color = a, shape = tau)) +
-          geom_point(alpha = 0.8, size = 2) +
-          theme_bw() +
-          scale_y_continuous(trans = "log10") +
-          scale_x_continuous(trans = "log10") +
-          ggtitle(paste("r =", myr)) +
-          NULL
-  )
-  dev.off()
-}
-
-
-##Testing whether B decay after max_time can be fit with a
-# logistic-like curve
-temp1 <- ybig1[ybig1$uniq_run == 4, ]
-temp2 <- y_summarized1[y_summarized1$uniq_run == 4, ]
-
-func1 <- function(t, max_dens, max_time, r) {
-  #max_dens - exp(r*(t-max_time))
-  max_dens - (max_dens/(1+exp(-r*(t-max_time))))
-}
-
-func1_log <- function(t, max_dens, max_time, r) {
-  log10(max_dens - (max_dens/(1+exp(-r*(t-max_time)))))
-}
-
-func1_optim <- function(params, times, density) {
-  max_dens = params[["max_dens"]]
-  max_time = params[["max_time"]]
-  r = params[["r"]]
-  fit_data <- func1(t = times, max_dens = max_dens,
-                    max_time = max_time, r = r)
-  return(sum((density-fit_data)**2))
-}
-
-fit1 <- optim(par = list(max_dens = temp2$max_dens,
-                        max_time = temp2$max_time,
-                        r = 0.15),
-             fn = func1_optim,
-             times = temp1$time[temp1$time >= temp2$max_time],
-             density = temp1$Density[temp1$time >= temp2$max_time])
-               
-
-ggplot(data = temp1[temp1$Pop == "B", ],
-       aes(x = time, y = Density+10)) +
-  geom_line(aes(color = Pop, group = Pop),
-            lwd = 1, alpha = 1) +
-  geom_hline(yintercept = 10, lty = 2) +
-  stat_function(mapping = aes(x = time),
-                fun = func1_log,
-                args = list(max_dens = 59450913826, #temp2$max_dens,
-                            max_time = 19810832468, #temp2$max_time+60,
-                            r = 14138914293), # 0.15),
-                color = "black") +
-  scale_y_continuous(trans = "log10", limits = c(10, NA)) +
-  NULL
+#   myrow <- which(fit_output$myr == myr)
+#   print(ggplot(data = y_summarized2[y_summarized2$r == myr, ],
+#                aes(x = extin_time, y = max_dens, color = b, shape = a)) +
+#           geom_point() +
+#           # stat_function(fun = max_dens_func2,
+#           #               args = list(K = fit_output$K[myrow], 
+#           #                           P_0 = fit_output$P_0[myrow], 
+#           #                           r = fit_output$r[myrow]),
+#           #               color = "black", alpha = 0.1, lwd = 1) +
+#           # stat_function(fun = max_dens_func2,
+#           #               args = list(K = 10**9, 
+#           #                           P_0 = 7*10**5, 
+#           #                           r = .007),
+#           #               color = "black", alpha = 0.1, lwd = 1) +
+#           scale_y_continuous(trans = "log10") +
+#           scale_x_continuous(trans = "log10") +
+#           ggtitle(paste("r =", myr)) +
+#           theme_bw() +
+#           NULL
+#         )
+# #}
+# 
+# ##Relating phage_r to extin_time
+# y_summarized2$tau <- as.factor(y_summarized2$tau)
+# 
+# phage_r_model1 <- lm(phage_r_log10 ~ extin_time_log10 + 
+#                        a + a:extin_time_log10 + 
+#                        b + b:extin_time_log10 +
+#                        tau + tau:extin_time_log10,
+#                      y_summarized2)
+# anova(phage_r_model1)
+# summary(phage_r_model1)
+# 
+#   #for (myr in unique(y_summarized2$r)) {
+#   myr <- 0.00798
+#   print(ggplot(data = y_summarized2[y_summarized2$max_dens_log10 < 8.95, ],
+#                aes(x = extin_time_log10, y = phage_r_log10, 
+#                    color = a, shape = tau)) +
+#           geom_point(alpha = 0.5) +
+# #          facet_grid(~b) +
+#           # stat_function(fun = max_dens_func2,
+#           #               args = list(K = 10**9, P_0 = 10**6, r = myr)) +
+# #          scale_y_continuous(trans = "log10") +
+# #          ggtitle(paste("r =", myr)) +
+#           NULL)
+#   #}
+# 
+# for (myr in unique(y_summarized2$r)) {
+#   #myr <- 0.00798
+#   tiff(paste("./run2_statplots/phager_extintime_r=", myr, ".tiff", sep = ""),
+#        width = 6, height = 5, units = "in", res = 300)
+#   print(ggplot(data = y_summarized2[y_summarized2$r == myr, ],
+#                aes(x = extin_time, y = phage_r, 
+#                    color = a, shape = tau)) +
+#           geom_point(alpha = 0.8, size = 2) +
+#           theme_bw() +
+#           scale_y_continuous(trans = "log10") +
+#           scale_x_continuous(trans = "log10") +
+#           ggtitle(paste("r =", myr)) +
+#           NULL
+#   )
+#   dev.off()
+# }
+# 
+# 
+# ##Testing whether B decay after max_time can be fit with a
+# # logistic-like curve
+# temp1 <- ybig1[ybig1$uniq_run == 4, ]
+# temp2 <- y_summarized1[y_summarized1$uniq_run == 4, ]
+# 
+# func1 <- function(t, max_dens, max_time, r) {
+#   #max_dens - exp(r*(t-max_time))
+#   max_dens - (max_dens/(1+exp(-r*(t-max_time))))
+# }
+# 
+# func1_log <- function(t, max_dens, max_time, r) {
+#   log10(max_dens - (max_dens/(1+exp(-r*(t-max_time)))))
+# }
+# 
+# func1_optim <- function(params, times, density) {
+#   max_dens = params[["max_dens"]]
+#   max_time = params[["max_time"]]
+#   r = params[["r"]]
+#   fit_data <- func1(t = times, max_dens = max_dens,
+#                     max_time = max_time, r = r)
+#   return(sum((density-fit_data)**2))
+# }
+# 
+# fit1 <- optim(par = list(max_dens = temp2$max_dens,
+#                         max_time = temp2$max_time,
+#                         r = 0.15),
+#              fn = func1_optim,
+#              times = temp1$time[temp1$time >= temp2$max_time],
+#              density = temp1$Density[temp1$time >= temp2$max_time])
+#                
+# 
+# ggplot(data = temp1[temp1$Pop == "B", ],
+#        aes(x = time, y = Density+10)) +
+#   geom_line(aes(color = Pop, group = Pop),
+#             lwd = 1, alpha = 1) +
+#   geom_hline(yintercept = 10, lty = 2) +
+#   stat_function(mapping = aes(x = time),
+#                 fun = func1_log,
+#                 args = list(max_dens = 59450913826, #temp2$max_dens,
+#                             max_time = 19810832468, #temp2$max_time+60,
+#                             r = 14138914293), # 0.15),
+#                 color = "black") +
+#   scale_y_continuous(trans = "log10", limits = c(10, NA)) +
+#   NULL
 
 
