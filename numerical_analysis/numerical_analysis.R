@@ -1,5 +1,4 @@
 #TODO:
-# FIX B-TAU mixup!!!
 # figure out how to calculate area-under-curve consistently
 # use netrd (see Scarpino mtg)
 #
@@ -279,7 +278,7 @@ run_sims <- function(u_Svals,
   ybig <- data.frame("uniq_run" = rep(NA, 6*(1+init_time/init_stepsize)*num_sims),
                      "u_S" = NA, "u_R" = NA, 
                      "k_S" = NA, "k_R" = NA,
-                     "a" = NA, "tau" = NA, "b" = NA, 
+                     "a" = NA, "b" = NA, "tau" = NA,
                      "c_SI" = NA, "c_SR" = NA,
                      "c_RS" = NA, "c_RI" = NA, 
                      "z" = NA, "m" = NA,
@@ -370,20 +369,21 @@ run_sims <- function(u_Svals,
         #First drop all rows with nan
         yout_list[[2]] <- yout_list[[2]][!(is.nan(yout_list[[2]]$S) |
                                              is.nan(yout_list[[2]]$I) |
-                                             is.nan(yout_list[[2]]$P)), ]
+                                             is.nan(yout_list[[2]]$P) |
+                                             is.nan(yout_list[[2]]$R)), ]
         
         #S and I both at equil, we're done
         if (yout_list[[2]]$S[nrow(yout_list[[2]])] < min_dens & 
             yout_list[[2]]$I[nrow(yout_list[[2]])] < min_dens) {
           keep_running <- FALSE
           at_equil <- TRUE
-          #S not at equil, need more time
+        #S not at equil, need more time
         } else if (yout_list[[2]]$S[nrow(yout_list[[2]])] >= min_dens) { 
           j <- j+1
-          #I not at equil (but S is because above check failed),
-          #   first we'll lengthen the simulation
-          #    (to make sure it was long enough to catch the last burst)
-          #   then we'll start shrinking our step size
+        #I not at equil (but S is because above check failed),
+        #   first we'll lengthen the simulation
+        #    (to make sure it was long enough to catch the last burst)
+        #   then we'll start shrinking our step size
         } else if (yout_list[[2]]$I[nrow(yout_list[[2]])] >= min_dens) {
           if (i_only_pos_times < 1) {
             j <- j+1
@@ -430,44 +430,28 @@ run_sims <- function(u_Svals,
                                variable.factor = FALSE))
       #If the run failed
     } else {
+      temp <- data.frame(uniq_run = i, 
+                         u_S = param_combos$u_Svals[i], 
+                         u_R = param_combos$u_Rvals[i], 
+                         k_S = param_combos$k_Svals[i], 
+                         k_R = param_combos$k_Rvals[i],
+                         a = param_combos$avals[i], 
+                         b = param_combos$bvals[i], 
+                         tau = param_combos$tauvals[i],
+                         c_SI = param_combos$c_SIvals[i],
+                         c_SR = param_combos$c_SRvals[i],
+                         c_RS = param_combos$c_RSvals[i],
+                         c_RI = param_combos$c_RIvals[i],
+                         z = param_combos$zvals[i],
+                         m = param_combos$mvals[i],
+                         init_S_dens = param_combos$init_S_dens_vals[i], 
+                         init_R_dens = param_combos$init_R_dens_vals[i], 
+                         init_moi = param_combos$init_moi_vals[i],
+                         equil = at_equil)
       if (is.null(yfail)) { #This is the first failed run
-        yfail <- data.frame(uniq_run = i, 
-                            u_S = param_combos$u_Svals[i], 
-                            u_R = param_combos$u_Rvals[i], 
-                            k_S = param_combos$k_Svals[i], 
-                            k_R = param_combos$k_Rvals[i],
-                            a = param_combos$avals[i], b = param_combos$bvals[i], 
-                            tau = param_combos$tauvals[i],
-                            c_SI = param_combos$c_SIvals[i],
-                            c_SR = param_combos$c_SRvals[i],
-                            c_RS = param_combos$c_RSvals[i],
-                            c_RI = param_combos$c_RIvals[i],
-                            z = param_combos$zvals[i],
-                            m = param_combos$mvals[i],
-                            init_S_dens = param_combos$init_S_dens_vals[i], 
-                            init_R_dens = param_combos$init_R_dens_vals[i], 
-                            init_moi = param_combos$init_moi_vals[i],
-                            equil = at_equil)
+        yfail <- temp
       } else { #This is a non-first failed run
-        yfail <- rbind(yfail, 
-                       data.frame(uniq_run = i, 
-                                  u_S = param_combos$u_Svals[i], 
-                                  u_R = param_combos$u_Rvals[i], 
-                                  k_S = param_combos$k_Svals[i], 
-                                  k_R = param_combos$k_Rvals[i],
-                                  a = param_combos$avals[i], 
-                                  b = param_combos$bvals[i], 
-                                  tau = param_combos$tauvals[i],
-                                  c_SI = param_combos$c_SIvals[i],
-                                  c_SR = param_combos$c_SRvals[i],
-                                  c_RS = param_combos$c_RSvals[i],
-                                  c_RI = param_combos$c_RIvals[i],
-                                  z = param_combos$zvals[i],
-                                  m = param_combos$mvals[i],
-                                  init_S_dens = param_combos$init_S_dens_vals[i], 
-                                  init_R_dens = param_combos$init_R_dens_vals[i], 
-                                  init_moi = param_combos$init_moi_vals[i],
-                                  equil = at_equil))
+        yfail <- rbind(yfail, temp)
       }
     }
     
