@@ -842,8 +842,8 @@ find_local_extrema <- function(values,
 #     with 10^-7 to 10^-4 most common range
 
 ## Global Settings ----
-glob_read_files <- FALSE
-glob_make_curveplots <- FALSE
+glob_read_files <- TRUE
+glob_make_curveplots <- TRUE
 glob_make_statplots <- TRUE
 
 ## Run #1: a, b, tau (phage traits) ----
@@ -1759,80 +1759,80 @@ if (glob_make_statplots) {
 }
 
 ###Run #4: r, a, b, tau ----
-run4 <- run_sims_filewrapper(name = "run4",
-                             u_Svals = signif(0.04*10**seq(from = 1, to = -2, by = -0.67), 3),
-                             k_Svals = c(10**9),
-                             avals = 10**seq(from = -14, to = -6, by = 2),
-                             tauvals = signif(10**seq(from = 0, to = 3, by = 0.75), 3),
-                             bvals = signif(5*10**seq(from = -1, to = 3, by = 1), 3),
-                             c_SIvals = 1,
-                             init_S_dens_vals = 10**6,
-                             init_moi_vals = 10**-2,
-                             min_dens = 0.1,
-                             init_time = 100,
-                             init_stepsize = 1,
-                             print_info = TRUE,
-                             read_file = glob_read_files)
-                             
-#Check fails/no equils
-run4[[2]]
-
-run4[[3]]
-
-#Find peaks & extinction via summarize
-ybig4 <- group_by_at(run4[[1]], .vars = 1:17)
-ybig4 <- ybig4[complete.cases(ybig4), ]
-y_summarized4 <- summarize(ybig4,
-                           max_dens = max(Density[Pop == "B"]),
-                           max_time = time[Pop == "B" & 
-                                             Density[Pop == "B"] == max_dens],
-                           extin_index = min(which(Pop == "B" &
-                                                     Density <= 10**4)),
-                           extin_dens = Density[extin_index],
-                           extin_time = time[extin_index],
-                           extin_time_sincemax = extin_time-max_time,
-                           auc = sum(Density[Pop == "B" & time < extin_time])*
-                             extin_time,
-                           phage_final = max(Density[Pop == "P"]),
-                           phage_extin = Density[Pop == "P" & time == extin_time],
-                           phage_r = (log(phage_final)-
-                                        log(init_S_dens[1]*init_moi[1]))/
-                             extin_time
-)
-
-## Plot summarized stats ----
-y_sum_melt4 <- reshape2::melt(y_summarized4,
-                              id.vars = 1:17,
-                              variable.name = "sum_stat",
-                              value.name = "stat_val")
-
-if (glob_make_statplots) {
-  for (myu_S in unique(y_sum_melt4$u_S)) {
-    tiff(paste("./run2_statplots/all_stats_r=", 
-               formatC(myu_S, digits = 5, format = "f"), 
-               ".tiff", sep = ""),
-         width = 5, height = 7, units = "in", res = 300)
-    print(ggplot(data = y_sum_melt4[y_sum_melt4$r == myu_S &
-                                      y_sum_melt4$sum_stat %in% 
-                                      c("max_dens", "max_time", 
-                                        "extin_time", "extin_time_sincemax",
-                                        "phage_final", "phage_r"), ],
-                 aes(x = a, y = stat_val, 
-                     color = as.factor(b), group = as.factor(b))) +
-            geom_point(size = 2, alpha = 0.8) + 
-            geom_line(size = 1.1, alpha = 0.6) +
-            facet_grid(sum_stat~tau, scales = "free_y") +
-            scale_y_continuous(trans = "log10") +
-            scale_x_continuous(trans = "log10") +
-            scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-            theme_bw() +
-            theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-            ggtitle(paste("r=", myu_S, " tau", sep = "")) +
-            NULL
-    )
-    dev.off()
-  }
-}
+# run4 <- run_sims_filewrapper(name = "run4",
+#                              u_Svals = signif(0.04*10**seq(from = 1, to = -2, by = -0.67), 3),
+#                              k_Svals = c(10**9),
+#                              avals = 10**seq(from = -14, to = -6, by = 2),
+#                              tauvals = signif(10**seq(from = 0, to = 3, by = 0.75), 3),
+#                              bvals = signif(5*10**seq(from = -1, to = 3, by = 1), 3),
+#                              c_SIvals = 1,
+#                              init_S_dens_vals = 10**6,
+#                              init_moi_vals = 10**-2,
+#                              min_dens = 0.1,
+#                              init_time = 100,
+#                              init_stepsize = 1,
+#                              print_info = TRUE,
+#                              read_file = glob_read_files)
+#                              
+# #Check fails/no equils
+# run4[[2]]
+# 
+# run4[[3]]
+# 
+# #Find peaks & extinction via summarize
+# ybig4 <- group_by_at(run4[[1]], .vars = 1:17)
+# ybig4 <- ybig4[complete.cases(ybig4), ]
+# y_summarized4 <- summarize(ybig4,
+#                            max_dens = max(Density[Pop == "B"]),
+#                            max_time = time[Pop == "B" & 
+#                                              Density[Pop == "B"] == max_dens],
+#                            extin_index = min(which(Pop == "B" &
+#                                                      Density <= 10**4)),
+#                            extin_dens = Density[extin_index],
+#                            extin_time = time[extin_index],
+#                            extin_time_sincemax = extin_time-max_time,
+#                            auc = sum(Density[Pop == "B" & time < extin_time])*
+#                              extin_time,
+#                            phage_final = max(Density[Pop == "P"]),
+#                            phage_extin = Density[Pop == "P" & time == extin_time],
+#                            phage_r = (log(phage_final)-
+#                                         log(init_S_dens[1]*init_moi[1]))/
+#                              extin_time
+# )
+# 
+# ## Plot summarized stats ----
+# y_sum_melt4 <- reshape2::melt(y_summarized4,
+#                               id.vars = 1:17,
+#                               variable.name = "sum_stat",
+#                               value.name = "stat_val")
+# 
+# if (glob_make_statplots) {
+#   for (myu_S in unique(y_sum_melt4$u_S)) {
+#     tiff(paste("./run2_statplots/all_stats_r=", 
+#                formatC(myu_S, digits = 5, format = "f"), 
+#                ".tiff", sep = ""),
+#          width = 5, height = 7, units = "in", res = 300)
+#     print(ggplot(data = y_sum_melt4[y_sum_melt4$r == myu_S &
+#                                       y_sum_melt4$sum_stat %in% 
+#                                       c("max_dens", "max_time", 
+#                                         "extin_time", "extin_time_sincemax",
+#                                         "phage_final", "phage_r"), ],
+#                  aes(x = a, y = stat_val, 
+#                      color = as.factor(b), group = as.factor(b))) +
+#             geom_point(size = 2, alpha = 0.8) + 
+#             geom_line(size = 1.1, alpha = 0.6) +
+#             facet_grid(sum_stat~tau, scales = "free_y") +
+#             scale_y_continuous(trans = "log10") +
+#             scale_x_continuous(trans = "log10") +
+#             scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+#             theme_bw() +
+#             theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+#             ggtitle(paste("r=", myu_S, " tau", sep = "")) +
+#             NULL
+#     )
+#     dev.off()
+#   }
+# }
 
 ###Run #5: init_dens and init_moi as r,k,a,b,tau indiv ----
 run5_params <- data.frame(matrix(NA, ncol = 7, nrow = 25*5*3))
