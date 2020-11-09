@@ -1665,6 +1665,8 @@ y_sum_melt3 <- reshape2::melt(y_summarized3,
                               id.vars = 1:17,
                               variable.name = "sum_stat",
                               value.name = "stat_val")
+
+dir.create("./run3_statplots")
 if (glob_make_statplots) {
   for (myu_S in unique(y_sum_melt3$u_S)) {
     for (myb in unique(y_sum_melt3$b)) {
@@ -1672,7 +1674,7 @@ if (glob_make_statplots) {
                  formatC(myu_S, digits = 5, format = "f"), 
                  ",b=", myb, ".tiff", sep = ""),
            width = 5, height = 7, units = "in", res = 300)
-      print(ggplot(data = y_sum_melt3[y_sum_melt3$r == myu_S &
+      print(ggplot(data = y_sum_melt3[y_sum_melt3$u_S == myu_S &
                                         y_sum_melt3$b == myb &
                                         y_sum_melt3$sum_stat %in% 
                                         c("max_dens", "max_time", 
@@ -1696,14 +1698,19 @@ if (glob_make_statplots) {
   }
 
   #Let's focus in on extin_time
+  tiff("./run3_statplots/extin_time.tiff",
+       width = 6, height = 4, units = "in", res = 300)
   print(ggplot(data = y_summarized3,
-         aes(x = init_S_dens, y = extin_time, color = init_moi,
-             shape = a)) +
+         aes(x = init_S_dens, y = extin_time, color = as.factor(init_moi),
+             shape = as.factor(a))) +
     geom_point() +
-    facet_grid(r~b*tau) +
+    facet_grid(u_S~b*tau) +
   #  geom_line() +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
     theme_bw() +
     NULL)
+  dev.off()
 }
 
 ###Plot stats against ea other ----
@@ -1724,7 +1731,7 @@ if (glob_make_statplots) {
                ".tiff", sep = ""),
          width = 15, height = 15, units = "in", res = 300)
     #Make base figure
-    p <- GGally::ggpairs(y_summarized3[y_summarized3$r == myu_S, ],
+    p <- GGally::ggpairs(y_summarized3[y_summarized3$u_S == myu_S, ],
                          aes(color = as.factor(init_moi), 
                              shape = as.factor(init_S_dens)),
                          columns = c("max_dens_log10", "max_time_log10",
