@@ -1666,7 +1666,7 @@ y_sum_melt3 <- reshape2::melt(y_summarized3,
                               variable.name = "sum_stat",
                               value.name = "stat_val")
 
-dir.create("./run3_statplots")
+dir.create("./run3_statplots", showWarnings = FALSE)
 if (glob_make_statplots) {
   for (myu_S in unique(y_sum_melt3$u_S)) {
     for (myb in unique(y_sum_melt3$b)) {
@@ -1852,7 +1852,7 @@ run5_params$bvals <- c(rep(63.2, times = 25*3*3),
 run5_params$tauvals <- c(rep(37.6, times = 25*4*3),
                    rep(signif(10**seq(from = 1.25, to = 2, by = 0.325), 3), each = 25),
                    rep(37.6, times = 25*0*3))
-                             
+             
 run5 <- run_sims_filewrapper(name = "run5",
                              u_Svals = run5_params$u_Svals,
                              k_Svals = run5_params$k_Svals,
@@ -1892,11 +1892,13 @@ y_summarized5 <- summarize(ybig5,
                              extin_time
 )
 
+dir.create("./run5_statplots", showWarnings = FALSE)
 if (glob_make_statplots) {
+  tiff("./run5_statplots/max_time1.tiff", width = 6, height = 4, units = "in", res = 300)
   print(ggplot(data = y_summarized5[y_summarized5$k_S == 10**9 &
                                       y_summarized5$a == 10**-10 &
-                                      y_summarized5$b == 37.6 &
-                                      y_summarized5$tau == 63.2, ],
+                                      y_summarized5$b == 63.2 &
+                                      y_summarized5$tau == 37.6, ],
                aes(x = log10(init_S_dens), 
                    y = log10(init_moi),
                    z = max_time)) +
@@ -1906,11 +1908,13 @@ if (glob_make_statplots) {
           scale_fill_viridis_d(direction = -1) +
           theme_bw() +
           NULL)
+  dev.off()
   
+  tiff("./run5_statplots/max_time2.tiff", width = 6, height = 4, units = "in", res = 300)
   print(ggplot(data = y_summarized5[y_summarized5$u_S == 0.0179 &
                                       y_summarized5$a == 10**-10 &
-                                      y_summarized5$b == 37.6 &
-                                      y_summarized5$tau == 63.2, ],
+                                      y_summarized5$b == 63.2 &
+                                      y_summarized5$tau == 37.6, ],
                aes(x = log10(init_S_dens), 
                    y = log10(init_moi),
                    z = max_time)) +
@@ -1920,11 +1924,13 @@ if (glob_make_statplots) {
           scale_fill_viridis_d(direction = -1) +
           theme_bw() +
           NULL)
+  dev.off()
   
+  tiff("./run5_statplots/max_time3.tiff", width = 6, height = 4, units = "in", res = 300)
   print(ggplot(data = y_summarized5[y_summarized5$u_S == 0.0179 &
                                       y_summarized5$k_S == 10**9 &
-                                      y_summarized5$b == 37.6 &
-                                      y_summarized5$tau == 63.2, ],
+                                      y_summarized5$b == 63.2 &
+                                      y_summarized5$tau == 37.6, ],
                aes(x = log10(init_S_dens), 
                    y = log10(init_moi),
                    z = max_time)) +
@@ -1934,11 +1940,13 @@ if (glob_make_statplots) {
           scale_fill_viridis_d(direction = -1) +
           theme_bw() +
           NULL)
+  dev.off()
   
+  tiff("./run5_statplots/max_time4.tiff", width = 6, height = 4, units = "in", res = 300)
   print(ggplot(data = y_summarized5[y_summarized5$u_S == 0.0179 &
                                       y_summarized5$k_S == 10**9 &
                                       y_summarized5$a == 10**-10 &
-                                      y_summarized5$tau == 63.2, ],
+                                      y_summarized5$tau == 37.6, ],
                aes(x = log10(init_S_dens), 
                    y = log10(init_moi),
                    z = max_time)) +
@@ -1948,11 +1956,13 @@ if (glob_make_statplots) {
           scale_fill_viridis_d(direction = -1) +
           theme_bw() +
           NULL)
+  dev.off()
   
+  tiff("./run5_statplots/max_time5.tiff", width = 6, height = 4, units = "in", res = 300)
   print(ggplot(data = y_summarized5[y_summarized5$u_S == 0.0179 &
                                       y_summarized5$k_S == 10**9 &
                                       y_summarized5$a == 10**-10 &
-                                      y_summarized5$b == 37.6, ],
+                                      y_summarized5$b == 63.2, ],
                aes(x = log10(init_S_dens), 
                    y = log10(init_moi),
                    z = max_time)) +
@@ -1962,17 +1972,20 @@ if (glob_make_statplots) {
           scale_fill_viridis_d(direction = -1) +
           theme_bw() +
           NULL)
+  dev.off()
   
+  tiff("./run5_statplots/maxdens_phagefinal.tiff", width = 6, height = 4, units = "in", res = 300)
   print(ggplot(data = y_summarized5[y_summarized5$u_S == 0.0179 &
                                       y_summarized5$k_S == 10**9 &
                                       y_summarized5$a == 10**-10 &
-                                      y_summarized5$tau == 63.2, ],
+                                      y_summarized5$tau == 37.6, ],
                aes(x = max_dens, y = phage_final, color = as.factor(b),
                    shape = as.factor(init_moi))) +
           geom_point() +
           scale_y_continuous(trans = "log10") +
           scale_x_continuous(trans = "log10") +
           NULL)
+  dev.off()
 }
 
 
@@ -2072,7 +2085,7 @@ if (glob_make_statplots) {
   print(cowplot::plot_grid(p1 + theme(legend.position = "none"), 
                      p2 + theme(legend.position = "none"), 
                      p3 + theme(legend.position = "none"),
-                     get_legend(p1),
+                     cowplot::get_legend(p1),
                      #rel_widths = c(1, 1, 1, .4),
                      nrow = 2))
   dev.off()
