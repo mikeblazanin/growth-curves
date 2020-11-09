@@ -45,6 +45,7 @@ library(ggplot2)
 library(dplyr)
 
 #Setwd
+dir.create("numerical_analysis", showWarnings = FALSE)
 setwd("./numerical_analysis/")
 
 #Okabe and Ito 2008 colorblind-safe qualitative color scale
@@ -2199,6 +2200,7 @@ if (glob_make_statplots) {
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
     NULL)
   dev.off()
+}
 
 ##Run 8: r, k, a, b, tau +/- (costless) resistance ----
 run8_params <- expand.grid(u_vals = signif(0.04*10**c(0, -0.7), 3),
