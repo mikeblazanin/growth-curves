@@ -1036,7 +1036,7 @@ if (glob_make_statplots) {
   tiff("./run1_statplots/stat_cors.tiff", width = 10, height = 10, units = "in", res = 300)
   #Make base figure
   p <- GGally::ggpairs(y_summarized1,
-                     aes(color = b, shape = a),
+                     aes(color = as.factor(b), shape = as.factor(a)),
                      columns = c("max_dens_log10", "max_time_log10",
                                  "extin_time_log10", 
                                  #"auc_log10", 
@@ -1054,8 +1054,8 @@ if (glob_make_statplots) {
   tiff("./run1_statplots/maxdens_maxtime.tiff",
        width = 5, height = 5, units = "in", res = 300)
   print(ggplot(data = y_summarized1,
-         aes(x = max_dens, y = max_time, color = b, fill = b, 
-             shape = a)) +
+         aes(x = max_time, y = max_dens, color = as.factor(b), 
+             fill = as.factor(b), shape = as.factor(a))) +
     geom_point(size = 2.5, alpha = 0.5) +
     scale_x_continuous(trans = "log10") +
     scale_y_continuous(trans = "log10") +
@@ -1069,8 +1069,8 @@ if (glob_make_statplots) {
   tiff("./run1_statplots/maxdens_maxtime_facet.tiff",
        width = 6, height = 4, units = "in", res = 300)
   print(ggplot(data = y_summarized1,
-         aes(x = max_dens, y = max_time, color = b, fill = b, 
-             shape = a)) +
+         aes(x = max_time, y = max_dens, color = as.factor(b), 
+             fill = as.factor(b), shape = as.factor(a))) +
     geom_point(size = 2.5, alpha = 0.5) +
     facet_grid(~tau) +
     scale_x_continuous(trans = "log10") +
@@ -1087,24 +1087,26 @@ if (glob_make_statplots) {
   tiff("./run1_statplots/maxdens_extintime.tiff",
        width = 5, height = 5, units = "in", res = 300)
   print(ggplot(data = y_summarized1,
-         aes(x = max_dens, y = extin_time, color = b, fill = b, 
-             shape = a)) +
-    geom_point(size = 2.5, alpha = 0.5) +
+         aes(x = extin_time, y = max_dens, color = as.factor(b), 
+             fill = as.factor(tau), shape = as.factor(a))) +
+    geom_point(size = 1.5, alpha = 1, stroke = 1) +
     #facet_grid(tau~.) +
     scale_x_continuous(trans = "log10") +
     scale_y_continuous(trans = "log10") +
     theme_bw() +
     scale_shape_manual(values = 21:25) +
-    scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-    scale_fill_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+    scale_color_manual(values = my_cols) +
+    scale_fill_manual(values = my_cols) +
+    #scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+    #scale_fill_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
     NULL)
   dev.off()
   
   tiff("./run1_statplots/maxdens_extintime_facet.tiff",
        width = 6, height = 4, units = "in", res = 300)
   print(ggplot(data = y_summarized1,
-         aes(x = max_dens, y = extin_time, color = b, fill = b, 
-             shape = a)) +
+         aes(x = extin_time, y = max_dens, color = as.factor(b), 
+             fill = as.factor(b), shape = as.factor(a))) +
     geom_point(size = 2.5, alpha = 0.5) +
     facet_grid(~tau) +
     scale_x_continuous(trans = "log10") +
@@ -1121,8 +1123,8 @@ if (glob_make_statplots) {
   tiff("./run1_statplots/maxtime_extintime.tiff",
        width = 5, height = 5, units = "in", res = 300)
   print(ggplot(data = y_summarized1,
-         aes(x = max_time, y = extin_time, color = b, fill = b,
-             shape = a)) +
+         aes(x = max_time, y = extin_time, color = as.factor(b), 
+             fill = as.factor(b), shape = as.factor(a))) +
     geom_point(size = 2.5, alpha = 0.5) +
   #  facet_grid(tau~.) +
     scale_x_continuous(trans = "log10") +
@@ -1137,8 +1139,8 @@ if (glob_make_statplots) {
   tiff("./run1_statplots/maxtime_extintime_facet.tiff",
        width = 6, height = 4, units = "in", res = 300)
   print(ggplot(data = y_summarized1,
-         aes(x = max_time, y = extin_time, color = b, fill = b,
-             shape = a)) +
+         aes(x = max_time, y = extin_time, color = as.factor(b), 
+             fill = as.factor(b), shape = as.factor(a))) +
     geom_point(size = 2.5, alpha = 0.5) +
     facet_grid(~tau) +
     scale_x_continuous(trans = "log10") +
@@ -1155,7 +1157,7 @@ if (glob_make_statplots) {
 
 #Making contour plots ----
 if (glob_make_statplots) {
-  tiff("./run1_statplots/maxtime_contour1.tiff", width = 5, height = 5,
+  tiff("./run1_statplots/maxtime_contour1.tiff", width = 8, height = 4,
        units = "in", res = 300)
   p1 <- ggplot(data = y_summarized1, 
          aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(b)))) +
@@ -1167,12 +1169,12 @@ if (glob_make_statplots) {
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
     ylab("Burst Size") +
     xlab("Infection Rate") +
-    labs(title = "Peak Time", subtitle = "Lysis Time") +
+    labs(fill = "Peak Time", subtitle = "Lysis Time") +
     NULL
   print(p1)
   dev.off()
   
-  tiff("./run1_statplots/maxtime_contour2.tiff", width = 5, height = 5,
+  tiff("./run1_statplots/maxtime_contour2.tiff", width = 8, height = 4,
        units = "in", res = 300)
   p2 <- ggplot(data = y_summarized1, 
          aes(x = as.numeric(as.character(tau)), y = as.numeric(as.character(b)))) +
@@ -1184,12 +1186,12 @@ if (glob_make_statplots) {
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
     ylab("Burst Size") +
     xlab("Lysis Time") +
-    labs(title = "Peak Time", subtitle = "Infection Rate") +
+    labs(fill = "Peak Time", subtitle = "Infection Rate") +
     NULL
   print(p2)
   dev.off()
   
-  tiff("./run1_statplots/maxtime_contour3.tiff", width = 5, height = 5,
+  tiff("./run1_statplots/maxtime_contour3.tiff", width = 8, height = 4,
        units = "in", res = 300)
   p3 <- ggplot(data = y_summarized1, 
          aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(tau)))) +
@@ -1201,7 +1203,7 @@ if (glob_make_statplots) {
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
     ylab("Lysis Time") +
     xlab("Infection Rate") +
-    labs(title = "Peak Time", subtitle = "Burst Size") +
+    labs(fill = "Peak Time", subtitle = "Burst Size") +
     NULL
   print(p3)
   dev.off()
@@ -1211,7 +1213,7 @@ if (glob_make_statplots) {
   cowplot::plot_grid(p1 + theme(legend.position = "none"), 
                      p2 + theme(legend.position = "none"), 
                      p3 + theme(legend.position = "none"),
-                     get_legend(p1),
+                     cowplot::get_legend(p1),
                      #rel_widths = c(1, 1, 1, .4),
                      nrow = 2)
   dev.off()
@@ -1348,7 +1350,7 @@ if (glob_make_statplots) {
                                   "phage_r",
                                   "phage_atmaxdens"
                                   ), ],
-           aes(x = a, y = stat_val, color = b, group = b)) +
+           aes(x = a, y = stat_val, color = as.factor(b), group = as.factor(b))) +
       geom_point(size = 2, alpha = 0.8) + 
       geom_line(size = 1.1, alpha = 0.6) +
       facet_grid(sum_stat~tau, scales = "free_y") +
@@ -1366,17 +1368,22 @@ if (glob_make_statplots) {
 
 ##Just extin_time ----
 if (glob_make_statplots) {
+  tiff("./run2_statplots/extin_time_1.tiff",
+       width = 5, height = 4, units = "in", res = 300)
   print(ggplot(data = y_summarized2,
          aes(x = a, y = extin_time, color = as.factor(b), group = as.factor(b))) +
     #geom_point() + 
-    geom_line(lwd = 1.25, alpha = 0.8) +
+    geom_line(lwd = 1, alpha = 0.65) +
     scale_color_manual(values = my_cols[c(1, 2, 3, 5, 7)]) +
     facet_grid(u_S~tau) +
     scale_y_continuous(trans = "log10") +
     theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
     NULL)
+  dev.off()
 
+  tiff("./run2_statplots/extin_time_2.tiff",
+       width = 5, height = 4, units = "in", res = 300)
   print(ggplot(data = y_summarized2,
          aes(x = b, y = extin_time, color = as.factor(u_S),
              group = as.factor(u_S))) +
@@ -1388,7 +1395,10 @@ if (glob_make_statplots) {
     theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
     NULL)
+  dev.off()
 
+  tiff("./run2_statplots/extin_time_3.tiff",
+       width = 5, height = 4, units = "in", res = 300)
   print(ggplot(data = y_summarized2,
          aes(x = u_S, y = extin_time, color = as.factor(tau),
              group = as.factor(tau))) +
@@ -1400,7 +1410,10 @@ if (glob_make_statplots) {
     theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
     NULL)
+  dev.off()
   
+  tiff("./run2_statplots/extin_time_4.tiff",
+       width = 5, height = 4, units = "in", res = 300)
   print(ggplot(data = y_summarized2,
          aes(x = tau, y = extin_time, color = as.factor(a),
              group = as.factor(a))) +
@@ -1412,6 +1425,7 @@ if (glob_make_statplots) {
     theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
     NULL)
+  dev.off()
 }
 
 ###Plot stats against ea other ----
@@ -1463,7 +1477,8 @@ if (glob_make_statplots) {
   tiff("./run2_statplots/maxdens_maxtime.tiff",
        width = 6, height = 4, units = "in", res = 300)
   print(ggplot(data = y_summarized2,
-         aes(x = max_time, y = max_dens, color = a, shape = b)) +
+         aes(x = max_time, y = max_dens, color = as.factor(a), 
+             shape = as.factor(b))) +
     geom_point() +
     facet_grid(~u_S) +
     scale_y_continuous(trans = "log10") +
