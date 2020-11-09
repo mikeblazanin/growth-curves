@@ -1509,102 +1509,71 @@ if (glob_make_statplots) {
 #First try fitting a model to the data
 temp <- y_summarized2[y_summarized2$u_S == 0.00798 &
                         y_summarized2$max_dens_log10 < 8.95, ]
-model1 <- lm(phage_final_log10 ~ max_dens_log10 + as.factor(tau),
+model1 <- lm(phage_final_log10 ~ max_dens_log10 + as.factor(b),
              temp)
 summary(model1)
 
 if (glob_make_statplots) {
+  tiff("./run2_statplots/phagefinal_peakdens_fit.tiff",
+       width = 5, height = 5, units = "in", res = 300)
   print(ggplot(data = temp,
-               aes(x = max_dens_log10, y = phage_final_log10, 
-                   color = b, shape = tau)) +
-          geom_point() +
-          geom_line(data = fortify(model1), 
-                    aes(x = max_dens_log10, y = .fitted)) +
+               aes(x = max_dens_log10, y = phage_final_log10)) +
+          geom_point(aes(color = as.factor(b), shape = as.factor(tau))) +
+          geom_line(data = fortify(model1),
+                    aes(x = max_dens_log10, y = .fitted, color = `as.factor(b)`)) +
           NULL)
+  dev.off()
 }
 
 #The model seems to suggest the following "true" underlying model:
-phage_final_func <- function(x, a, b, tau) {
-  log10(b*x)
-}
+y_summarized2$pred_phage_final <- y_summarized2$b*y_summarized2$max_dens
 
-#Pre-define all the stat_functions into a list to add all at once
-stat_func_list1 <- list()
-i <- 1
-for (myb in unique(y_summarized2$b)) {
-  stat_func_list1[[i]] <- 
-    stat_function(fun = phage_final_func,
-                  args = list(b = as.numeric(as.character(myb))),
-                  color = colorRampPalette(colors = c("gold", "dark red"))(5)[i])
-  i <- i+1
-}
-
-#Make plots
 if (glob_make_statplots) {
-  for (myu_S in unique(y_summarized2$u_S)) {
-  #myu_S <- 0.00798
-    tiff(paste("./run2_statplots/phagefinal_maxdens_u=", myu_S, ".tiff", sep = ""),
-         width = 5, height = 5, units = "in", res = 300)
-    print(ggplot(data = y_summarized2[y_summarized2$u_S == myu_S, ],
-                 aes(x = max_dens, y = phage_final, color = b, shape = tau)) +
-            geom_point() +
-            scale_y_continuous(trans = "log10") +
-            scale_x_continuous(trans = "log10") +
-            scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-            ggtitle(paste("u =", myu_S)) +
-            stat_func_list1 +
-            theme_bw() +
-            NULL
-    )
-    dev.off()
-  }
+  tiff("./run2_statplots/phagefinal_peakdens_pred.tiff",
+       width = 8, height = 4, units = "in", res = 300)
+  print(ggplot(data = y_summarized2, aes(x = max_dens, y = phage_final, 
+                                   color = as.factor(b), shape = as.factor(tau))) +
+    geom_point(alpha = 0.5) +
+    scale_y_continuous(trans = "log10") +
+    scale_x_continuous(trans = "log10") +
+    scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+    geom_line(aes(x = max_dens, y = pred_phage_final, color = as.factor(b))) +
+    facet_grid(~u_S) +
+    NULL)
+  dev.off()
 }
 
 #Since max_dens is related to max_time, and phage_final is related to max_dens
 #We can relate phage_final to max_time
-phage_final_func2 <- function(max_time, K, P_0, u, b) {
-  #note output is in terms of phage_final_log10
-  #log10(phage_final) = log10(K/(1+((K-P_0)/P_0)*exp(-u*max_time))) + log10(b)
-  log10(K/(1+((K-P_0)/P_0)*exp(-u*max_time))) + log10(b)
+phage_final_func2 <- function(max_time, k, P_0, u, b) {
+  #phage_final = b*(K/(1+((K-P_0)/P_0)*exp(-u*max_time)))
+  b*(k/(1+((k-P_0)/P_0)*exp(-u*max_time)))
 }
 
-#Pre-define all the stat_functions into a list to add all at once
-# (this is a nested list, the upper level corresponding to different
-# u values, and the inner level to different b values)
-stat_func_list2 <- list()
-i <- 1
-j <- 1
-for (myu_S in unique(y_summarized2$u_S)) {
-  j <- 1
-  stat_func_list2[[i]] <- list()
-  for (myb in unique(y_summarized2$b)) {
-    stat_func_list2[[i]][[j]] <- stat_function(fun = phage_final_func2,
-                                          args = list(b = as.numeric(as.character(myb)), 
-                                                      K = 10**9, P_0 = 10**6, u = myu_S),
-                                          color = colorRampPalette(colors = c("gold", "dark red"))(5)[j])
-    j <- j+1
-  }
-  i <- i+1
-}
+y_summarized2$pred_phage_final2 <-
+  phage_final_func2(max_time = y_summarized2$max_time,
+                    k = y_summarized2$k_S,
+                    P_0 = y_summarized2$init_S_dens,
+                    u = y_summarized2$u_S,
+                    b = y_summarized2$b)
 
-i <- 1
 if (glob_make_statplots) {
-  for (myu_S in unique(y_summarized2$u_S)) {
-  #myu_S <- 0.00798
-    tiff(paste("./run2_statplots/phagefinal_maxtime_u=", myu_S, ".tiff", sep = ""),
-         width = 5, height = 5, units = "in", res = 300)
-    print(ggplot(data = y_summarized2[y_summarized2$u_S == myu_S, ],
-                 aes(x = max_time, y = phage_final_log10, color = b, shape = a)) +
-            geom_point() +
-            stat_func_list2[[i]] +
-            scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
-            ggtitle(paste("u =", myu_S)) +
-            theme_bw() +
-            NULL
-          )
-    dev.off()
-    i <- i+1
-  }
+  tiff("./run2_statplots/phagefinal_maxtime_pred.tiff",
+       width = 6, height = 4, units = "in", res = 300)
+  print(ggplot(data = y_summarized2,
+               aes(x = max_time, y = phage_final, 
+                   color = as.factor(b), shape = as.factor(a))) +
+          geom_point() +
+          geom_line(aes(x = max_time, y = pred_phage_final2,
+                        color = as.factor(b), group = as.factor(b))) +
+          scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+          facet_wrap(~u_S) +
+          scale_y_continuous(trans = "log10") +
+          scale_x_continuous(trans = "log10") +
+          theme_bw() +
+          NULL
+  )
+  dev.off()
 }
 
 ##Run #3: r, a, b, tau, init_dens, init_moi ----
