@@ -1,4 +1,11 @@
 #TODO:
+# verify that coinfection actually works the way it should!
+# check whether burst size can be inferred by running curves across 
+#   various init conditions then plotting max dens vs final phage
+# then think about how that inter-relates to extinction time – phage r 
+#   relationship
+# Perhaps should measure something like P density at bact peak? 
+#   Or P r up to bact peak?
 # figure out how to calculate area-under-curve consistently
 # use netrd (see Scarpino mtg)
 #
@@ -1213,12 +1220,12 @@ if (glob_make_statplots) {
   
   tiff("./run1_statplots/maxtime_contour_all.tiff", width = 8, height = 6,
        units = "in", res = 300)
-  cowplot::plot_grid(p1 + theme(legend.position = "none"), 
+  print(cowplot::plot_grid(p1 + theme(legend.position = "none"), 
                      p2 + theme(legend.position = "none"), 
                      p3 + theme(legend.position = "none"),
                      cowplot::get_legend(p1),
                      #rel_widths = c(1, 1, 1, .4),
-                     nrow = 2)
+                     nrow = 2))
   dev.off()
 }
 
@@ -1247,7 +1254,7 @@ if (glob_make_curveplots) {
 if (glob_make_statplots) {
   tiff("./run1_statplots/B_plots.tiff", width = 10, height = 10, 
        units = "in", res = 300)
-  ggplot(data = ybig1[ybig1$Pop == "B" &
+  print(ggplot(data = ybig1[ybig1$Pop == "B" &
                        ybig1$Density > 0, ],
          aes(x = time, y = Density+10, color = as.factor(a))) +
     geom_line(lwd = 1, alpha = 0.5) +
@@ -1256,12 +1263,13 @@ if (glob_make_statplots) {
     scale_y_continuous(trans = "log10") +
     scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
     theme_bw() +
-    ggtitle("b (top), tau (side)")
+    ggtitle("b (top), tau (side)") +
+    NULL)
   dev.off()
 
   tiff("./run1_statplots/B_plots2.tiff", width = 10, height = 10, 
        units = "in", res = 300)
-  ggplot(data = ybig1[ybig1$Pop == "B" &
+  print(ggplot(data = ybig1[ybig1$Pop == "B" &
                        ybig1$Density > 0, ],
          aes(x = time, y = Density+10, color = as.factor(tau))) +
     geom_line(lwd = 1, alpha = 0.5) +
@@ -1270,12 +1278,13 @@ if (glob_make_statplots) {
     scale_y_continuous(trans = "log10") +
     scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
     theme_bw() +
-    ggtitle("a (top), b (side)")
+    ggtitle("a (top), b (side)") +
+    NULL)
   dev.off()
 
   tiff("./run1_statplots/B_plots3.tiff", width = 10, height = 10, 
        units = "in", res = 300)
-  ggplot(data = ybig1[ybig1$Pop == "B" &
+  print(ggplot(data = ybig1[ybig1$Pop == "B" &
                        ybig1$Density > 0, ],
          aes(x = time, y = Density+10, color = as.factor(b))) +
     geom_line(lwd = 1, alpha = 0.5) +
@@ -1284,7 +1293,8 @@ if (glob_make_statplots) {
     scale_y_continuous(trans = "log10") +
     scale_color_manual(values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
     theme_bw() +
-    ggtitle("a (top), tau (side)")
+    ggtitle("a (top), tau (side)") +
+    NULL)
   dev.off()
 }
 
@@ -2044,7 +2054,7 @@ if (glob_make_statplots) {
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
     ylab("Carrying Capacity") +
     xlab("Growth Rate") +
-    labs(title = "Peak Time", subtitle = "Infection Rate") +
+    labs(fill = "Peak Time", subtitle = "Infection Rate") +
     NULL
   print(p1)
   dev.off()
@@ -2061,7 +2071,7 @@ if (glob_make_statplots) {
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
     ylab("Carrying Capacity") +
     xlab("Infection Rate") +
-    labs(title = "Peak Time", subtitle = "Growth Rate") +
+    labs(fill = "Peak Time", subtitle = "Growth Rate") +
     NULL
   print(p2)
   dev.off()
@@ -2078,7 +2088,7 @@ if (glob_make_statplots) {
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
     ylab("Growth Rate") +
     xlab("Infection Rate") +
-    labs(title = "Peak Time", subtitle = "Carrying Capacity") +
+    labs(fill = "Peak Time", subtitle = "Carrying Capacity") +
     NULL
   print(p3)
   dev.off()
@@ -2311,6 +2321,209 @@ if (glob_make_curveplots) {
 
 
 
+## Run #10: a, b, tau +/- coinfection (phage traits) ----
+run10 <- run_sims_filewrapper(name = "run10",
+                             u_Svals = c(0.023), #(30 min doubling time)
+                             k_Svals = c(10**9),
+                             avals = 10**seq(from = -12, to = -8, by = 1),
+                             tauvals = signif(10**seq(from = 1, to = 2, by = 0.25), 3),
+                             bvals = signif(5*10**seq(from = 0, to = 2, by = 0.5), 3),
+                             c_SIvals = 1,
+                             init_S_dens_vals = 10**6,
+                             init_moi_vals = 10**-2,
+                             zvals = c(0, 1),
+                             min_dens = 0.1,
+                             init_time = 100,
+                             init_stepsize = 1,
+                             print_info = TRUE,
+                             read_file = glob_read_files)
+
+#Find peaks & extinction via summarize
+ybig10 <- group_by_at(run10[[1]], .vars = 1:17)
+y_summarized10 <- summarize(ybig10,
+                           max_dens = max(Density[Pop == "B"]),
+                           max_time = time[Pop == "B" & 
+                                             Density[Pop == "B"] == max_dens],
+                           extin_index = min(which(Pop == "B" &
+                                                     Density <= 10**4)),
+                           extin_dens = Density[extin_index],
+                           extin_time = time[extin_index],
+                           auc = sum(Density[Pop == "B" & time < extin_time])*
+                             extin_time,
+                           phage_final = max(Density[Pop == "P"]),
+                           phage_extin = Density[Pop == "P" & time == extin_time],
+                           phage_r = (log(phage_final)-
+                                        log(init_S_dens[1]*init_moi[1]))/
+                             extin_time,
+                           run_time = max(time)
+)
+
+dir.create("./run10_statplots", showWarnings = FALSE)
+if (glob_make_statplots) {
+  tiff("./run10_statplots/maxtime_contour1.tiff", width = 8, height = 4,
+       units = "in", res = 300)
+  p1 <- ggplot(data = y_summarized10, 
+               aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(b)))) +
+    geom_contour_filled(aes(z = max_time)) +
+    facet_grid(z~tau) +
+    scale_fill_viridis_d(direction = -1) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ylab("Burst Size") +
+    xlab("Infection Rate") +
+    labs(fill = "Peak Time", subtitle = "Lysis Time") +
+    NULL
+  print(p1)
+  dev.off()
+  
+  tiff("./run10_statplots/maxtime_contour2.tiff", width = 8, height = 4,
+       units = "in", res = 300)
+  p2 <- ggplot(data = y_summarized10, 
+               aes(x = as.numeric(as.character(tau)), y = as.numeric(as.character(b)))) +
+    geom_contour_filled(aes(z = max_time)) +
+    facet_grid(z~a) +
+    scale_fill_viridis_d(direction = -1) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ylab("Burst Size") +
+    xlab("Lysis Time") +
+    labs(fill = "Peak Time", subtitle = "Infection Rate") +
+    NULL
+  print(p2)
+  dev.off()
+  
+  tiff("./run10_statplots/maxtime_contour3.tiff", width = 8, height = 4,
+       units = "in", res = 300)
+  p3 <- ggplot(data = y_summarized10, 
+               aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(tau)))) +
+    geom_contour_filled(aes(z = max_time)) +
+    facet_grid(z~b) +
+    scale_fill_viridis_d(direction = -1) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ylab("Lysis Time") +
+    xlab("Infection Rate") +
+    labs(fill = "Peak Time", subtitle = "Burst Size") +
+    NULL
+  print(p3)
+  dev.off()
+  
+  tiff("./run10_statplots/maxtime_contour_all.tiff", width = 8, height = 6,
+       units = "in", res = 300)
+  print(cowplot::plot_grid(p1 + theme(legend.position = "none"), 
+                           p2 + theme(legend.position = "none"), 
+                           p3 + theme(legend.position = "none"),
+                           cowplot::get_legend(p1),
+                           #rel_widths = c(1, 1, 1, .4),
+                           nrow = 2))
+  dev.off()
+}
+
+##Run 11: a, u, k +/- coinfection (bacterial traits) ----
+run11 <- 
+  run_sims_filewrapper(name = "run11",
+                       u_Svals = signif(0.04*10**seq(from = 0, to = -0.7, by = -0.175), 3),
+                       k_Svals = signif(10**c(8, 8.5, 9, 9.5, 10), 3),
+                       avals = 10**seq(from = -12, to = -8, by = 1),
+                       tauvals = 50,
+                       bvals = 50,
+                       init_S_dens_vals = 10**6,
+                       init_moi_vals = 10**-2,
+                       c_SIvals = 1,
+                       zvals = c(0, 1),
+                       combinatorial = TRUE,
+                       min_dens = 0.1,
+                       init_time = 100,
+                       init_stepsize = 1,
+                       print_info = TRUE,
+                       read_file = glob_read_files)
+
+ybig11 <- group_by_at(run11[[1]], .vars = 1:17)
+y_summarized11 <- summarize(ybig11,
+                           max_dens = max(Density[Pop == "B"]),
+                           max_time = time[Pop == "B" & 
+                                             Density[Pop == "B"] == max_dens],
+                           extin_index = min(which(Pop == "B" &
+                                                     Density <= 9.99*10**3)),
+                           extin_dens = Density[extin_index],
+                           extin_time = time[extin_index],
+                           extin_time_sincemax = extin_time-max_time,
+                           auc = sum(Density[Pop == "B" & time < extin_time])*
+                             extin_time,
+                           phage_final = max(Density[Pop == "P"]),
+                           phage_extin = Density[Pop == "P" & time == extin_time],
+                           phage_r = (log(phage_final)-
+                                        log(init_S_dens[1]*init_moi[1]))/
+                             extin_time
+)
+
+dir.create("run11_statplots", showWarnings = FALSE)
+if (glob_make_statplots) {
+  #Making contour plots
+  tiff("./run11_statplots/maxtime_contour1.tiff", width = 5, height = 5,
+       units = "in", res = 300)
+  p1 <- ggplot(data = y_summarized11, 
+               aes(x = as.numeric(as.character(u_S)), y = as.numeric(as.character(k_S)))) +
+    geom_contour_filled(aes(z = max_time)) +
+    facet_grid(z~a) +
+    scale_fill_viridis_d(direction = -1) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ylab("Carrying Capacity") +
+    xlab("Growth Rate") +
+    labs(fill = "Peak Time", subtitle = "Infection Rate") +
+    NULL
+  print(p1)
+  dev.off()
+  
+  tiff("./run11_statplots/maxtime_contour2.tiff", width = 5, height = 5,
+       units = "in", res = 300)
+  p2 <- ggplot(data = y_summarized11, 
+               aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(k_S)))) +
+    geom_contour_filled(aes(z = max_time)) +
+    facet_grid(z~u_S) +
+    scale_fill_viridis_d(direction = -1) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ylab("Carrying Capacity") +
+    xlab("Infection Rate") +
+    labs(fill = "Peak Time", subtitle = "Growth Rate") +
+    NULL
+  print(p2)
+  dev.off()
+  
+  tiff("./run11_statplots/maxtime_contour3.tiff", width = 5, height = 5,
+       units = "in", res = 300)
+  p3 <- ggplot(data = y_summarized11, 
+               aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(u_S)))) +
+    geom_contour_filled(aes(z = max_time)) +
+    facet_grid(z~k_S) +
+    scale_fill_viridis_d(direction = -1) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ylab("Growth Rate") +
+    xlab("Infection Rate") +
+    labs(fill = "Peak Time", subtitle = "Carrying Capacity") +
+    NULL
+  print(p3)
+  dev.off()
+  
+  tiff("./run11_statplots/maxtime_contour_all.tiff", width = 8, height = 6,
+       units = "in", res = 300)
+  print(cowplot::plot_grid(p1 + theme(legend.position = "none"), 
+                           p2 + theme(legend.position = "none"), 
+                           p3 + theme(legend.position = "none"),
+                           cowplot::get_legend(p1),
+                           #rel_widths = c(1, 1, 1, .4),
+                           nrow = 2))
+  dev.off()
+}
 
 
 
