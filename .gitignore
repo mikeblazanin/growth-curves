@@ -5,3 +5,5 @@
 *.png
 *.tiff
 test_*/
+Celia/sim*_*.csv
+numerical_analysis/run*_*.csv
