@@ -45,8 +45,11 @@ library(ggplot2)
 library(dplyr)
 
 #Setwd
-dir.create("numerical_analysis", showWarnings = FALSE)
-setwd("./numerical_analysis/")
+mywd_split <- strsplit(getwd(), split = "/") 
+if (mywd_split[[1]][length(mywd_split[[1]])] != "numerical_analysis") {
+  dir.create("numerical_analysis", showWarnings = FALSE)
+  setwd("./numerical_analysis/")
+}
 
 #Okabe and Ito 2008 colorblind-safe qualitative color scale
 my_cols <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
