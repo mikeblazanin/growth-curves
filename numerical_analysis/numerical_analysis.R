@@ -1,5 +1,7 @@
 #TODO:
 # verify that coinfection actually works the way it should!
+# should probably come up with a way of not plotting
+#   things where bact density reaches ~k
 # check whether burst size can be inferred by running curves across 
 #   various init conditions then plotting max dens vs final phage
 # then think about how that inter-relates to extinction time – phage r 
@@ -2355,24 +2357,30 @@ y_summarized10 <- summarize(ybig10,
                            phage_r = (log(phage_final)-
                                         log(init_S_dens[1]*init_moi[1]))/
                              extin_time,
-                           run_time = max(time)
+                           run_time = max(time),
+                           near_k = if(max_dens >= 0.95*k_S[1]) {1} else{NA}
 )
 
 dir.create("./run10_statplots", showWarnings = FALSE)
 if (glob_make_statplots) {
+  ##Make contour plots of peak time
   tiff("./run10_statplots/maxtime_contour1.tiff", width = 8, height = 4,
        units = "in", res = 300)
   p1 <- ggplot(data = y_summarized10, 
                aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(b)))) +
     geom_contour_filled(aes(z = max_time)) +
-    facet_grid(z~tau) +
     scale_fill_viridis_d(direction = -1) +
+    geom_point(aes(color = as.factor(near_k))) +
+    scale_color_manual(values = c("gray")) +
+    facet_grid(z~tau) +
     scale_x_continuous(trans = "log10") +
     scale_y_continuous(trans = "log10") +
+    theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
     ylab("Burst Size") +
     xlab("Infection Rate") +
     labs(fill = "Peak Time", subtitle = "Lysis Time") +
+    guides(fill = guide_legend(ncol = 2)) +
     NULL
   print(p1)
   dev.off()
@@ -2382,10 +2390,13 @@ if (glob_make_statplots) {
   p2 <- ggplot(data = y_summarized10, 
                aes(x = as.numeric(as.character(tau)), y = as.numeric(as.character(b)))) +
     geom_contour_filled(aes(z = max_time)) +
-    facet_grid(z~a) +
     scale_fill_viridis_d(direction = -1) +
+    geom_point(aes(color = as.factor(near_k))) +
+    scale_color_manual(values = c("gray")) +
+    facet_grid(z~a) +
     scale_x_continuous(trans = "log10") +
     scale_y_continuous(trans = "log10") +
+    theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
     ylab("Burst Size") +
     xlab("Lysis Time") +
@@ -2399,10 +2410,13 @@ if (glob_make_statplots) {
   p3 <- ggplot(data = y_summarized10, 
                aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(tau)))) +
     geom_contour_filled(aes(z = max_time)) +
-    facet_grid(z~b) +
     scale_fill_viridis_d(direction = -1) +
+    geom_point(aes(color = as.factor(near_k))) +
+    scale_color_manual(values = c("gray")) +
+    facet_grid(z~b) +
     scale_x_continuous(trans = "log10") +
     scale_y_continuous(trans = "log10") +
+    theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
     ylab("Lysis Time") +
     xlab("Infection Rate") +
@@ -2412,6 +2426,61 @@ if (glob_make_statplots) {
   dev.off()
   
   tiff("./run10_statplots/maxtime_contour_all.tiff", width = 8, height = 6,
+       units = "in", res = 300)
+  print(cowplot::plot_grid(p1 + theme(legend.position = "none"), 
+                           p2 + theme(legend.position = "none"), 
+                           p3 + theme(legend.position = "none"),
+                           cowplot::get_legend(p1),
+                           #rel_widths = c(1, 1, 1, .4),
+                           nrow = 2))
+  dev.off()
+  
+  ##Make contour plots of extinction time
+  p1 <- ggplot(data = y_summarized10, 
+               aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(b)))) +
+    geom_contour_filled(aes(z = log10(extin_time))) +
+    scale_fill_viridis_d(direction = -1) +
+    geom_point(aes(color = as.factor(near_k))) +
+    scale_color_manual(values = c("gray")) +
+    facet_grid(z~tau) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ylab("Burst Size") +
+    xlab("Infection Rate") +
+    labs(fill = "log10(Extinction Time)", subtitle = "Lysis Time") +
+    guides(fill = guide_legend(ncol = 2)) +
+    NULL
+  p2 <- ggplot(data = y_summarized10, 
+               aes(x = as.numeric(as.character(tau)), y = as.numeric(as.character(b)))) +
+    geom_contour_filled(aes(z = log10(extin_time))) +
+    scale_fill_viridis_d(direction = -1) +
+    geom_point(aes(color = as.factor(near_k))) +
+    scale_color_manual(values = c("gray")) +
+    facet_grid(z~a) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ylab("Burst Size") +
+    xlab("Lysis Time") +
+    labs(fill = "Extinction Time", subtitle = "Infection Rate") +
+    NULL
+  p3 <- ggplot(data = y_summarized10, 
+               aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(tau)))) +
+    geom_contour_filled(aes(z = log10(extin_time))) +
+    scale_fill_viridis_d(direction = -1) +
+    geom_point(aes(color = as.factor(near_k))) +
+    scale_color_manual(values = c("gray")) +
+    facet_grid(z~b) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ylab("Lysis Time") +
+    xlab("Infection Rate") +
+    labs(fill = "Extinction Time", subtitle = "Burst Size") +
+    NULL
+  
+  tiff("./run10_statplots/extintime_contour_all.tiff", width = 8, height = 6,
        units = "in", res = 300)
   print(cowplot::plot_grid(p1 + theme(legend.position = "none"), 
                            p2 + theme(legend.position = "none"), 
@@ -2457,25 +2526,29 @@ y_summarized11 <- summarize(ybig11,
                            phage_extin = Density[Pop == "P" & time == extin_time],
                            phage_r = (log(phage_final)-
                                         log(init_S_dens[1]*init_moi[1]))/
-                             extin_time
+                             extin_time,
+                           near_k = if(max_dens >= 0.95*k_S[1]) {1} else{NA}
 )
 
 dir.create("run11_statplots", showWarnings = FALSE)
 if (glob_make_statplots) {
-  #Making contour plots
+  #Making contour plots for peak time
   tiff("./run11_statplots/maxtime_contour1.tiff", width = 5, height = 5,
        units = "in", res = 300)
   p1 <- ggplot(data = y_summarized11, 
                aes(x = as.numeric(as.character(u_S)), y = as.numeric(as.character(k_S)))) +
     geom_contour_filled(aes(z = max_time)) +
-    facet_grid(z~a) +
     scale_fill_viridis_d(direction = -1) +
+    geom_point(aes(color = as.factor(near_k))) +
+    scale_color_manual(values = c("gray")) +
+    facet_grid(z~a) +
     scale_x_continuous(trans = "log10") +
     scale_y_continuous(trans = "log10") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
     ylab("Carrying Capacity") +
     xlab("Growth Rate") +
     labs(fill = "Peak Time", subtitle = "Infection Rate") +
+    guides(fill = guide_legend(ncol = 2)) +
     NULL
   print(p1)
   dev.off()
@@ -2485,8 +2558,10 @@ if (glob_make_statplots) {
   p2 <- ggplot(data = y_summarized11, 
                aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(k_S)))) +
     geom_contour_filled(aes(z = max_time)) +
-    facet_grid(z~u_S) +
     scale_fill_viridis_d(direction = -1) +
+    geom_point(aes(color = as.factor(near_k))) +
+    scale_color_manual(values = c("gray")) +
+    facet_grid(z~u_S) +
     scale_x_continuous(trans = "log10") +
     scale_y_continuous(trans = "log10") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
@@ -2502,8 +2577,10 @@ if (glob_make_statplots) {
   p3 <- ggplot(data = y_summarized11, 
                aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(u_S)))) +
     geom_contour_filled(aes(z = max_time)) +
-    facet_grid(z~k_S) +
     scale_fill_viridis_d(direction = -1) +
+    geom_point(aes(color = as.factor(near_k))) +
+    scale_color_manual(values = c("gray")) +
+    facet_grid(z~k_S) +
     scale_x_continuous(trans = "log10") +
     scale_y_continuous(trans = "log10") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
@@ -2515,6 +2592,63 @@ if (glob_make_statplots) {
   dev.off()
   
   tiff("./run11_statplots/maxtime_contour_all.tiff", width = 8, height = 6,
+       units = "in", res = 300)
+  print(cowplot::plot_grid(p1 + theme(legend.position = "none"), 
+                           p2 + theme(legend.position = "none"), 
+                           p3 + theme(legend.position = "none"),
+                           cowplot::get_legend(p1),
+                           #rel_widths = c(1, 1, 1, .4),
+                           nrow = 2))
+  dev.off()
+  
+  ##Make extinction time contour plots
+  p1 <- ggplot(data = y_summarized11, 
+               aes(x = as.numeric(as.character(u_S)), y = as.numeric(as.character(k_S)))) +
+    geom_contour_filled(aes(z = log10(extin_time))) +
+    scale_fill_viridis_d(direction = -1) +
+    geom_point(aes(color = as.factor(near_k))) +
+    scale_color_manual(values = c("gray")) +
+    facet_grid(z~a) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ylab("Carrying Capacity") +
+    xlab("Growth Rate") +
+    labs(fill = "Extinction Time", subtitle = "Infection Rate") +
+    guides(fill = guide_legend(ncol = 2)) +
+    NULL
+  
+  p2 <- ggplot(data = y_summarized11, 
+               aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(k_S)))) +
+    geom_contour_filled(aes(z = log10(extin_time))) +
+    scale_fill_viridis_d(direction = -1) +
+    geom_point(aes(color = as.factor(near_k))) +
+    scale_color_manual(values = c("gray")) +
+    facet_grid(z~u_S) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ylab("Carrying Capacity") +
+    xlab("Infection Rate") +
+    labs(fill = "Extinction Time", subtitle = "Growth Rate") +
+    NULL
+  
+  p3 <- ggplot(data = y_summarized11, 
+               aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(u_S)))) +
+    geom_contour_filled(aes(z = log10(extin_time))) +
+    scale_fill_viridis_d(direction = -1) +
+    geom_point(aes(color = as.factor(near_k))) +
+    scale_color_manual(values = c("gray")) +
+    facet_grid(z~k_S) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ylab("Growth Rate") +
+    xlab("Infection Rate") +
+    labs(fill = "Extinction Time", subtitle = "Carrying Capacity") +
+    NULL
+  
+  tiff("./run11_statplots/extintime_contour_all.tiff", width = 8, height = 6,
        units = "in", res = 300)
   print(cowplot::plot_grid(p1 + theme(legend.position = "none"), 
                            p2 + theme(legend.position = "none"), 
