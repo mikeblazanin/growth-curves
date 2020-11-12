@@ -1591,6 +1591,23 @@ if (glob_make_statplots) {
   dev.off()
 }
 
+##Relating max time and extin time
+ggplot(data = y_summarized2[y_summarized2$max_dens < 0.8*10**9, ],
+       aes(x = max_time, y = extin_time, 
+           color = as.factor(tau))) +
+           #color = max_dens/k_S)) +
+  geom_point(alpha = 0.5) +
+  #facet_wrap(~u_S, scales = "free") +
+  geom_abline(slope = 1, intercept = 0, lty = 2) +
+  #geom_abline(slope = 1.162, intercept = 26.6) +
+  scale_x_continuous(trans = "log10") +
+  scale_y_continuous(trans = "log10")
+
+temp <- lm(extin_time ~ max_time,
+   data = y_summarized2[y_summarized2$max_dens < 0.8*10**9, ])
+
+summary(temp)
+
 ##Run #3: r, a, b, tau, init_dens, init_moi ----
 run3 <- run_sims_filewrapper(name = "run3",
                              u_Svals = c(0.04, 0.0179),
