@@ -1,7 +1,5 @@
 #TODO:
 # verify that coinfection actually works the way it should!
-# should probably come up with a way of not plotting
-#   things where bact density reaches ~k
 # check whether burst size can be inferred by running curves across 
 #   various init conditions then plotting max dens vs final phage
 # then think about how that inter-relates to extinction time – phage r 
@@ -42,8 +40,6 @@
 # Measure amount of time I is above S (and so I is more of B) – should be correlated w/ tau
 # Run w 2 P pops in competition. Compare outcome to indiv grow curves
 # Think about similar approach as Wang et al ’96 for our model
-# Think about superinfection parameter being included
-#   (simply a rescaling of a for already-infected cells)
 
 ## Import libraries ----
 
@@ -855,7 +851,7 @@ find_local_extrema <- function(values,
 
 ## Global Settings ----
 glob_read_files <- TRUE
-glob_make_curveplots <- TRUE
+glob_make_curveplots <- FALSE
 glob_make_statplots <- TRUE
 
 ## Run #1: a, b, tau (phage traits) ----
@@ -1340,7 +1336,8 @@ y_summarized2 <- dplyr::summarize(ybig2,
                            phage_r = (log(phage_final)-
                                         log(init_S_dens[1]*init_moi[1]))/
                              extin_time,
-                           phage_atmaxdens = Density[Pop == "P" & time == max_time]
+                           phage_atmaxdens = Density[Pop == "P" & time == max_time],
+                           near_k = if(max_dens >= 0.95*k_S[1]) {1} else{0}
 )
 
 ## Plot summarized stats ----
@@ -1592,21 +1589,88 @@ if (glob_make_statplots) {
 }
 
 ##Relating max time and extin time
-ggplot(data = y_summarized2[y_summarized2$max_dens < 0.8*10**9, ],
-       aes(x = max_time, y = extin_time, 
-           color = as.factor(tau))) +
-           #color = max_dens/k_S)) +
-  geom_point(alpha = 0.5) +
-  #facet_wrap(~u_S, scales = "free") +
-  geom_abline(slope = 1, intercept = 0, lty = 2) +
-  #geom_abline(slope = 1.162, intercept = 26.6) +
-  scale_x_continuous(trans = "log10") +
-  scale_y_continuous(trans = "log10")
+if (glob_make_statplots) {
+  tiff("./run2_statplots/peaktime_extintime.tiff",
+       width = 5, height = 4, units = "in", res = 300)
+  print(ggplot(data = y_summarized2,
+         aes(x = max_time, y = extin_time)) +
+    geom_point(alpha = 0.5, size = 2,
+               aes(color = as.factor(u_S), shape = as.factor(near_k))) +
+    geom_abline(intercept = 0, slope = 1, lty = 3) +
+    #geom_abline(intercept = 0.319, slope = 0.913, color = "red") +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme_bw() +
+    NULL)
+  dev.off()
 
-temp <- lm(extin_time ~ max_time,
-   data = y_summarized2[y_summarized2$max_dens < 0.8*10**9, ])
+  temp <- lm(extin_time ~ max_time,
+     data = y_summarized2[y_summarized2$max_dens < 0.8*10**9, ])
+  temp2 <- lm(extin_time_log10 ~ max_time_log10,
+              data = y_summarized2[y_summarized2$max_dens < 0.8*10**9, ])
 
-summary(temp)
+  summary(temp)
+  summary(temp2)
+}
+
+#Calculate max time and extin time ranks w/in u_S
+y_summarized2$max_time_rnk <- NA
+y_summarized2$extin_time_rnk <- NA
+
+for (my_u_S in unique(y_summarized2$u_S)) {
+  rows <- which(y_summarized2$u_S == my_u_S)
+  y_summarized2$max_time_rnk[rows] <- rank(y_summarized2$max_time[rows],
+                                           ties.method = "average")
+  y_summarized2$extin_time_rnk[rows] <- rank(y_summarized2$extin_time[rows],
+                                             ties.method = "average")
+}
+
+if (glob_make_statplots) {
+  tiff("./run2_statplots/peaktimernk_extintimernk.tiff",
+       width = 5, height = 4, units = "in", res = 300)
+  print(ggplot(data = y_summarized2,
+         aes(x = max_time_rnk, y = extin_time_rnk, 
+             color = as.factor(near_k))) +
+    geom_point() +
+    facet_wrap(~u_S) +
+    geom_abline(slope = 1, lty = 2) +
+      labs(subtitle = "u_S"))
+  dev.off()
+
+  tiff("./run2_statplots/peaktimernk_contour.tiff",
+       width = 6, height = 4, units = "in", res = 300)
+  print(ggplot(data = y_summarized2, 
+         aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(b)))) +
+    geom_contour_filled(aes(z = max_time_rnk)) +
+    facet_grid(u_S~tau) +
+    scale_fill_viridis_d(direction = -1) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ylab("Burst Size") +
+    xlab("Infection Rate") +
+    labs(fill = "Peak Time Rank", subtitle = "Lysis Time") +
+    NULL)
+  dev.off()
+  
+  tiff("./run2_statplots/extintimernk_contour.tiff",
+       width = 6, height = 4, units = "in", res = 300)
+  print(ggplot(data = y_summarized2, 
+         aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(b)))) +
+    geom_contour_filled(aes(z = extin_time_rnk)) +
+    facet_grid(u_S~tau) +
+    scale_fill_viridis_d(direction = -1) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ylab("Burst Size") +
+    xlab("Infection Rate") +
+    labs(fill = "Extinction Time Rank", subtitle = "Lysis Time") +
+    NULL)
+  dev.off()
+}
+
+
 
 ##Run #3: r, a, b, tau, init_dens, init_moi ----
 run3 <- run_sims_filewrapper(name = "run3",
@@ -1921,8 +1985,52 @@ y_summarized5 <- summarize(ybig5,
                            phage_extin = Density[Pop == "P" & time == extin_time],
                            phage_r = (log(phage_final)-
                                         log(init_S_dens[1]*init_moi[1]))/
-                             extin_time
+                             extin_time,
+                           near_k = if(max_dens >= 0.95*k_S[1]) {1} else{0}
 )
+
+dir.create("run5_dens_curves", showWarnings = FALSE)
+if (glob_make_curveplots) {
+  dens_offset <- 10
+  for (run in unique(ybig5$uniq_run)) {
+    tiff(paste("./run5_dens_curves/", run, ".tiff", sep = ""),
+         width = 5, height = 5, units = "in", res = 300)
+    print(
+      ggplot(data = ybig5[ybig5$uniq_run == run &
+                            ybig5$Pop %in% c("S", "I", "P", "R"),], 
+             aes(x = time, y = Density+dens_offset, color = Pop)) +
+        geom_line(lwd = 1.5, alpha = 1) + 
+        geom_line(data = ybig5[ybig5$uniq_run == run &
+                                 ybig5$Pop == "B",], 
+                  aes(x = time, y = Density+dens_offset),
+                  color = "black", alpha = 0.5, lwd = 1.1) +
+        geom_line(data = ybig5[ybig5$uniq_run == run &
+                                 ybig5$Pop == "PI",],
+                  aes(x = time, y = Density+dens_offset),
+                  color = "black", alpha = 0.5, lwd = 1, lty = 3) +
+        geom_point(data = y_summarized5[y_summarized5$uniq_run == run, ],
+                   aes(x = max_time, y = max_dens+dens_offset), color = "black") +
+        geom_point(data = y_summarized5[y_summarized5$uniq_run == run, ],
+                   aes(x = extin_time, y = extin_dens+dens_offset), color = "black") +
+        scale_y_continuous(trans = "log10") +
+        # scale_x_continuous(breaks = seq(from = 0, to = max(ybig7$time), 
+        #                                 by = round(max(ybig7[ybig7$uniq_run == run &
+        #                                                        ybig7$Pop != "B", 
+        #                                                      "time"])/10))) +
+        scale_color_manual(limits = c("S", "I", "P", "R"),
+                           values = my_cols[c(2, 3, 1, 7)]) +
+        geom_hline(yintercept = dens_offset, lty = 2) +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1),
+              title = element_text(size = 9)) +
+        ggtitle(paste(ybig5[min(which(ybig5$uniq_run == run)),
+                            c(2, 4, 6:8, 15, 17)],
+                      collapse = ", ")) +
+        labs(y = paste("Density +", dens_offset)) +
+        NULL
+    )
+    dev.off()
+  }
+}
 
 dir.create("./run5_statplots", showWarnings = FALSE)
 if (glob_make_statplots) {
@@ -2019,6 +2127,12 @@ if (glob_make_statplots) {
           NULL)
   dev.off()
 }
+
+ggplot(data = y_summarized5,
+       aes(x = max_time, y = extin_time, 
+           color = as.factor(a), shape = as.factor(near_k))) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0)
 
 
 ##Run 6: a, u, k (bacterial traits) ----
@@ -2375,7 +2489,7 @@ y_summarized10 <- summarize(ybig10,
                                         log(init_S_dens[1]*init_moi[1]))/
                              extin_time,
                            run_time = max(time),
-                           near_k = if(max_dens >= 0.95*k_S[1]) {1} else{NA}
+                           near_k = if(max_dens >= 0.95*k_S[1]) {1} else{0}
 )
 
 dir.create("./run10_statplots", showWarnings = FALSE)
@@ -2507,6 +2621,14 @@ if (glob_make_statplots) {
                            nrow = 2))
   dev.off()
 }
+
+ggplot(data = y_summarized10,
+       aes(x = max_time, y = extin_time,
+           color = as.factor(a))) +
+  geom_point() +
+  facet_grid(~as.factor(near_k)) +
+  scale_y_continuous(trans = "log10") +
+  scale_x_continuous(trans = "log10")
 
 ##Run 11: a, u, k +/- coinfection (bacterial traits) ----
 run11 <- 
