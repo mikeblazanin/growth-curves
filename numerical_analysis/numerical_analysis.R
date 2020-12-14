@@ -337,7 +337,7 @@ run_sims <- function(u_Svals,
         #times <- seq(0, init_time*2**j, init_stepsize)
       }
       
-      #Run simulation (using 1st entry of list as error code:\
+      #Run simulation (using 1st entry of list as error code:
       # 0 - success
       # 1 - error
       # 2 - warning
@@ -368,12 +368,12 @@ run_sims <- function(u_Svals,
       #If there was an error, increase k by 1 and re-run
       if(yout_list[[1]] == 1) {
         k <- k+1
-        #If there was a warning, could be several causes, so we
-        # generally just halve step size and increase length
+      #If there was a warning, could be several causes, so we
+      # generally just halve step size and increase length
       } else if (yout_list[[1]] == 2) {
         j <- j+1
         k <- k+2
-        #If it was successful, check for equilibrium
+      #If it was successful, check for equilibrium
       } else if (yout_list[[1]] == 0) {
         #First drop all rows with nan
         yout_list[[2]] <- yout_list[[2]][!(is.nan(yout_list[[2]]$S) |
