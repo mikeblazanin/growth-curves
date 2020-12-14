@@ -317,15 +317,15 @@ run_sims <- function(u_Svals,
   
   #Define counters
   rows_tracking <- list(
-    #number of rows this simulation is more than expected if dynamic_stepsize = FALSE
-    "excess_rows_thistime" = 0,
-    #when saving data, number of rows to start lower than expected
-    "cum_offset" = 0, 
+    #row where data should start being entered for next simulation
+    "start_row" = 1,
+    #number of rows this simulation is 
+    # (default value provided for dynamic_stepsize = FALSE
+    #  but when dynamic_stepsize = TRUE this will be overwritten ea time)
+    "this_run_nrows" = 6*(1+init_time/init_stepsize),
     #counter for additional rows to add, to minimize number of times
     # ybig has to be re-defined
-    "still_needed_toadd" = 0, 
-    #counter for number of rows added already
-    "added_sofar" = 0)
+    "still_needed_toadd" = 0)
                                         
   for (i in 1:nrow(param_combos)) { #i acts as the uniq_run counter
     #Define pops & parameters
@@ -433,17 +433,16 @@ run_sims <- function(u_Svals,
       yout_list$value$PI <- yout_list$value$P + yout_list$value$I
       
       if (!dynamic_stepsize) {
-        rows_tracking$excess_rows_thistime <- 
-          (6*nrow(yout_list$value))-(6*(1+init_time/init_stepsize))-1
+        rows_tracking$this_run_nrows <- 6*nrow(yout_list$value)
         rows_tracking$still_needed_toadd <- 
-          rows_tracking$still_needed_toadd + rows_tracking$excess_rows_thistime
+          rows_tracking$still_needed_toadd + 
+          (rows_tracking$this_run_nrows - 6*(1+init_time/init_stepsize))
         
-        #If the expected end row of this simulation plus the cumulative offset so far
-        #is larger than the originally allocated number of rows plus the number
-        # of rows added so far, we need to add more rows
-        if(i * 6*(1+init_time/init_stepsize) + 
-           rows_tracking$cum_offset + rows_tracking$excess_rows_thistime >
-           num_sims * 6*(1+init_time/init_stepsize) + rows_tracking$added_sofar) {
+        #If the expected end row of this simulation
+        #is larger than the number of rows available, 
+        #we need to add more rows
+        if((rows_tracking$start_row + rows_tracking$this_run_nrows - 1) >
+           nrow(ybig)) {
           ybig <- 
             rbind(ybig,
                   data.frame("uniq_run" = rep(NA, rows_tracking$still_needed_toadd),
@@ -457,16 +456,14 @@ run_sims <- function(u_Svals,
                              "init_moi" = NA,
                              "equil" = NA, "time" = NA, "Pop" = as.character(NA),
                              "Density" = NA, stringsAsFactors = FALSE))
-          rows_tracking$added_sofar <- 
-            rows_tracking$added_sofar + rows_tracking$still_needed_toadd
+          
           rows_tracking$still_needed_toadd <- 0
         }
       }
       
       #Reshape, add parameters, and fill into ybig in right rows
-      ybig[((i-1)*6*(1+init_time/init_stepsize)+1) + rows_tracking$cum_offset:
-             (((i)*6*(1+init_time/init_stepsize)) + rows_tracking$cum_offset + 
-             rows_tracking$excess_rows_thistime), ] <- 
+      ybig[rows_tracking$start_row : 
+             (rows_tracking$start_row + rows_tracking$this_run_nrows - 1), ] <-
         cbind(data.frame(uniq_run = i, 
                          u_S = param_combos$u_Svals[i], 
                          u_R = param_combos$u_Rvals[i], 
@@ -518,8 +515,7 @@ run_sims <- function(u_Svals,
     } else {stop("tryCatch failed during saving, neither success nor warning nor error detected")}
     
     #Update cumulative offset (for non-dynamic stepsize runs)
-    rows_tracking$cum_offset <- 
-      rows_tracking$cum_offset+rows_tracking$excess_rows_thistime
+    rows_tracking$start_row <- rows_tracking$start_row + rows_tracking$this_run_nrows
 
     #Print progress update
     if (print_info & i %in% progress_seq) {
