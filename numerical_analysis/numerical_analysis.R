@@ -203,6 +203,25 @@ run_sims <- function(u_Svals,
   #   3. a dataframe (AKA yfail) with the parameters for runs that failed
   #       to successfully complete
   
+  ##Save a tryCatch function for later use
+  ##  I didn't write this, see: https://stackoverflow.com/a/24569739/14805829
+  ##  notably, returns list with $value $warning and $error
+  ##  successful will have NULL $warning and $error
+  ##  warning will have NULL $error (and value in $value)
+  ##  error will have NULL $value and $warning
+  myTryCatch <- function(expr) {
+    warn <- err <- NULL
+    value <- withCallingHandlers(
+      tryCatch(expr, error=function(e) {
+        err <<- e
+        NULL
+      }), warning=function(w) {
+        warn <<- w
+        invokeRestart("muffleWarning")
+      })
+    list(value=value, warning=warn, error=err)
+  }
+  
   if(init_time %% init_stepsize != 0) {
     warning("init_time is not divisible by init_stepsize, this has not been tested")
   }
@@ -333,31 +352,24 @@ run_sims <- function(u_Svals,
         times <- seq(0, init_time*2**j, init_stepsize*2**j)
       } else {
         stop("dynamic_stepsize = FALSE does not yet work")
-        #If dynamic_stepsize false, keep stepsize at init_stepsize
-        #times <- seq(0, init_time*2**j, init_stepsize)
+
+        # #If dynamic_stepsize false, keep stepsize at init_stepsize
+        # times <- seq(0, init_time*2**j, init_stepsize)
       }
       
-      #Run simulation (using 1st entry of list as error code:
-      # 0 - success
-      # 1 - error
-      # 2 - warning
-      yout_list <- tryCatch(
-        expr = {
-          #Note that the max step size for the integrator is the 
-          # same as our step size except halved for each k count
-          list(0,
-               as.data.frame(
-                 dede(y = yinit, times = times, func = derivs, 
-                      parms = params, hmax = init_stepsize*2**(j-k))))
-        },
-        error = function(e) {list(1)},
-        warning = function(w) {
-          list(2,
-               as.data.frame(
-                 dede(y = yinit, times = times, func = derivs, 
-                      parms = params, hmax = 2**(j-k))))
-        }
-      )
+      # #Calculate hmax (max step size integrator uses)
+      # if (dynamic_stepsize) {
+      #   hmax_val <- init_stepsize*2**(j-k)
+      # } else {hmax_val <- min(init_stepsize*2**(j-k), init_stepsize)}
+      
+      #Run simulation
+      yout_list <- myTryCatch(expr = {
+        #Note that the max step size for the integrator is the 
+        # same as our step size except halved for each k count
+             as.data.frame(
+               dede(y = yinit, times = times, func = derivs, 
+                    parms = params, hmax = init_stepsize*2**(j-k)))
+      })
       
       #Infinite loop prevention check (j = 10 is 24 hrs)
       if (j >= 10 | k >= 15 | j+k >= 20) {
@@ -366,34 +378,34 @@ run_sims <- function(u_Svals,
       }
       
       #If there was an error, increase k by 1 and re-run
-      if(yout_list[[1]] == 1) {
+      if(!is.null(yout_list$error)) {
         k <- k+1
       #If there was a warning, could be several causes, so we
       # generally just halve step size and increase length
-      } else if (yout_list[[1]] == 2) {
+      } else if (!is.null(yout_list$warning)) {
         j <- j+1
         k <- k+2
       #If it was successful, check for equilibrium
-      } else if (yout_list[[1]] == 0) {
+      } else if (is.null(yout_list$warning) & is.null(yout_list$error)) {
         #First drop all rows with nan
-        yout_list[[2]] <- yout_list[[2]][!(is.nan(yout_list[[2]]$S) |
-                                             is.nan(yout_list[[2]]$I) |
-                                             is.nan(yout_list[[2]]$P) |
-                                             is.nan(yout_list[[2]]$R)), ]
+        yout_list$value <- yout_list$value[!(is.nan(yout_list$value$S) |
+                                             is.nan(yout_list$value$I) |
+                                             is.nan(yout_list$value$P) |
+                                             is.nan(yout_list$value$R)), ]
         
         #S and I both at equil, we're done
-        if (yout_list[[2]]$S[nrow(yout_list[[2]])] < min_dens & 
-            yout_list[[2]]$I[nrow(yout_list[[2]])] < min_dens) {
+        if (yout_list$value$S[nrow(yout_list$value)] < min_dens & 
+            yout_list$value$I[nrow(yout_list$value)] < min_dens) {
           keep_running <- FALSE
           at_equil <- TRUE
         #S not at equil, need more time
-        } else if (yout_list[[2]]$S[nrow(yout_list[[2]])] >= min_dens) { 
+        } else if (yout_list$value$S[nrow(yout_list$value)] >= min_dens) { 
           j <- j+1
         #I not at equil (but S is because above check failed),
         #   first we'll lengthen the simulation
         #    (to make sure it was long enough to catch the last burst)
         #   then we'll start shrinking our step size
-        } else if (yout_list[[2]]$I[nrow(yout_list[[2]])] >= min_dens) {
+        } else if (yout_list$value$I[nrow(yout_list$value)] >= min_dens) {
           if (i_only_pos_times < 1) {
             j <- j+1
             i_only_pos_times <- i_only_pos_times+1
@@ -401,15 +413,15 @@ run_sims <- function(u_Svals,
             k <- k+1
           }
         }
-      }
+      } else {stop("tryCatch failed, niether success, warning, nor error detected")}
     }
     
-    #Once end conditions triggered, if run succeeded
-    if(yout_list[[1]] == 0 | yout_list[[1]] == 2) {
+    #Once end conditions triggered, if run succeeded (or warning-d)
+    if(!is.null(yout_list$value)) {
       #Calculate all bacteria (B)
-      yout_list[[2]]$B <- yout_list[[2]]$S + yout_list[[2]]$I + yout_list[[2]]$R
+      yout_list$value$B <- yout_list$value$S + yout_list$value$I + yout_list$value$R
       #Calculate all phage (PI)
-      yout_list[[2]]$PI <- yout_list[[2]]$P + yout_list[[2]]$I
+      yout_list$value$PI <- yout_list$value$P + yout_list$value$I
       
       #Reshape, add parameters, and fill into ybig in right rows
       ybig[((i-1)*6*(1+init_time/init_stepsize)+1):
@@ -432,13 +444,13 @@ run_sims <- function(u_Svals,
                          init_R_dens = param_combos$init_R_dens_vals[i], 
                          init_moi = param_combos$init_moi_vals[i],
                          equil = at_equil),
-              data.table::melt(data = data.table::as.data.table(yout_list[[2]]), 
+              data.table::melt(data = data.table::as.data.table(yout_list$value), 
                                id.vars = c("time"),
                                value.name = "Density", 
                                variable.name = "Pop",
                                variable.factor = FALSE))
       #If the run failed
-    } else {
+    } else if (!is.null(yout_list$error)) {
       temp <- data.frame(uniq_run = i, 
                          u_S = param_combos$u_Svals[i], 
                          u_R = param_combos$u_Rvals[i], 
@@ -462,7 +474,7 @@ run_sims <- function(u_Svals,
       } else { #This is a non-first failed run
         yfail <- rbind(yfail, temp)
       }
-    }
+    } else {stop("tryCatch failed during saving, neither success nor warning nor error detected")}
     
     #Print progress update
     if (print_info & i %in% progress_seq) {
