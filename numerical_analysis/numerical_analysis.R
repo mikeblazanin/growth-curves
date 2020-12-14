@@ -314,6 +314,18 @@ run_sims <- function(u_Svals,
                      "init_moi" = NA,
                      "equil" = NA, "time" = NA, "Pop" = as.character(NA),
                      "Density" = NA, stringsAsFactors = FALSE)
+  
+  #Define counters
+  rows_tracking <- list(
+    #number of rows this simulation is more than expected if dynamic_stepsize = FALSE
+    "excess_rows_thistime" = 0,
+    #when saving data, number of rows to start lower than expected
+    "cum_offset" = 0, 
+    #counter for additional rows to add, to minimize number of times
+    # ybig has to be re-defined
+    "still_needed_toadd" = 0, 
+    #counter for number of rows added already
+    "added_sofar" = 0)
                                         
   for (i in 1:nrow(param_combos)) { #i acts as the uniq_run counter
     #Define pops & parameters
@@ -351,24 +363,21 @@ run_sims <- function(u_Svals,
         # (so that the number of timepoints returned is constant)
         times <- seq(0, init_time*2**j, init_stepsize*2**j)
       } else {
-        stop("dynamic_stepsize = FALSE does not yet work")
-
-        # #If dynamic_stepsize false, keep stepsize at init_stepsize
-        # times <- seq(0, init_time*2**j, init_stepsize)
+        #If dynamic_stepsize false, keep stepsize at init_stepsize
+        times <- seq(0, init_time*2**j, init_stepsize)
       }
       
-      # #Calculate hmax (max step size integrator uses)
-      # if (dynamic_stepsize) {
-      #   hmax_val <- init_stepsize*2**(j-k)
-      # } else {hmax_val <- min(init_stepsize*2**(j-k), init_stepsize)}
+      #Calculate hmax (max step size integrator uses)
+      if (dynamic_stepsize) {
+        #Note that the max step size for the integrator is the 
+        # same as our step size except halved for each k count
+        hmax_val <- init_stepsize*2**(j-k)
+      } else {hmax_val <- min(init_stepsize*2**(j-k), init_stepsize)}
       
       #Run simulation
       yout_list <- myTryCatch(expr = {
-        #Note that the max step size for the integrator is the 
-        # same as our step size except halved for each k count
-             as.data.frame(
-               dede(y = yinit, times = times, func = derivs, 
-                    parms = params, hmax = init_stepsize*2**(j-k)))
+        as.data.frame(dede(y = yinit, times = times, func = derivs, 
+                           parms = params, hmax = hmax_val))
       })
       
       #Infinite loop prevention check (j = 10 is 24 hrs)
@@ -423,9 +432,41 @@ run_sims <- function(u_Svals,
       #Calculate all phage (PI)
       yout_list$value$PI <- yout_list$value$P + yout_list$value$I
       
+      if (!dynamic_stepsize) {
+        rows_tracking$excess_rows_thistime <- 
+          (6*nrow(yout_list$value))-(6*(1+init_time/init_stepsize))-1
+        rows_tracking$still_needed_toadd <- 
+          rows_tracking$still_needed_toadd + rows_tracking$excess_rows_thistime
+        
+        #If the expected end row of this simulation plus the cumulative offset so far
+        #is larger than the originally allocated number of rows plus the number
+        # of rows added so far, we need to add more rows
+        if(i * 6*(1+init_time/init_stepsize) + 
+           rows_tracking$cum_offset + rows_tracking$excess_rows_thistime >
+           num_sims * 6*(1+init_time/init_stepsize) + rows_tracking$added_sofar) {
+          ybig <- 
+            rbind(ybig,
+                  data.frame("uniq_run" = rep(NA, rows_tracking$still_needed_toadd),
+                             "u_S" = NA, "u_R" = NA, 
+                             "k_S" = NA, "k_R" = NA,
+                             "a" = NA, "b" = NA, "tau" = NA,
+                             "c_SI" = NA, "c_SR" = NA,
+                             "c_RS" = NA, "c_RI" = NA, 
+                             "z" = NA, "m" = NA,
+                             "init_S_dens" = NA, "init_R_dens" = NA,
+                             "init_moi" = NA,
+                             "equil" = NA, "time" = NA, "Pop" = as.character(NA),
+                             "Density" = NA, stringsAsFactors = FALSE))
+          rows_tracking$added_sofar <- 
+            rows_tracking$added_sofar + rows_tracking$still_needed_toadd
+          rows_tracking$still_needed_toadd <- 0
+        }
+      }
+      
       #Reshape, add parameters, and fill into ybig in right rows
-      ybig[((i-1)*6*(1+init_time/init_stepsize)+1):
-             ((i)*6*(1+init_time/init_stepsize)), ] <- 
+      ybig[((i-1)*6*(1+init_time/init_stepsize)+1) + rows_tracking$cum_offset:
+             (((i)*6*(1+init_time/init_stepsize)) + rows_tracking$cum_offset + 
+             rows_tracking$excess_rows_thistime), ] <- 
         cbind(data.frame(uniq_run = i, 
                          u_S = param_combos$u_Svals[i], 
                          u_R = param_combos$u_Rvals[i], 
@@ -476,6 +517,10 @@ run_sims <- function(u_Svals,
       }
     } else {stop("tryCatch failed during saving, neither success nor warning nor error detected")}
     
+    #Update cumulative offset (for non-dynamic stepsize runs)
+    rows_tracking$cum_offset <- 
+      rows_tracking$cum_offset+rows_tracking$excess_rows_thistime
+
     #Print progress update
     if (print_info & i %in% progress_seq) {
       print(paste((which(progress_seq == i)-1)*10,
