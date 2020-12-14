@@ -1614,22 +1614,24 @@ if (glob_make_statplots) {
 }
 
 #Calculate max time and extin time ranks w/in u_S
-y_summarized2$max_time_rnk <- NA
-y_summarized2$extin_time_rnk <- NA
+y_summarized2$max_time_ecdf <- NA
+y_summarized2$extin_time_ecdf <- NA
 
 for (my_u_S in unique(y_summarized2$u_S)) {
   rows <- which(y_summarized2$u_S == my_u_S)
-  y_summarized2$max_time_rnk[rows] <- rank(y_summarized2$max_time[rows],
-                                           ties.method = "average")
-  y_summarized2$extin_time_rnk[rows] <- rank(y_summarized2$extin_time[rows],
-                                             ties.method = "average")
+  y_summarized2$max_time_ecdf[rows] <- 
+    rank(y_summarized2$max_time[rows], ties.method = "average")/
+    max(rank(y_summarized2$max_time[rows], ties.method = "average"))
+  y_summarized2$extin_time_ecdf[rows] <- 
+    rank(y_summarized2$extin_time[rows], ties.method = "average")/
+    max(rank(y_summarized2$extin_time[rows], ties.method = "average"))
 }
 
 if (glob_make_statplots) {
-  tiff("./run2_statplots/peaktimernk_extintimernk.tiff",
+  tiff("./run2_statplots/peaktimeecdf_extintimeecdf.tiff",
        width = 5, height = 4, units = "in", res = 300)
   print(ggplot(data = y_summarized2,
-         aes(x = max_time_rnk, y = extin_time_rnk, 
+         aes(x = max_time_ecdf, y = extin_time_ecdf, 
              color = as.factor(near_k))) +
     geom_point() +
     facet_wrap(~u_S) +
@@ -1637,11 +1639,11 @@ if (glob_make_statplots) {
       labs(subtitle = "u_S"))
   dev.off()
 
-  tiff("./run2_statplots/peaktimernk_contour.tiff",
-       width = 6, height = 4, units = "in", res = 300)
-  print(ggplot(data = y_summarized2, 
+  # tiff("./run2_statplots/peaktimeecdf_contour1.tiff",
+  #      width = 6, height = 4, units = "in", res = 300)
+  p1 <- print(ggplot(data = y_summarized2, 
          aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(b)))) +
-    geom_contour_filled(aes(z = max_time_rnk)) +
+    geom_contour_filled(aes(z = max_time_ecdf)) +
     facet_grid(u_S~tau) +
     scale_fill_viridis_d(direction = -1) +
     scale_x_continuous(trans = "log10") +
@@ -1649,28 +1651,141 @@ if (glob_make_statplots) {
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
     ylab("Burst Size") +
     xlab("Infection Rate") +
-    labs(fill = "Peak Time Rank", subtitle = "Lysis Time") +
+    labs(fill = "Peak Time Percentile", subtitle = "Lysis Time") +
     NULL)
+  #dev.off()
+  
+  # tiff("./run2_statplots/peaktimeecdf_contour2.tiff",
+  #      width = 6, height = 4, units = "in", res = 300)
+  p2 <- print(ggplot(data = y_summarized2, 
+               aes(x = as.numeric(as.character(tau)), y = as.numeric(as.character(b)))) +
+          geom_contour_filled(aes(z = max_time_ecdf)) +
+          facet_grid(u_S~a) +
+          scale_fill_viridis_d(direction = -1) +
+          scale_x_continuous(trans = "log10") +
+          scale_y_continuous(trans = "log10") +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+          ylab("Burst Size") +
+          xlab("Lysis Time") +
+          labs(fill = "Peak Time Percentile", subtitle = "Infection Rate") +
+          NULL)
+  #dev.off()
+  
+  # tiff("./run2_statplots/peaktimeecdf_contour3.tiff",
+  #      width = 6, height = 4, units = "in", res = 300)
+  p3 <- print(ggplot(data = y_summarized2, 
+               aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(tau)))) +
+          geom_contour_filled(aes(z = max_time_ecdf)) +
+          facet_grid(u_S~b) +
+          scale_fill_viridis_d(direction = -1) +
+          scale_x_continuous(trans = "log10") +
+          scale_y_continuous(trans = "log10") +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+          ylab("Lysis Time") +
+          xlab("Infection Rate") +
+          labs(fill = "Peak Time Percentile", subtitle = "Burst Size") +
+          NULL)
+  #dev.off()
+  
+  tiff("./run2_statplots/maxtime_ecdf_contour_all.tiff", width = 8, height = 8,
+       units = "in", res = 300)
+  print(cowplot::plot_grid(p1 + theme(legend.position = "none"), 
+                           p2 + theme(legend.position = "none"), 
+                           p3 + theme(legend.position = "none"),
+                           cowplot::get_legend(p1),
+                           #rel_widths = c(1, 1, 1, .4),
+                           nrow = 2))
   dev.off()
   
-  tiff("./run2_statplots/extintimernk_contour.tiff",
-       width = 6, height = 4, units = "in", res = 300)
-  print(ggplot(data = y_summarized2, 
-         aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(b)))) +
-    geom_contour_filled(aes(z = extin_time_rnk)) +
-    facet_grid(u_S~tau) +
-    scale_fill_viridis_d(direction = -1) +
-    scale_x_continuous(trans = "log10") +
-    scale_y_continuous(trans = "log10") +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-    ylab("Burst Size") +
-    xlab("Infection Rate") +
-    labs(fill = "Extinction Time Rank", subtitle = "Lysis Time") +
-    NULL)
+  p1 <- print(ggplot(data = y_summarized2, 
+                     aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(b)))) +
+                geom_contour_filled(aes(z = extin_time_ecdf)) +
+                facet_grid(u_S~tau) +
+                scale_fill_viridis_d(direction = -1) +
+                scale_x_continuous(trans = "log10") +
+                scale_y_continuous(trans = "log10") +
+                theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+                ylab("Burst Size") +
+                xlab("Infection Rate") +
+                labs(fill = "Extinction Time Percentile", subtitle = "Lysis Time") +
+                NULL)
+  p2 <- print(ggplot(data = y_summarized2, 
+                     aes(x = as.numeric(as.character(tau)), y = as.numeric(as.character(b)))) +
+                geom_contour_filled(aes(z = extin_time_ecdf)) +
+                facet_grid(u_S~a) +
+                scale_fill_viridis_d(direction = -1) +
+                scale_x_continuous(trans = "log10") +
+                scale_y_continuous(trans = "log10") +
+                theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+                ylab("Burst Size") +
+                xlab("Lysis Time") +
+                labs(fill = "Extinction Time Percentile", subtitle = "Infection Rate") +
+                NULL)
+  p3 <- print(ggplot(data = y_summarized2, 
+                     aes(x = as.numeric(as.character(a)), y = as.numeric(as.character(tau)))) +
+                geom_contour_filled(aes(z = extin_time_ecdf)) +
+                facet_grid(u_S~b) +
+                scale_fill_viridis_d(direction = -1) +
+                scale_x_continuous(trans = "log10") +
+                scale_y_continuous(trans = "log10") +
+                theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+                ylab("Lysis Time") +
+                xlab("Infection Rate") +
+                labs(fill = "Extinction Time Percentile", subtitle = "Burst Size") +
+                NULL)
+
+  tiff("./run2_statplots/extintime_ecdf_contour_all.tiff", width = 8, height = 8,
+       units = "in", res = 300)
+  print(cowplot::plot_grid(p1 + theme(legend.position = "none"), 
+                           p2 + theme(legend.position = "none"), 
+                           p3 + theme(legend.position = "none"),
+                           cowplot::get_legend(p1),
+                           #rel_widths = c(1, 1, 1, .4),
+                           nrow = 2))
   dev.off()
+  
 }
 
+extintime_as_maxtime_lm <- lm(data = y_summarized2[y_summarized2$max_dens < 0.8*10**9, ],
+                              formula = extin_time_log10~max_time_log10*as.factor(u_S))
+summary(extintime_as_maxtime_lm)
+y_summarized2$extin_time_log10_pred <- NA
+y_summarized2$extin_time_log10_pred[y_summarized2$max_dens < 0.8*10**9] <-
+  predict(extintime_as_maxtime_lm)
 
+if (glob_make_statplots) {
+  tiff("./run2_statplots/maxtime_extintime_facets.tiff",
+       width = 8, height = 4, units = "in", res = 300)
+  print(ggplot(data = y_summarized2,
+               aes(x = max_time_log10, y = extin_time_log10)) +
+          geom_point(alpha = 0.5, size = 2,
+                     aes(color = as.factor(u_S), 
+                         shape = as.factor(max_dens > 0.8*10**9))) +
+          geom_abline(intercept = 0, slope = 1, lty = 3) +
+          #geom_abline(intercept = 0.319, slope = 0.913, color = "red") +
+          theme_bw() +
+          facet_wrap(~u_S) +
+          scale_color_manual(values = my_cols) +
+          NULL)
+  dev.off()
+
+  tiff("./run2_statplots/maxtime_extintime_fits.tiff",
+       width = 6, height = 4, units = "in", res = 300)
+  print(ggplot(data = y_summarized2,
+             aes(x = max_time_log10, y = extin_time_log10,
+                 color = as.factor(u_S))) +
+        geom_point(alpha = 0.25, size = 2,
+                   aes(shape = as.factor(max_dens > 0.8*10**9))) +
+        geom_line(aes(y = extin_time_log10_pred), lwd = 1) +
+        geom_abline(intercept = 0, slope = 1, lty = 3) +
+        #geom_abline(intercept = 0.319, slope = 0.913, color = "red") +
+        theme_bw() +
+        #facet_wrap(~u_S) +
+        #xlim(0, NA) + ylim(0, NA) +
+        scale_color_manual(values = my_cols) +
+        NULL)
+  dev.off()
+}
 
 ##Run #3: r, a, b, tau, init_dens, init_moi ----
 run3 <- run_sims_filewrapper(name = "run3",
