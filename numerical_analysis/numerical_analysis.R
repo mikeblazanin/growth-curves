@@ -7,7 +7,16 @@
 # Perhaps should measure something like P density at bact peak? 
 #   Or P r up to bact peak?
 # figure out how to calculate area-under-curve consistently
+# fix resistance equil checking
 # use netrd (see Scarpino mtg)
+# 
+# Given that extin time and max time so linearly related, should be able to
+#   connect extin time to the others that max time is related to
+#   (although need predictive understanding of extin time-max time lines
+#   for true connection)
+# Perhaps math for the shape of the fitness peak in max time might be useful?
+#   e.g. we know there's diminishing returns, so perhaps the relation to the
+#         underlying parameters is multiplicative or something like that
 #
 # given control curves and curves varying in density & moi,
 #   figure out how one could calculate phage parameters
@@ -15,9 +24,6 @@
 # can dede itself handle a stop-at-equilibrium condition?
 #   Yes, they're called roots. However, it's not clear whether
 #     it would really make things faster or not
-# add in the evolution of resistant bacteria
-# fix area-under-curve calculations
-#     doing so requires implementing static timestep reporting
 # use deriv-percap of B to find max decay rate?
 # think about characteristics to be taken when curves are too slow
 #   (e.g. time to grow above some threshold density)
@@ -26,7 +32,6 @@
 # When stats are plotted against each other there are lots of logistic curves
 #  fit a logistic eq to them and see what they are
 #  (e.g. are they just the bacterial curve when no phage around?)
-# Go back and re-learn multivariate calc
 # In theory we should be able to predict how much pfu_final
 #  is above b*max_dens based on auc before max_dens (or similar)
 # Should calculate bacterial decay rate from max_dens to extin_time
