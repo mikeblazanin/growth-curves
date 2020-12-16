@@ -1,8 +1,6 @@
 #TODO:
-# check whether burst size can be inferred by running curves across 
-#   various init conditions then plotting max dens vs final phage
-# then think about how that inter-relates to extinction time – phage r 
-#   relationship
+# think about how phagefinal-burstsize-maxtime relationship
+#   inter-relates to extinction time – phage r relationship
 # Perhaps should measure something like P density at bact peak? 
 #   Or P r up to bact peak?
 # figure out how to calculate area-under-curve consistently
@@ -2623,8 +2621,67 @@ if (glob_make_curveplots) {
 }
 
 ##Run 9: init dens & moi across a few b vals ----
+run9 <- 
+  run_sims_filewrapper(name = "run9",
+                       u_Svals = 0.0179,
+                       k_Svals = 10**9,
+                       avals = 10**-10,
+                       tauvals = 50,
+                       bvals = signif(5*10**seq(from = 0, to = 2, by = 1), 3),
+                       init_S_dens_vals = 10**c(2, 4, 6),
+                       init_moi_vals = 10**c(0, -1, -2),
+                       c_SIvals = 1,
+                       zvals = c(0, 1),
+                       combinatorial = TRUE,
+                       min_dens = 0.1,
+                       init_time = 100,
+                       init_stepsize = 1,
+                       print_info = TRUE,
+                       read_file = glob_read_files)
 
+ybig9 <- group_by_at(run9[[1]], .vars = 1:17)
+y_summarized9 <- summarize(ybig9,
+                            max_dens = max(Density[Pop == "B"]),
+                            max_time = time[Pop == "B" & 
+                                              Density[Pop == "B"] == max_dens],
+                            extin_index = min(which(Pop == "B" &
+                                                      Density <= 9.99*10**3)),
+                            extin_dens = Density[extin_index],
+                            extin_time = time[extin_index],
+                            extin_time_sincemax = extin_time-max_time,
+                            auc = sum(Density[Pop == "B" & time < extin_time])*
+                              extin_time,
+                            phage_final = max(Density[Pop == "P"]),
+                            phage_extin = Density[Pop == "P" & time == extin_time],
+                            phage_r = (log(phage_final)-
+                                         log(init_S_dens[1]*init_moi[1]))/
+                              extin_time,
+                            near_k = if(max_dens >= 0.95*k_S[1]) {1} else{NA}
+)
 
+y_summarized9$phage_final_pred <- y_summarized9$max_dens * y_summarized9$b
+
+lm_run9_1 <- lm(phage_final ~ max_dens:as.factor(b):as.factor(z) + 0,
+                y_summarized9)
+lm_run9_2 <- lm(phage_final ~ as.factor(b):as.factor(z) + max_dens:as.factor(b):as.factor(z) + 0,
+              y_summarized9)
+summary(lm_run9_1)
+summary(lm_run9_2)
+
+dir.create("./run9_statplots", showWarnings = FALSE)
+if(glob_make_statplots) {
+  png("./run9_statplots/phagefinal_maxdens.png", width = 7, height = 5, units = "in", res = 300)
+  print(ggplot(data = y_summarized9,
+         aes(x = max_dens, y = phage_final, color = as.factor(b))) +
+    geom_point(alpha = 0.75, size = 2.5) +
+    facet_grid(z~., 
+               labeller = as_labeller(c("0" = "No coinfection", "1" = "Coinfection"))) +
+    geom_line(aes(x = max_dens, y = phage_final_pred, color = as.factor(b)))) +
+    scale_y_continuous(trans = "log10") + scale_x_continuous(trans = "log10") +
+    scale_shape_manual(values = c(0, 1, 2, 3, 4, 8, 7, 9, 10)) +
+    theme_bw()
+  dev.off()
+}
 
 ## Run #10: a, b, tau +/- coinfection (phage traits) ----
 run10 <- run_sims_filewrapper(name = "run10",
@@ -2969,6 +3026,9 @@ if (glob_make_statplots) {
                            nrow = 2))
   dev.off()
 }
+
+
+
 
 
 
