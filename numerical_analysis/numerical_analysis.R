@@ -2305,7 +2305,7 @@ ggplot(data = y_summarized5,
   geom_abline(slope = 1, intercept = 0)
 
 
-##Run 6: a, u, k (bacterial traits) ----
+##Run #6: a, u, k (bacterial traits) ----
 run6 <- 
   run_sims_filewrapper(name = "run6",
                        u_Svals = signif(0.04*10**seq(from = 0, to = -0.7, by = -0.175), 3),
@@ -2407,7 +2407,7 @@ if (glob_make_statplots) {
   dev.off()
 }
 
-##Run 7: r, k, a, b, tau +/- coinfection ----
+##Run #7: r, k, a, b, tau +/- coinfection ----
 
 ###TODO: check all the errors & see what's the cause
 ###       also figure out why the predict function is making two lines????
@@ -2522,7 +2522,7 @@ if (glob_make_statplots) {
   dev.off()
 }
 
-##Run 8: r, k, a, b, tau +/- (costless) resistance ----
+##Run #8: r, k, a, b, tau +/- (costless) resistance ----
 run8_params <- expand.grid(u_vals = signif(0.04*10**c(0, -0.7), 3),
                            k_vals = signif(10**c(8, 10), 3),
                            avals = 10**seq(from = -12, to = -8, by = 4),
@@ -2620,7 +2620,7 @@ if (glob_make_curveplots) {
   }
 }
 
-##Run 9: init dens & moi across a few b vals ----
+##Run #9: init dens & moi across a few b vals ----
 run9 <- 
   run_sims_filewrapper(name = "run9",
                        u_Svals = 0.0179,
@@ -2859,7 +2859,7 @@ ggplot(data = y_summarized10,
   scale_y_continuous(trans = "log10") +
   scale_x_continuous(trans = "log10")
 
-##Run 11: a, u, k +/- coinfection (bacterial traits) ----
+##Run #11: a, u, k +/- coinfection (bacterial traits) ----
 run11 <- 
   run_sims_filewrapper(name = "run11",
                        u_Svals = signif(0.04*10**seq(from = 0, to = -0.7, by = -0.175), 3),
@@ -3027,9 +3027,87 @@ if (glob_make_statplots) {
   dev.off()
 }
 
+## Run #12: a, b, tau w/ static stepsize  (phage traits) ----
+run12 <- run_sims_filewrapper(name = "run12",
+                              u_Svals = c(0.023), #(30 min doubling time)
+                              k_Svals = c(10**9),
+                              avals = 10**seq(from = -12, to = -8, by = 1),
+                              tauvals = signif(10**seq(from = 1, to = 2, by = 0.25), 3),
+                              bvals = signif(5*10**seq(from = 0, to = 2, by = 0.5), 3),
+                              c_SIvals = 1,
+                              init_S_dens_vals = 10**6,
+                              init_moi_vals = 10**-2,
+                              zvals = 0,
+                              min_dens = 0.1,
+                              init_time = 100,
+                              init_stepsize = 1,
+                              dynamic_stepsize = FALSE,
+                              print_info = TRUE,
+                              read_file = glob_read_files)
 
+#Find peaks & extinction via summarize
+ybig12 <- group_by_at(run12[[1]], .vars = 1:17)
+y_summarized12 <- summarize(ybig12,
+                            max_dens = max(Density[Pop == "B"]),
+                            max_time = time[Pop == "B" & 
+                                              Density[Pop == "B"] == max_dens],
+                            extin_index = min(which(Pop == "B" &
+                                                      Density <= 10**4)),
+                            extin_dens = Density[extin_index],
+                            extin_time = time[extin_index],
+                            auc = sum(Density[Pop == "B" & time < extin_time])*
+                              extin_time,
+                            phage_final = max(Density[Pop == "P"]),
+                            phage_extin = Density[Pop == "P" & time == extin_time],
+                            phage_r = (log(phage_final)-
+                                         log(init_S_dens[1]*init_moi[1]))/
+                              extin_time,
+                            run_time = max(time),
+                            near_k = if(max_dens >= 0.95*k_S[1]) {1} else{0}
+)
 
+#Plot stats against ea other (looking at AUC)
+for (col in c("max_dens", "max_time",
+              "extin_time", "auc", "phage_final", "phage_r")) {
+  y_summarized12[, paste(col, "_log10", sep = "")] <- log10(y_summarized12[, col])
+}
 
+dir.create("run12_statplots", showWarnings = FALSE)
+if (glob_make_statplots) {
+  tiff("./run12_statplots/stat_cors_log10.tiff", width = 10, height = 10, units = "in", res = 300)
+  #Make base figure
+  p <- GGally::ggpairs(y_summarized12,
+                       aes(color = as.factor(b), shape = as.factor(near_k)),
+                       columns = c("max_dens_log10", "max_time_log10",
+                                   "extin_time_log10", 
+                                   "phage_final_log10", 
+                                   "phage_r_log10", 
+                                   "auc_log10"),
+                       lower = list(continuous = "points"),
+                       upper = list(continuous = "points")) +
+    theme_bw() +
+    theme(strip.text = element_text(size = 7),
+          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+  print(p)
+  dev.off()
+  
+  tiff("./run12_statplots/stat_cors.tiff", width = 10, height = 10, units = "in", res = 300)
+  #Make base figure
+  p <- GGally::ggpairs(y_summarized12[y_summarized12$near_k == 0, ],
+                       aes(color = as.factor(b), shape = as.factor(near_k)),
+                       columns = c("max_dens", "max_time",
+                                   "extin_time", 
+                                   "phage_final", 
+                                   "phage_r", 
+                                   "auc"),
+                       lower = list(continuous = "points"),
+                       upper = list(continuous = "points")) +
+    theme_bw() +
+    theme(strip.text = element_text(size = 7),
+          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+  print(p)
+  dev.off()
+}
 
 
 ###Work in progress below: ----
