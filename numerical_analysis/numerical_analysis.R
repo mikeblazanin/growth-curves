@@ -1,5 +1,4 @@
 #TODO:
-# verify that coinfection actually works the way it should!
 # check whether burst size can be inferred by running curves across 
 #   various init conditions then plotting max dens vs final phage
 # then think about how that inter-relates to extinction time – phage r 
