@@ -2702,13 +2702,25 @@ lm_run9_2 <- lm(phage_final ~ as.factor(b):as.factor(z) + max_dens:as.factor(b):
               y_summarized9)
 lm_run9_3 <- lm(phage_final_log10 ~ as.factor(b):as.factor(z) + max_dens_log10 + 0,
                 y_summarized9)
+lm_run9_4 <- lm(phage_final_log10 ~ as.factor(b):as.factor(z) + 
+                  max_dens_log10:as.factor(b):as.factor(z) + 0,
+                y_summarized9)
 summary(lm_run9_1)
 summary(lm_run9_2)
 summary(lm_run9_3)
+summary(lm_run9_4)
+
+10**lm_run9_3$coefficients
+
+#For the fits using phage_final_log10
+# phage_final ~ b * max_dens
+# log10(phage_final) ~ log10(b * max_dens) = log10(max_dens) + log10(b)
+#   so intercepts = log10(b)
 
 y_summarized9$phage_final_pred_lm1 <- lm_run9_1$fitted.values
 y_summarized9$phage_final_pred_lm2 <- lm_run9_2$fitted.values
 y_summarized9$phage_final_log10_pred_lm3 <- lm_run9_3$fitted.values
+y_summarized9$phage_final_log10_pred_lm4 <- lm_run9_4$fitted.values
 
 dir.create("./run9_statplots", showWarnings = FALSE)
 if(glob_make_statplots) {
@@ -2718,15 +2730,25 @@ if(glob_make_statplots) {
     geom_point(alpha = 0.75, size = 2.5) +
     facet_grid(z~., 
                labeller = as_labeller(c("0" = "No coinfection", "1" = "Coinfection"))) +
-    geom_line(aes(x = max_dens, y = phage_final_pred, color = as.factor(b))) +
-    geom_line(aes(y = phage_final_pred_lm1, color = as.factor(b)), lty = 3) +
-    geom_line(aes(y = phage_final_pred_lm2, color = as.factor(b)), lty = 2) +
-    geom_line(aes(y = 10**phage_final_log10_pred_lm3, color = as.factor(b)), lty = 4) +
+    # geom_line(aes(x = max_dens, y = phage_final_pred, color = as.factor(b))) +
+     # geom_line(aes(y = phage_final_pred_lm1, color = as.factor(b)), lty = 2) +
+     # geom_line(aes(y = phage_final_pred_lm2, color = as.factor(b)), lty = 3) +
+    geom_line(aes(y = 10**phage_final_log10_pred_lm3, color = as.factor(b)), lty = 2) +
+      geom_line(aes(y = 10**phage_final_log10_pred_lm4, color = as.factor(b)), lty = 3) +
     scale_y_continuous(trans = "log10") + scale_x_continuous(trans = "log10") +
     scale_shape_manual(values = c(0, 1, 2, 3, 4, 8, 7, 9, 10)) +
     theme_bw())
   dev.off()
 }
+
+ggplot(data = y_summarized9,
+       aes(x = max_dens_log10, y = phage_final_log10, color = as.factor(b))) +
+  geom_point() +
+  geom_line(aes(y = phage_final_log10_pred_lm3)) +
+  facet_grid(z~., 
+             labeller = as_labeller(c("0" = "No coinfection", "1" = "Coinfection"))) +
+  NULL
+  
 
 ## Run #10: a, b, tau +/- coinfection (phage traits) ----
 run10 <- run_sims_filewrapper(name = "run10",
