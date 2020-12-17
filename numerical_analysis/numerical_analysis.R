@@ -8,6 +8,7 @@
 # use netrd (see Scarpino mtg)
 # 
 # figure out what's going on w/ fits in run9
+# compare dens curves where r is dift but maxtime/extintime are similar
 # 
 # Given that extin time and max time so linearly related, should be able to
 #   connect extin time to the others that max time is related to
@@ -1841,6 +1842,32 @@ if (glob_make_statplots) {
         #xlim(0, NA) + ylim(0, NA) +
         scale_color_manual(values = my_cols) +
         NULL)
+  dev.off()
+}
+
+#Pull out curves that have similar maxtime & extintime but different r
+width = 0.05
+stepsize = 0.05
+dir.create("./run2_Bcurves", showWarnings = FALSE)
+for (cntr in seq(from = min(rowMeans(cbind(y_summarized2$max_time_log10,
+                            y_summarized2$extin_time_log10)))+width/2,
+                               to = 2.25, by = stepsize)) {
+  myruns <- y_summarized2$uniq_run[
+    which(abs(rowMeans(cbind(y_summarized2$max_time_log10, 
+                         y_summarized2$extin_time_log10)) - cntr) <= width/2)]
+  png(paste("./run2_Bcurves/", round(cntr, 3),
+            "_cntr_extin_maxtime_Bcurves.png", sep = ""),
+      width = 5, height = 5, units = "in", res = 300)
+  print(ggplot(data = ybig2[ybig2$uniq_run %in% myruns &
+                              ybig2$Pop %in% c("B", "P"), ],
+               aes(x = time, y = Density, color = as.factor(u_S), 
+                   group = paste(uniq_run, Pop))) +
+          geom_line(aes(lty = Pop), lwd = 2, alpha = 0.6) +
+          scale_y_continuous(trans = "log10") +
+          scale_linetype_manual(values = c(1, 3)) +
+          scale_color_viridis_d() +
+          theme_bw() +
+          NULL)
   dev.off()
 }
 
