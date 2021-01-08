@@ -1849,27 +1849,136 @@ if (glob_make_statplots) {
 width = 0.05
 stepsize = 0.05
 dir.create("./run2_Bcurves", showWarnings = FALSE)
-for (cntr in seq(from = min(rowMeans(cbind(y_summarized2$max_time_log10,
-                            y_summarized2$extin_time_log10)))+width/2,
-                               to = 2.25, by = stepsize)) {
-  myruns <- y_summarized2$uniq_run[
-    which(abs(rowMeans(cbind(y_summarized2$max_time_log10, 
-                         y_summarized2$extin_time_log10)) - cntr) <= width/2)]
-  png(paste("./run2_Bcurves/", round(cntr, 3),
-            "_cntr_extin_maxtime_Bcurves.png", sep = ""),
-      width = 5, height = 5, units = "in", res = 300)
-  print(ggplot(data = ybig2[ybig2$uniq_run %in% myruns &
-                              ybig2$Pop %in% c("B", "P"), ],
-               aes(x = time, y = Density, color = as.factor(u_S), 
-                   group = paste(uniq_run, Pop))) +
-          geom_line(aes(lty = Pop), lwd = 2, alpha = 0.6) +
-          scale_y_continuous(trans = "log10") +
-          scale_linetype_manual(values = c(1, 3)) +
-          scale_color_viridis_d() +
-          theme_bw() +
-          NULL)
-  dev.off()
+if(glob_make_statplots) {
+  for (cntr in seq(from = min(rowMeans(cbind(y_summarized2$max_time_log10,
+                              y_summarized2$extin_time_log10)))+width/2,
+                                 to = 2.25, by = stepsize)) {
+    myruns <- y_summarized2$uniq_run[
+      which(abs(rowMeans(cbind(y_summarized2$max_time_log10, 
+                           y_summarized2$extin_time_log10)) - cntr) <= width/2)]
+    if(length(myruns) > 0) {
+      png(paste("./run2_Bcurves/", round(cntr, 3),
+                "_cntr_extin_maxtime_Bcurves.png", sep = ""),
+          width = 5, height = 5, units = "in", res = 300)
+      print(ggplot(data = ybig2[ybig2$uniq_run %in% myruns &
+                                  ybig2$Pop %in% c("B", "P"), ],
+                   aes(x = time, y = Density, color = as.factor(u_S), 
+                       group = paste(uniq_run, Pop))) +
+              geom_line(aes(lty = Pop), lwd = 2, alpha = 0.6) +
+              scale_y_continuous(trans = "log10", limits = c(1, 10**11)) +
+              scale_linetype_manual(values = c(1, 3)) +
+              scale_color_viridis_d() +
+              xlim(0, 400) +
+              theme_bw() +
+              NULL)
+      dev.off()
+    }
+  }
 }
+
+#Define squared error function
+P_curve_err <- function(params, fixed_vals, t_vals, P_vals) {
+  #first input is a named vector containing all the parameters
+  #Second input is a named vector with all the fixed values
+  # (a, b, tau, u_S, S_0, init_moi)
+  #third input is the vector of time values
+  #fourth input is the vector P_vals that the prediction should be compared to
+  pred_vals <- with(as.list(fixed_vals),
+                    {S_0 * init_moi * params["phi"]**((-a * (b-1) * S_0)/u_S) *
+                        params["phi"]**((a * (b-1) * S_0 * exp(u_S * t_vals))/u_S)})
+  err <- sum((log10(pred_vals[!is.infinite(pred_vals)]) - 
+                log10(P_vals[!is.infinite(pred_vals)]))**2)
+  if (is.infinite(err)) {return(10**308)} else {return(err)}
+}
+
+#Find fits
+run2_phi_fits <- as.data.frame(matrix(NA, nrow = length(unique(ybig2$uniq_run)),
+                                   ncol = 8))
+colnames(run2_phi_fits) <- c("uniq_run", "a", "b", "tau", "u_S", "init_S_dens",
+                          "init_moi", "fit_phi")
+i <- 1
+for (my_run in unique(ybig2$uniq_run)) {
+  if(max(ybig2$Density[ybig2$uniq_run == my_run & ybig2$Pop == "B"]) < 
+     0.9*ybig2$k_S[ybig2$uniq_run == my_run][1]) {
+    myrows <- which(ybig2$uniq_run == my_run &
+                      ybig2$Pop == "P" &
+                      ybig2$time <= y_summarized2$max_time[y_summarized2$uniq_run == my_run])
+    temp <- optim(fn = P_curve_err,
+                  par = c(phi = 1),
+                  fixed_vals = c(a = ybig2$a[myrows[1]], b = ybig2$b[myrows[1]],
+                                 tau = ybig2$tau[myrows[1]], 
+                                 u_S = ybig2$u_S[myrows[1]],
+                                 S_0 = ybig2$init_S_dens[myrows[1]],
+                                 init_moi = ybig2$init_moi[myrows[1]]),
+                  t_vals = ybig2$time[myrows],
+                  P_vals = ybig2$Density[myrows],
+                  method = "Brent",
+                  lower = 1, upper = 10)
+    run2_phi_fits[i, ] <- data.frame(uniq_run = my_run,
+                                  a = ybig2$a[myrows[1]], 
+                                  b = ybig2$b[myrows[1]],
+                                  tau = ybig2$tau[myrows[1]], 
+                                  u_S = ybig2$u_S[myrows[1]],
+                                  init_S_dens = ybig2$init_S_dens[myrows[1]],
+                                  init_moi = ybig2$init_moi[myrows[1]],
+                                  fit_phi = temp$par["phi"])
+  }
+  i <- i+1
+}
+
+##Plot out P curves
+dir.create("./run2_Pplots/", showWarnings = FALSE)
+if(glob_make_curveplots) {
+  for (myrun in unique(ybig2$uniq_run)) {
+    myrows <- which(ybig2$uniq_run == myrun &
+                      ybig2$Pop %in% c("B", "P"))
+    myrowsb <- which(ybig2$uniq_run == myrun & ybig2$Pop == "B")
+    if (max(ybig2$Density[myrowsb]) < 0.9*ybig2$k_S[myrowsb[1]]) {
+      myrowsp <- which(ybig2$uniq_run == myrun & ybig2$Pop == "P")
+      myrowsp_1 <- myrowsp[1]
+      my_phi <- run2_phi_fits$fit_phi[which(run2_phi_fits$uniq_run == myrun)]
+      
+      pred <- data.frame(time = ybig2$time[myrowsp],
+                         Density = 
+                           with(ybig2,
+                                {init_S_dens[myrowsp_1]*init_moi[myrowsp_1]*
+                           exp(-(a[myrowsp_1]*(b[myrowsp_1]-1)*
+                                  init_S_dens[myrowsp_1])/
+                                 u_S[myrowsp_1])*
+                           exp((a[myrowsp_1]*(b[myrowsp_1]-1)*
+                                init_S_dens[myrowsp_1]*
+                                exp(u_S[myrowsp_1]*time[myrowsp]))/
+                                 u_S[myrowsp_1])}),
+                         Density2 = 
+                           with(ybig2,
+                                {init_S_dens[myrowsp_1]*init_moi[myrowsp_1]*
+                                    my_phi**((-a[myrowsp_1]*(b[myrowsp_1]-1)*
+                                            init_S_dens[myrowsp_1])/
+                                          u_S[myrowsp_1])*
+                                    my_phi**((a[myrowsp_1]*(b[myrowsp_1]-1)*
+                                           init_S_dens[myrowsp_1]*
+                                           exp(u_S[myrowsp_1]*time[myrowsp]))/
+                                          u_S[myrowsp_1])}))
+      
+      png(paste("./run2_Pplots/", myrun, ".png", sep = ""),
+                width = 4, height = 4, units = "in", res = 300)
+      print(ggplot(data = ybig2[myrows, ],
+                   aes(x = time, y = Density, color = Pop)) +
+              geom_line(lwd = 1.5) +
+              geom_line(data = pred, aes(x = time, y = Density), color = "black") +
+              geom_line(data = pred, aes(x = time, y = Density2), color = "black",
+                        lty = 2) +
+              theme_bw() +
+              scale_y_continuous(trans = "log10",
+                                 limits = c(NA, max(ybig2$Density[myrows]))) +
+              ggtitle(label = ybig2$tau[myrows[1]]) +
+              NULL
+      )
+      dev.off()
+    }
+  }
+}
+
 
 ##Run #3: r, a, b, tau, init_dens, init_moi ----
 run3 <- run_sims_filewrapper(name = "run3",
