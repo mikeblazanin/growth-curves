@@ -1883,19 +1883,42 @@ P_curve_err <- function(params, fixed_vals, t_vals, P_vals) {
   # (a, b, tau, u_S, S_0, init_moi)
   #third input is the vector of time values
   #fourth input is the vector P_vals that the prediction should be compared to
-  pred_vals <- with(as.list(fixed_vals),
-                    {S_0 * init_moi * params["phi"]**((-a * (b-1) * S_0)/u_S) *
-                        params["phi"]**((a * (b-1) * S_0 * exp(u_S * t_vals))/u_S)})
+  pred_vals <- 
+    with(as.list(fixed_vals),
+         {S_0 * init_moi * 
+             params["phi"]**((-params["delta"] * a * (b-1) * 
+                                S_0 * exp(-u_S * params["lambda"]))/u_S) *
+             params["phi"]**((params["delta"] * a * (b-1) * 
+                                S_0 * exp(u_S * (t_vals - params["lambda"])))/u_S)})
   err <- sum((log10(pred_vals[!is.infinite(pred_vals)]) - 
                 log10(P_vals[!is.infinite(pred_vals)]))**2)
   if (is.infinite(err)) {return(10**308)} else {return(err)}
 }
 
+##Save a tryCatch function for later use
+##  I didn't write this, see: https://stackoverflow.com/a/24569739/14805829
+##  notably, returns list with $value $warning and $error
+##  successful will have NULL $warning and $error
+##  warning will have NULL $error (and value in $value)
+##  error will have NULL $value and $warning
+myTryCatch <- function(expr) {
+  warn <- err <- NULL
+  value <- withCallingHandlers(
+    tryCatch(expr, error=function(e) {
+      err <<- e
+      NULL
+    }), warning=function(w) {
+      warn <<- w
+      invokeRestart("muffleWarning")
+    })
+  list(value=value, warning=warn, error=err)
+}
+
 #Find fits
 run2_phi_fits <- as.data.frame(matrix(NA, nrow = length(unique(ybig2$uniq_run)),
-                                   ncol = 8))
+                                   ncol = 10))
 colnames(run2_phi_fits) <- c("uniq_run", "a", "b", "tau", "u_S", "init_S_dens",
-                          "init_moi", "fit_phi")
+                          "init_moi", "fit_phi", "fit_delta", "fit_lambda")
 i <- 1
 for (my_run in unique(ybig2$uniq_run)) {
   if(max(ybig2$Density[ybig2$uniq_run == my_run & ybig2$Pop == "B"]) < 
@@ -1903,25 +1926,51 @@ for (my_run in unique(ybig2$uniq_run)) {
     myrows <- which(ybig2$uniq_run == my_run &
                       ybig2$Pop == "P" &
                       ybig2$time <= y_summarized2$max_time[y_summarized2$uniq_run == my_run])
-    temp <- optim(fn = P_curve_err,
-                  par = c(phi = 1),
-                  fixed_vals = c(a = ybig2$a[myrows[1]], b = ybig2$b[myrows[1]],
-                                 tau = ybig2$tau[myrows[1]], 
-                                 u_S = ybig2$u_S[myrows[1]],
-                                 S_0 = ybig2$init_S_dens[myrows[1]],
-                                 init_moi = ybig2$init_moi[myrows[1]]),
-                  t_vals = ybig2$time[myrows],
-                  P_vals = ybig2$Density[myrows],
-                  method = "Brent",
-                  lower = 1, upper = 10)
+    temp <- myTryCatch(
+      optim(fn = P_curve_err,
+            par = c(phi = exp(1), delta = 1, lambda = 0),
+            fixed_vals = c(a = ybig2$a[myrows[1]], b = ybig2$b[myrows[1]],
+                           tau = ybig2$tau[myrows[1]], 
+                           u_S = ybig2$u_S[myrows[1]],
+                           S_0 = ybig2$init_S_dens[myrows[1]],
+                           init_moi = ybig2$init_moi[myrows[1]]),
+            t_vals = ybig2$time[myrows],
+            P_vals = ybig2$Density[myrows],
+            method = "Nelder-Mead"))
+    if(is.null(temp$error)) {
+      run2_phi_fits[i, ] <- data.frame(uniq_run = my_run,
+                                       a = ybig2$a[myrows[1]], 
+                                       b = ybig2$b[myrows[1]],
+                                       tau = ybig2$tau[myrows[1]], 
+                                       u_S = ybig2$u_S[myrows[1]],
+                                       init_S_dens = ybig2$init_S_dens[myrows[1]],
+                                       init_moi = ybig2$init_moi[myrows[1]],
+                                       fit_phi = temp$value$par["phi"],
+                                       fit_delta = temp$value$par["delta"],
+                                       fit_lambda = temp$value$par["lambda"])
+    } else {
+      run2_phi_fits[i, ] <- data.frame(uniq_run = my_run,
+                                       a = ybig2$a[myrows[1]], 
+                                       b = ybig2$b[myrows[1]],
+                                       tau = ybig2$tau[myrows[1]], 
+                                       u_S = ybig2$u_S[myrows[1]],
+                                       init_S_dens = ybig2$init_S_dens[myrows[1]],
+                                       init_moi = ybig2$init_moi[myrows[1]],
+                                       fit_phi = "err",
+                                       fit_delta = "err",
+                                       fit_lambda = "err")
+    }
+  } else {
     run2_phi_fits[i, ] <- data.frame(uniq_run = my_run,
-                                  a = ybig2$a[myrows[1]], 
-                                  b = ybig2$b[myrows[1]],
-                                  tau = ybig2$tau[myrows[1]], 
-                                  u_S = ybig2$u_S[myrows[1]],
-                                  init_S_dens = ybig2$init_S_dens[myrows[1]],
-                                  init_moi = ybig2$init_moi[myrows[1]],
-                                  fit_phi = temp$par["phi"])
+                                     a = ybig2$a[myrows[1]], 
+                                     b = ybig2$b[myrows[1]],
+                                     tau = ybig2$tau[myrows[1]], 
+                                     u_S = ybig2$u_S[myrows[1]],
+                                     init_S_dens = ybig2$init_S_dens[myrows[1]],
+                                     init_moi = ybig2$init_moi[myrows[1]],
+                                     fit_phi = NA,
+                                     fit_delta = NA,
+                                     fit_lambda = NA)
   }
   i <- i+1
 }
@@ -1933,10 +1982,14 @@ if(glob_make_curveplots) {
     myrows <- which(ybig2$uniq_run == myrun &
                       ybig2$Pop %in% c("B", "P"))
     myrowsb <- which(ybig2$uniq_run == myrun & ybig2$Pop == "B")
-    if (max(ybig2$Density[myrowsb]) < 0.9*ybig2$k_S[myrowsb[1]]) {
+    if (max(ybig2$Density[myrowsb]) < 0.9*ybig2$k_S[myrowsb[1]] &
+        !is.na(run2_phi_fits$fit_phi[which(run2_phi_fits$uniq_run == myrun)]) &
+        run2_phi_fits$fit_phi[which(run2_phi_fits$uniq_run == myrun)] != "err") {
       myrowsp <- which(ybig2$uniq_run == myrun & ybig2$Pop == "P")
       myrowsp_1 <- myrowsp[1]
       my_phi <- run2_phi_fits$fit_phi[which(run2_phi_fits$uniq_run == myrun)]
+      my_delta <- run2_phi_fits$fit_delta[which(run2_phi_fits$uniq_run == myrun)]
+      my_lambda <- run2_phi_fits$fit_delta[which(run2_phi_fits$uniq_run == myrun)]
       
       pred <- data.frame(time = ybig2$time[myrowsp],
                          Density = 
@@ -1952,10 +2005,10 @@ if(glob_make_curveplots) {
                          Density2 = 
                            with(ybig2,
                                 {init_S_dens[myrowsp_1]*init_moi[myrowsp_1]*
-                                    my_phi**((-a[myrowsp_1]*(b[myrowsp_1]-1)*
+                                    my_phi**((-my_delta*a[myrowsp_1]*(b[myrowsp_1]-1)*
                                             init_S_dens[myrowsp_1])/
                                           u_S[myrowsp_1])*
-                                    my_phi**((a[myrowsp_1]*(b[myrowsp_1]-1)*
+                                    my_phi**((my_delta*a[myrowsp_1]*(b[myrowsp_1]-1)*
                                            init_S_dens[myrowsp_1]*
                                            exp(u_S[myrowsp_1]*time[myrowsp]))/
                                           u_S[myrowsp_1])}))
