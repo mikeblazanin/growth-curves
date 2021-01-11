@@ -1886,21 +1886,41 @@ P_fit_func <- function(a, b, tau, u_S, S_0, init_moi,
      phi**((-delta*a*(b-1)*S_0*exp(-eta*u_S*lambda))/u_S)*
      phi**((delta*a*(b-1)*S_0*exp(eta*u_S*(t_vals-lambda)))/u_S))
 }
+
+P_fit_func2 <- function(a, b, tau, u_S, S_0, init_moi, P_0 = S_0*init_moi,
+                       phi = 1, delta = 1, lambda = 0, eta = 1, t_vals) {
+  #Just a common-reference function that computes a curve's points
+  # when given the params and timepoints
+  #(Mostly so I don't have to re-write the equation in the error function
+  # and the plotting arguments)
+  return(P_0 - phi*S_0*a/(u_S*tau)*((b-1)/u_S) +
+           phi*S_0*a/(u_S*tau)*((b-1)*(exp(delta*u_S*t_vals)/u_S - t_vals)))
+}
   
 #Define squared error function
-P_curve_err <- function(params, fixed_vals, t_vals, P_vals) {
+P_curve_err <- function(params, fixed_vals, t_vals, P_vals, func) {
   #first input is a named vector containing all the parameters
   #Second input is a named vector with all the fixed values
   # (a, b, tau, u_S, S_0, init_moi)
   #third input is the vector of time values
   #fourth input is the vector P_vals that the prediction should be compared to
-  pred_vals <- 
-    P_fit_func(a = fixed_vals["a"], b = fixed_vals["b"], tau = fixed_vals["tau"],
-               u_S = fixed_vals["u_S"], S_0 = fixed_vals["S_0"], 
-               init_moi = fixed_vals["init_moi"],
-               phi = params["phi"], delta = params["delta"], 
-               lambda = params["lambda"], eta = params["eta"], 
-               t_vals = t_vals)
+  if (func == 1) {
+    pred_vals <- 
+      P_fit_func(a = fixed_vals["a"], b = fixed_vals["b"], tau = fixed_vals["tau"],
+                 u_S = fixed_vals["u_S"], S_0 = fixed_vals["S_0"], 
+                 init_moi = fixed_vals["init_moi"],
+                 phi = params["phi"], delta = params["delta"], 
+                 lambda = params["lambda"], eta = params["eta"], 
+                 t_vals = t_vals)
+  } else if (func == 2) {
+    pred_vals <- 
+      P_fit_func2(a = fixed_vals["a"], b = fixed_vals["b"], tau = fixed_vals["tau"],
+                u_S = fixed_vals["u_S"], S_0 = fixed_vals["S_0"], 
+                init_moi = fixed_vals["init_moi"],
+                phi = params["phi"], delta = params["delta"], 
+                lambda = params["lambda"], eta = params["eta"], 
+                t_vals = t_vals)
+  } else {stop("func does not have a valid value")}
   err <- sum((log10(pred_vals[!is.infinite(pred_vals)]) - 
                 log10(P_vals[!is.infinite(pred_vals)]))**2)
   if (is.infinite(err)) {return(10**308)} else {return(err)}
@@ -1926,10 +1946,11 @@ myTryCatch <- function(expr) {
 }
 
 #Find fits
-run2_phi_fits <- as.data.frame(matrix(NA, nrow = length(unique(ybig2$uniq_run)),
-                                   ncol = 11))
-colnames(run2_phi_fits) <- c("uniq_run", "a", "b", "tau", "u_S", "init_S_dens",
-                          "init_moi", "fit_phi", "fit_delta", "fit_lambda", "fit_eta")
+run2_Pcurve_paramfits <- as.data.frame(matrix(NA, nrow = length(unique(ybig2$uniq_run)),
+                                   ncol = 12))
+colnames(run2_Pcurve_paramfits) <- c("uniq_run", "a", "b", "tau", "u_S", "init_S_dens",
+                          "init_moi", "fit_phi", "fit_delta", "fit_lambda", 
+                          "fit_eta", "fit_err")
 i <- 1
 for (my_run in unique(ybig2$uniq_run)) {
   myrows <- which(ybig2$uniq_run == my_run &
@@ -1939,7 +1960,8 @@ for (my_run in unique(ybig2$uniq_run)) {
      0.9*ybig2$k_S[ybig2$uniq_run == my_run][1]) {
     temp <- myTryCatch(
       optim(fn = P_curve_err,
-            par = c(phi = exp(1), delta = 1, lambda = 0, eta = 1),
+            #par = c(phi = exp(1), delta = 1, lambda = 0, eta = 1),
+            par = c(phi = 1, delta = 1),
             fixed_vals = c(a = ybig2$a[myrows[1]], b = ybig2$b[myrows[1]],
                            tau = ybig2$tau[myrows[1]], 
                            u_S = ybig2$u_S[myrows[1]],
@@ -1947,9 +1969,10 @@ for (my_run in unique(ybig2$uniq_run)) {
                            init_moi = ybig2$init_moi[myrows[1]]),
             t_vals = ybig2$time[myrows],
             P_vals = ybig2$Density[myrows],
+            func = 2,
             method = "Nelder-Mead"))
     if(is.null(temp$error)) {
-      run2_phi_fits[i, ] <- data.frame(uniq_run = my_run,
+      run2_Pcurve_paramfits[i, ] <- data.frame(uniq_run = my_run,
                                        a = ybig2$a[myrows[1]], 
                                        b = ybig2$b[myrows[1]],
                                        tau = ybig2$tau[myrows[1]], 
@@ -1959,9 +1982,10 @@ for (my_run in unique(ybig2$uniq_run)) {
                                        fit_phi = temp$value$par["phi"],
                                        fit_delta = temp$value$par["delta"],
                                        fit_lambda = temp$value$par["lambda"],
-                                       fit_eta = temp$value$par["eta"])
+                                       fit_eta = temp$value$par["eta"],
+                                       fit_err = temp$value$value)
     } else {
-      run2_phi_fits[i, ] <- data.frame(uniq_run = my_run,
+      run2_Pcurve_paramfits[i, ] <- data.frame(uniq_run = my_run,
                                        a = ybig2$a[myrows[1]], 
                                        b = ybig2$b[myrows[1]],
                                        tau = ybig2$tau[myrows[1]], 
@@ -1971,10 +1995,11 @@ for (my_run in unique(ybig2$uniq_run)) {
                                        fit_phi = "err",
                                        fit_delta = "err",
                                        fit_lambda = "err",
-                                       fit_eta = "err")
+                                       fit_eta = "err",
+                                       fit_err = "err")
     }
   } else {
-    run2_phi_fits[i, ] <- data.frame(uniq_run = my_run,
+    run2_Pcurve_paramfits[i, ] <- data.frame(uniq_run = my_run,
                                      a = ybig2$a[myrows[1]], 
                                      b = ybig2$b[myrows[1]],
                                      tau = ybig2$tau[myrows[1]], 
@@ -1984,7 +2009,8 @@ for (my_run in unique(ybig2$uniq_run)) {
                                      fit_phi = NA,
                                      fit_delta = NA,
                                      fit_lambda = NA,
-                                     fit_eta = NA)
+                                     fit_eta = NA,
+                                     fit_err = NA)
   }
   i <- i+1
 }
@@ -1997,29 +2023,29 @@ if(glob_make_curveplots) {
                       ybig2$Pop %in% c("B", "P"))
     myrowsb <- which(ybig2$uniq_run == myrun & ybig2$Pop == "B")
     if (max(ybig2$Density[myrowsb]) < 0.9*ybig2$k_S[myrowsb[1]] &
-        !is.na(run2_phi_fits$fit_phi[which(run2_phi_fits$uniq_run == myrun)]) &
-        run2_phi_fits$fit_phi[which(run2_phi_fits$uniq_run == myrun)] != "err") {
+        !is.na(run2_Pcurve_paramfits$fit_phi[which(run2_Pcurve_paramfits$uniq_run == myrun)]) &
+        run2_Pcurve_paramfits$fit_phi[which(run2_Pcurve_paramfits$uniq_run == myrun)] != "err") {
       myrowsp <- which(ybig2$uniq_run == myrun & ybig2$Pop == "P")
       myrowsp_1 <- myrowsp[1]
       pred <- data.frame(time = ybig2$time[myrowsp],
-                         Density = P_fit_func(a = ybig2$a[myrowsp_1],
+                         Density = P_fit_func2(a = ybig2$a[myrowsp_1],
                                               b = ybig2$b[myrowsp_1],
                                               tau = ybig2$tau[myrowsp_1],
                                               u_S = ybig2$u_S[myrowsp_1],
                                               S_0 = ybig2$init_S_dens[myrowsp_1],
                                               init_moi = ybig2$init_moi[myrowsp_1],
                                               t_vals = ybig2$time[myrowsp]),
-                         Density2 = 
-                           P_fit_func(a = ybig2$a[myrowsp_1],
+                         Density_f = 
+                           P_fit_func2(a = ybig2$a[myrowsp_1],
                                       b = ybig2$b[myrowsp_1],
                                       tau = ybig2$tau[myrowsp_1],
                                       u_S = ybig2$u_S[myrowsp_1],
                                       S_0 = ybig2$init_S_dens[myrowsp_1],
                                       init_moi = ybig2$init_moi[myrowsp_1],
-                                      phi = run2_phi_fits$fit_phi[which(run2_phi_fits$uniq_run == myrun)],
-                                      delta = run2_phi_fits$fit_delta[which(run2_phi_fits$uniq_run == myrun)], 
-                                      lambda = run2_phi_fits$fit_lambda[which(run2_phi_fits$uniq_run == myrun)], 
-                                      eta = run2_phi_fits$fit_eta[which(run2_phi_fits$uniq_run == myrun)],
+                                      phi = run2_Pcurve_paramfits$fit_phi[which(run2_Pcurve_paramfits$uniq_run == myrun)],
+                                      delta = run2_Pcurve_paramfits$fit_delta[which(run2_Pcurve_paramfits$uniq_run == myrun)], 
+                                      lambda = run2_Pcurve_paramfits$fit_lambda[which(run2_Pcurve_paramfits$uniq_run == myrun)], 
+                                      eta = run2_Pcurve_paramfits$fit_eta[which(run2_Pcurve_paramfits$uniq_run == myrun)],
                                       t_vals = ybig2$time[myrowsp]))
       
       png(paste("./run2_Pplots/", myrun, ".png", sep = ""),
@@ -2027,19 +2053,26 @@ if(glob_make_curveplots) {
       print(ggplot(data = ybig2[myrows, ],
                    aes(x = time, y = Density, color = Pop)) +
               geom_line(lwd = 1.5) +
-              geom_line(data = pred, aes(x = time, y = Density), color = "black") +
-              geom_line(data = pred, aes(x = time, y = Density2), color = "black",
+              geom_line(data = pred, aes(x = time, y = Density), color = "black",
+                        lty = 2) +
+              geom_line(data = pred, aes(x = time, y = Density_f), color = "red",
                         lty = 2) +
               theme_bw() +
               scale_y_continuous(trans = "log10",
                                  limits = c(NA, max(ybig2$Density[myrows]))) +
-              ggtitle(label = ybig2$tau[myrows[1]]) +
+              ggtitle(label = round(run2_Pcurve_paramfits$fit_err[
+                which(run2_Pcurve_paramfits$uniq_run == myrun)])) +
               NULL
       )
       dev.off()
     }
   }
 }
+
+ggplot(data = run2_Pcurve_paramfits,
+       aes(x = fit_phi, y = fit_delta, color = as.factor(u_S))) +
+  geom_point() + facet_grid(a ~ b, scales = "free") +
+  theme_bw()
 
 
 ##Run #3: r, a, b, tau, init_dens, init_moi ----
