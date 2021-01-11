@@ -1960,8 +1960,8 @@ for (my_run in unique(ybig2$uniq_run)) {
      0.9*ybig2$k_S[ybig2$uniq_run == my_run][1]) {
     temp <- myTryCatch(
       optim(fn = P_curve_err,
-            #par = c(phi = exp(1), delta = 1, lambda = 0, eta = 1),
-            par = c(phi = 1, delta = 1),
+            par = c(phi = exp(1), delta = 1, lambda = 0, eta = 1),
+            #par = c(phi = 1, delta = 1),
             fixed_vals = c(a = ybig2$a[myrows[1]], b = ybig2$b[myrows[1]],
                            tau = ybig2$tau[myrows[1]], 
                            u_S = ybig2$u_S[myrows[1]],
@@ -1969,7 +1969,7 @@ for (my_run in unique(ybig2$uniq_run)) {
                            init_moi = ybig2$init_moi[myrows[1]]),
             t_vals = ybig2$time[myrows],
             P_vals = ybig2$Density[myrows],
-            func = 2,
+            func = 1,
             method = "Nelder-Mead"))
     if(is.null(temp$error)) {
       run2_Pcurve_paramfits[i, ] <- data.frame(uniq_run = my_run,
@@ -2028,7 +2028,7 @@ if(glob_make_curveplots) {
       myrowsp <- which(ybig2$uniq_run == myrun & ybig2$Pop == "P")
       myrowsp_1 <- myrowsp[1]
       pred <- data.frame(time = ybig2$time[myrowsp],
-                         Density = P_fit_func2(a = ybig2$a[myrowsp_1],
+                         Density = P_fit_func(a = ybig2$a[myrowsp_1],
                                               b = ybig2$b[myrowsp_1],
                                               tau = ybig2$tau[myrowsp_1],
                                               u_S = ybig2$u_S[myrowsp_1],
@@ -2036,7 +2036,7 @@ if(glob_make_curveplots) {
                                               init_moi = ybig2$init_moi[myrowsp_1],
                                               t_vals = ybig2$time[myrowsp]),
                          Density_f = 
-                           P_fit_func2(a = ybig2$a[myrowsp_1],
+                           P_fit_func(a = ybig2$a[myrowsp_1],
                                       b = ybig2$b[myrowsp_1],
                                       tau = ybig2$tau[myrowsp_1],
                                       u_S = ybig2$u_S[myrowsp_1],
