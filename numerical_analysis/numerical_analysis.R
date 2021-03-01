@@ -2074,6 +2074,110 @@ ggplot(data = run2_Pcurve_paramfits,
   geom_point() + facet_grid(a ~ b, scales = "free") +
   theme_bw()
 
+#Fit SI and SIP model to discrete time-lag data ----
+
+run_ode_sim <- function(u_S, k_S, c_SI, a, d,
+                       times, init_S, init_I,
+                       mode = c("SI", "SIP", "SIn", "SInP")) {
+  if (length(mode) > 1) {stop("mode must be specified")}
+  
+  if (mode == "SI") {
+    #S = u_S*S - aSI
+    #I = aSA - dI
+    derivs <- function(t, y, parms) {
+      #From documentation: The return value of func should be a list, whose first 
+      #element is a vector containing the derivatives of y with respect to time
+      y[y < 0] <- 0
+      
+      return(list(c(
+        S = parms["u_S"]*y["S"]*(parms["k_S"]-y["S"]-
+                                   parms["c_SI"]*y["I"])/parms["k_S"] - 
+          parms["a"]*y["S"]*y["I"],
+        I = parms["a"]*y["S"]*y["I"] - parms["d"]*y["I"])))
+    }
+    params <- c(u_S = u_S, k_S = k_S, c_SI = c_SI, a = a, d = d)
+  }
+  
+  if (mode == "SI") {
+    yout <- as.data.frame(ode(y = c(S = init_S, I = init_I),
+                              times = times, func = derivs, parms = params))
+  }
+  return(yout)
+}
+
+calc_ode_sim_err <- function(u_S, k_S, c_SI, a, d,
+                        times, init_S, init_I,
+                        S_dens = NULL, I_dens = NULL, B_dens = NULL,
+                        mode = c("SI", "SIP", "SIn", "SInP")) {
+  if (length(mode) > 1) {stop("mode must be specified")}
+  
+  if (!is.null(B_dens)) {
+    if (!is.null(S_dens)) {warning("S_dens will be ignored")}
+    if (!is.null(I_dens)) {warning("I_dens will be ignored")}
+  }
+  stopifnot(any(!is.null(B_dens), !is.null(S_dens), !is.null(I_dens)))
+  
+  sim_dens <- run_ode_sim(u_S = u_S, k_S = k_S, c_SI = c_SI, a = a, d = d,
+                         times = times, init_S = init_S, init_I = init_I,
+                         mode = mode)
+  if (!is.null(B_dens)) {
+    return(sum(((sim_dens$S+sim_dens$I)-B_dens)**2))
+  } else {
+    err <- rep(0, max(length(S_dens), length(I_dens), na.rm = T))
+    if (!is.null(S_dens)) {err <- err + (sim_dens$S - S_dens)**2}
+    if (!is.null(I_dens)) {err <- err + (sim_dens$I - I_dens)**2}
+    return(sum(err))
+  }
+}
+
+calc_ode_sim_err(u_S = .04, k_S = 10**9, c_SI = 1, a = 10**-10, d = 10**-2.5,
+                 times = unique(test$time), 
+                 init_S = 10**6, init_I = 10**4,
+                 mode = "SI", B_dens = test$Density[test$Pop == "B"])
+
+temp <- tidyr::pivot_longer(
+  run_ode_sim(u_S = .04, k_S = 10**9, c_SI = 1, 
+                    a = 10**-10, d = 10**-2.5,
+                    times = unique(test$time), 
+                    init_S = 10**6, init_I = 10**4,
+              mode = "SI"),
+  -time, names_to = "Pop", values_to = "Density")
+
+ggplot(data = test, aes(x = time, y = Density, color = Pop)) +
+  geom_line(lwd = 1.5, a = 0.9) +
+  scale_y_continuous(trans = "log10", limits = c(1, NA)) +
+  geom_line(data = temp, lty = 2)
+
+optim(par = c(a = 10**-10, d = 10**-10), fn = calc_SI_err,
+      u_S = u_S, k_S = k_S, c_SI = c_SI, init_S = init_S, init_I = init_I,
+      S_dens = ...)
+
+yout <- run_sim_SI(u_S = .04, k_S = 10**9, c_SI = 1, a = 10**-10, d = 10**-2.5,
+                   times = seq(from = 0, to = 12*60, by = 15), 
+                   init_S = 10**6, init_I = 10**4)
+yout_lng <- tidyr::pivot_longer(yout, cols = -time, 
+                                names_to = "pop", values_to = "density")
+ggplot(data = yout_lng, aes(x = time/60, y = density, color = pop)) +
+  geom_line() + scale_y_continuous(trans = "log10")
+
+#Find fits
+# Fit 1 - SI model fitting B
+# Fit 2 - SIP model fitting B
+# Fit 3 - SI model fitting B + P
+# Fit 4 - SIP model fitting B + P
+temp <- c("uniq_run", "a", "b", "tau", "u_S", "init_S_dens",
+          "init_moi", "fit1_a", "fit1_d",
+          "fit2_a", "fit2_d", "fit2_b",
+          "fit3_a", "fit3_d",
+          "fit4_a", "fit4_d", "fit4_b")
+run2_SI_fits <- as.data.frame(matrix(NA, nrow = length(unique(ybig2$uniq_run)),
+                                              ncol = length(temp)))
+colnames(run2_SI_fits) <- temp
+  
+i <- 1
+for (my_run in unique(ybig2$uniq_run)) {
+  myrows <- which(ybig2$uniq_run == my_run)
+
 
 ##Run #3: r, a, b, tau, init_dens, init_moi ----
 run3 <- run_sims_filewrapper(name = "run3",
