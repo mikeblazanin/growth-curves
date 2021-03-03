@@ -2078,7 +2078,8 @@ ggplot(data = run2_Pcurve_paramfits,
 run_ode_sim <- function(u_S, k_S, c_SI, a, d, b,
                        times, init_S, init_I, init_moi, nI = 1,
                        mode = c("SIn", "SInP")) {
-  if (length(mode) > 1) {stop("mode must be specified")}
+  if (length(mode) > 1 | !mode %in% c("SIn", "SInP")) {
+    stop("mode must be specified as 'SIn' or 'SInP'")}
   
   #browser()
   if (mode == "SIn") {
@@ -2107,7 +2108,7 @@ run_ode_sim <- function(u_S, k_S, c_SI, a, d, b,
         }
       }
 
-      return(list(c(dS, dI, dP)))
+      return(list(c(dS, dI)))
     }
     
     y_init <- c(init_S, rep(init_I, nI))
@@ -2193,9 +2194,16 @@ calc_ode_sim_err <- function(par = c(u_S = NULL, k_S = NULL, c_SI = NULL,
   }
   
   #Calculate and return error
+  #(treat all densities <= 1 as 1)
+  for (i in 2:ncol(sim_dens)) {sim_dens[, i][sim_dens[, i] < 1] <- 1}
+  if(!is.null(S_dens)) {S_dens[S_dens < 1] <- 1}
+  if(!is.null(I_dens)) {I_dens[I_dens < 1] <- 1}
+  if(!is.null(P_dens)) {P_dens[P_dens < 1] <- 1}
+  if(!is.null(B_dens)) {B_dens[B_dens < 1] <- 1}
+  
   err <- 0
   if (!is.null(B_dens)) {
-    B_sim_dens <- rowSums(sim_dens[, 2:(nI+1)])
+    B_sim_dens <- rowSums(sim_dens[, 2:(nI+2)])
     err <- err + sum((log10(B_sim_dens)-log10(B_dens))**2)
   } else {
     if (!is.null(S_dens)) {
@@ -2207,7 +2215,7 @@ calc_ode_sim_err <- function(par = c(u_S = NULL, k_S = NULL, c_SI = NULL,
     }
   }
   if (!is.null(P_dens)) {
-    err <- err + sum((log10(sim_dens[, nI+2])-log10(P_dens))**2)
+    err <- err + sum((log10(sim_dens[, nI+3])-log10(P_dens))**2)
   }
   return(err)
 }
@@ -2261,40 +2269,55 @@ optifix <- function(par, fixed, fn, gr = NULL, ...,
   return(.opt)
 }
 
-# optifix2 <- function(par, fixed, fn, gr = NULL, ..., 
-#                      method = c("Nelder-Mead", "BFGS", "CG", "L-BFGS-B", "SANN"), 
-#                      lower = -Inf, upper = Inf, 
-#                      control = list(), hessian = FALSE) {
-#   stopifnot(length(method) == 1,
-#             method %in% c("Nelder-Mead", "BFGS", "CG", "L-BFGS-B", "SANN"))
-#   
-#   #fn_rewrite <- function(par
-# }
-
-
 test <- ybig2[ybig2$uniq_run == 1, ]
 
-calc_ode_sim_err(par = c(a = 10**-10, d = 10**-10,
-                         u_S = test$u_S[1], k_S = test$k_S[1], 
-                         c_SI = test$c_SI[1]),
-                 times = unique(test$time), 
-                 init_S = test$init_S_dens[1], 
-                 init_I = test$init_S_dens[1]*test$init_moi[1],
-                 mode = "SI", B_dens = test$Density[test$Pop == "B"])
-
 temp <- run_ode_sim(u_S = .04, k_S = 10**9, c_SI = 1, 
-                    a = 10**-10, d = 10**-2.5,
+                    a = 10**-8, d = 100,
                     times = unique(test$time), 
                     init_S = test$init_S_dens[1], 
                     init_I = test$init_S_dens[1]*test$init_moi[1],
-                    mode = "SI")
+                    mode = "SInP")
+temp <- run_ode_sim(u_S = .04, k_S = 10**9, c_SI = 1, 
+                    a = 10**-12, d = 10, b = 5,
+                    times = unique(test$time), 
+                    init_S = test$init_S_dens[1], 
+                    init_I = 0, init_moi = test$init_moi[1],
+                    mode = "SInP")
+temp <- run_ode_sim(u_S = .04, k_S = 10**9, c_SI = 1, 
+                    a = 10**-12, d = 100, b = 5,
+                    times = unique(test$time), 
+                    init_S = test$init_S_dens[1], 
+                    init_I = 0, init_moi = test$init_moi[1],
+                    nI = 3,
+                    mode = "SInP")
 temp <- tidyr::pivot_longer(temp,
   -time, names_to = "Pop", values_to = "Density")
 
-ggplot(data = test, aes(x = time, y = Density, color = Pop)) +
-  geom_line(lwd = 1.5, alpha = 0.9) +
+ggplot(data = test, 
+       aes(x = time, y = Density, color = Pop)) +
+  #geom_line(lwd = 1.5, alpha = 0.9) +
   scale_y_continuous(trans = "log10", limits = c(1, NA)) +
-  geom_line(data = temp, lty = 2)
+  geom_line(data = temp,
+    #data = temp[temp$Pop %in% c("I1", "I2"), ], 
+            lty = 1, lwd = 1.5) +
+  #xlim(0, 500) +
+  NULL
+
+calc_ode_sim_err(par = c(u_S = .04, k_S = 10**9, c_SI = 1, 
+                 a = 10**-12, d = 100, b = 5),
+                 times = unique(test$time), 
+                 init_S = test$init_S_dens[1], 
+                 init_I = 0, init_moi = test$init_moi[1],
+                 nI = 3,
+                 mode = "SInP", B_dens = test$Density[test$Pop == "B"])
+
+optim(par = c(a = 10**-10, d = 10**-10,
+              u_S = test$u_S[1], k_S = test$k_S[1], c_SI = test$c_SI[1]),
+      fn = calc_ode_sim_err,
+      init_S = test$init_S_dens[1], init_I = test$init_S_dens[1]*test$init_moi[1],
+      B_dens = test$Density[test$Pop == "B"], mode = "SI",
+      times = unique(test$time),
+      method = "BFGS")
 
 optifix(par = c(a = 10**-10, d = 10**-10,
                 u_S = test$u_S[1], k_S = test$k_S[1], c_SI = test$c_SI[1]),
@@ -2304,14 +2327,6 @@ optifix(par = c(a = 10**-10, d = 10**-10,
       B_dens = test$Density[test$Pop == "B"], mode = "SI",
       times = unique(test$time),
       method = "BFGS")
-
-optim(par = c(a = 10**-10, d = 10**-10,
-                u_S = test$u_S[1], k_S = test$k_S[1], c_SI = test$c_SI[1]),
-        fn = calc_ode_sim_err,
-        init_S = test$init_S_dens[1], init_I = test$init_S_dens[1]*test$init_moi[1],
-        B_dens = test$Density[test$Pop == "B"], mode = "SI",
-        times = unique(test$time),
-        method = "BFGS")
 
 yout <- run_sim_SI(u_S = .04, k_S = 10**9, c_SI = 1, a = 10**-10, d = 10**-2.5,
                    times = seq(from = 0, to = 12*60, by = 15), 
