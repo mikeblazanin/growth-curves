@@ -2287,7 +2287,8 @@ optifix <- function(par, fixed, fn, gr = NULL, ...,
   return(.opt)
 }
 
-test <- ybig2[ybig2$uniq_run == 1, ]
+test <- ybig2[ybig2$uniq_run == 1 &
+                ybig2$time < 13000, ]
 
 temp <- run_ode_sim(u_S = .04, k_S = 10**9, c_SI = 1, 
                     a = 10**-8, d = 100,
@@ -2311,13 +2312,11 @@ temp <- run_ode_sim(u_S = .04, k_S = 10**9, c_SI = 1,
 temp <- tidyr::pivot_longer(temp,
   -time, names_to = "Pop", values_to = "Density")
 
-ggplot(data = test, 
-       aes(x = time, y = Density, color = Pop)) +
-  #geom_line(lwd = 1.5, alpha = 0.9) +
+ggplot(data = temp, 
+       #data = temp[temp$Pop %in% c("I1", "I2"), ],
+       aes(x = time, y = Density+1, color = Pop)) +
+  geom_line(lwd = 1.5) +
   scale_y_continuous(trans = "log10", limits = c(1, NA)) +
-  geom_line(data = temp,
-    #data = temp[temp$Pop %in% c("I1", "I2"), ], 
-            lty = 1, lwd = 1.5) +
   #xlim(0, 500) +
   NULL
 
@@ -2345,6 +2344,7 @@ optim_res <- optim(par = c(u_S = 0.04, k_S = 9, c_SI = 1,
                    init_I = 0,
                    init_moi = test$init_moi[1],
                    B_dens = test$Density[test$Pop == "B"], 
+                   P_dens = test$Density[test$Pop == "P"],
                    mode = "SInP", nI = 1,
                    times = unique(test$time),
                    method = "BFGS", log10_pars = c(F, T, F, T, T, F))
