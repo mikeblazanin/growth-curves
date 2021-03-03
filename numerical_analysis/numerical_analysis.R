@@ -895,52 +895,6 @@ find_local_extrema <- function(values,
   return(output)
 }
 
-##Define optim w/ fixed pars function ----
-##Written by Barry Rowlingson <b.rowlingson@lancaster.ac.uk> October 2011
-# This file released under a CC By-SA license: 
-# http://creativecommons.org/licenses/by-sa/3.0/
-# and must retain the text: "Originally written by Barry Rowlingson" in comments.
-# specify a second argument 'fixed', a vector of TRUE/FALSE values. 
-# If TRUE, the corresponding parameter in fn() is fixed. 
-# Otherwise its variable and optimised over.
-# The return thing is the return thing from optim() but with a couple 
-# of extra bits - a vector of all the parameters and 
-# a vector copy of the 'fixed' argument.
-optifix <- function(par, fixed, fn, gr = NULL, ..., 
-                    method = c("Nelder-Mead", "BFGS", "CG", "L-BFGS-B", "SANN"), 
-                    lower = -Inf, upper = Inf, 
-                    control = list(), hessian = FALSE) {
-  force(fn)
-  force(fixed)
-  .npar = length(par)
-  .fixValues = par[fixed]
-  .parStart = par[!fixed]
-  .fn <- function(par, ...) {
-    .par = rep(NA, sum(!fixed))
-    .par[!fixed] = par
-    .par[fixed] = .fixValues
-    fn(.par, ...)
-  }
-  if (!is.null(gr)) {
-    .gr <- function(par, ...) {
-      .gpar = rep(NA, sum(!fixed))
-      .gpar[!fixed] = par
-      .gpar[fixed] = .fixValues
-      gr(.gpar, ...)[!fixed]
-    }
-  }
-  else {
-    .gr <- NULL
-  }
-  .opt = optim(.parStart, .fn, .gr, ..., method = method, 
-               lower = lower, control = control, hessian = hessian)
-  .opt$fullpars = rep(NA, sum(!fixed))
-  .opt$fullpars[fixed] = .fixValues
-  .opt$fullpars[!fixed] = .opt$par
-  .opt$fixed = fixed
-  return(.opt)
-}
-
 ## Lit review of parameters ----
 #r ranges from .04/min (17 min doubling time)
 #         to 0.007/min (90 min doubling time)
@@ -2121,81 +2075,243 @@ ggplot(data = run2_Pcurve_paramfits,
 
 #Fit SI and SIP model to discrete time-lag data ----
 
-run_ode_sim <- function(u_S, k_S, c_SI, a, d,
-                       times, init_S, init_I,
-                       mode = c("SI", "SIP", "SIn", "SInP")) {
+run_ode_sim <- function(u_S, k_S, c_SI, a, d, b,
+                       times, init_S, init_I, init_moi, nI = 1,
+                       mode = c("SIn", "SInP")) {
   if (length(mode) > 1) {stop("mode must be specified")}
   
-  if (mode == "SI") {
-    #S = u_S*S - aSI
-    #I = aSA - dI
-    derivs <- function(t, y, parms) {
+  #browser()
+  if (mode == "SIn") {
+    #S = u_S*S*(k_S - S - c_SI*I)/k_S - aSI
+    #I[1] = aSI - I[1]/d
+    #I[n] = I[n-1]/d - I[n]/d
+    
+    params <- c("u_S" = unname(u_S), "k_S" = unname(k_S), 
+                "c_SI" = unname(c_SI), "a" = unname(a), "d" = unname(d))
+    
+    derivs <- function(t, y, parms, nI) {
       #From documentation: The return value of func should be a list, whose first 
       #element is a vector containing the derivatives of y with respect to time
-      y[y < 0] <- 0
+      y[y < 10**-10] <- 0
       
-      return(list(c(
-        S = parms["u_S"]*y["S"]*(parms["k_S"]-y["S"]-
-                                   parms["c_SI"]*y["I"])/parms["k_S"] - 
-          parms["a"]*y["S"]*y["I"],
-        I = parms["a"]*y["S"]*y["I"] - parms["d"]*y["I"])))
+      I_pops <- 2:(2+nI-1)
+      
+      dS <- parms["u_S"]*y["S"]*
+        (parms["k_S"]-y["S"]-parms["c_SI"]*sum(y[I_pops]))/parms["k_S"] - 
+        parms["a"]*y["S"]*sum(y[I_pops])
+      dI <- rep(NA, nI)
+      dI[1] <- parms["a"]*y["S"]*sum(y[I_pops]) - y[I_pops[1]]/parms["d"]
+      if (nI > 1) {
+        for (i in 2:nI) {
+          dI[i] <- y[I_pops[i-1]]/parms["d"] - y[I_pops[i]]/parms["d"]
+        }
+      }
+
+      return(list(c(dS, dI, dP)))
     }
-    params <- c(u_S = u_S, k_S = k_S, c_SI = c_SI, a = a, d = d)
-  }
-  
-  if (mode == "SI") {
-    yout <- as.data.frame(ode(y = c(S = init_S, I = init_I),
-                              times = times, func = derivs, parms = params))
+    
+    y_init <- c(init_S, rep(init_I, nI))
+    names(y_init) <- c("S", paste("I", 1:nI, sep = ""))
+    
+    yout <- as.data.frame(ode(y = y_init, times = times,
+                              func = derivs, parms = params, nI = nI))
+  } else if (mode == "SInP") {
+    #S = u_S*S*(k_S - S - c_SI*I)/k_S - aSP
+    #I[1] = aSP - I[1]/d
+    #I[n] = I[n-1]/d - I[n]/d
+    #P = bI[nI] - aSP
+    
+    params <- c("u_S" = unname(u_S), "k_S" = unname(k_S), 
+                "c_SI" = unname(c_SI), "a" = unname(a), "d" = unname(d),
+                "b" = unname(b))
+    
+    derivs <- function(t, y, parms, nI) {
+      #From documentation: The return value of func should be a list, whose first 
+      #element is a vector containing the derivatives of y with respect to time
+      y[y < 10**-10] <- 0
+      
+      I_pops <- 2:(2+nI-1)
+      
+      dS <- parms["u_S"]*y["S"]*
+        (parms["k_S"]-y["S"]-parms["c_SI"]*sum(y[I_pops]))/parms["k_S"] - 
+        parms["a"]*y["S"]*y["P"]
+      dI <- rep(NA, nI)
+      dI[1] <- parms["a"]*y["S"]*y["P"] - y[I_pops[1]]/parms["d"]
+      if (nI > 1) {
+        for (i in 2:nI) {
+          dI[i] <- y[I_pops[i-1]]/parms["d"] - y[I_pops[i]]/parms["d"]
+        }
+      }
+      dP <- parms["b"]*y[I_pops[nI]]/parms["d"] - parms["a"]*y["S"]*y["P"]
+      
+      return(list(c(dS, dI, dP)))
+    }
+    
+    y_init <- c(init_S, rep(init_I, nI), init_S*init_moi)
+    names(y_init) <- c("S", paste("I", 1:nI, sep = ""), "P")
+    
+    yout <- as.data.frame(ode(y = y_init, times = times,
+                              func = derivs, parms = params, nI = nI))
   }
   return(yout)
 }
 
-calc_ode_sim_err <- function(u_S, k_S, c_SI, a, d,
-                        times, init_S, init_I,
-                        S_dens = NULL, I_dens = NULL, B_dens = NULL,
-                        mode = c("SI", "SIP", "SIn", "SInP")) {
+calc_ode_sim_err <- function(par = c(u_S = NULL, k_S = NULL, c_SI = NULL, 
+                                     a = NULL, d = NULL, b = NULL),
+                             times, init_S, init_I, init_moi, nI,
+                             S_dens = NULL, I_dens = NULL, 
+                             P_dens = NULL, B_dens = NULL,
+                             mode = c("SIn", "SInP")) {
+  #Input checks
   if (length(mode) > 1) {stop("mode must be specified")}
   
   if (!is.null(B_dens)) {
     if (!is.null(S_dens)) {warning("S_dens will be ignored")}
     if (!is.null(I_dens)) {warning("I_dens will be ignored")}
   }
-  stopifnot(any(!is.null(B_dens), !is.null(S_dens), !is.null(I_dens)))
+  stopifnot(
+    any(!is.null(B_dens), !is.null(S_dens), !is.null(I_dens), !is.null(P_dens)))
+  mylens <- c(length(times), length(S_dens), length(I_dens), 
+              length(P_dens), length(B_dens))
+  if(var(mylens[mylens != 0]) != 0) {
+  stop("times, S_dens, I_dens, P_dens, B_dens (when specified) must be same length")}
   
-  sim_dens <- run_ode_sim(u_S = u_S, k_S = k_S, c_SI = c_SI, a = a, d = d,
-                         times = times, init_S = init_S, init_I = init_I,
-                         mode = mode)
-  if (!is.null(B_dens)) {
-    return(sum(((sim_dens$S+sim_dens$I)-B_dens)**2))
-  } else {
-    err <- rep(0, max(length(S_dens), length(I_dens), na.rm = T))
-    if (!is.null(S_dens)) {err <- err + (sim_dens$S - S_dens)**2}
-    if (!is.null(I_dens)) {err <- err + (sim_dens$I - I_dens)**2}
-    return(sum(err))
+  #browser()
+  
+  #Run simulation
+  if(mode == "SIn") {
+    sim_dens <- run_ode_sim(u_S = par["u_S"], k_S = par["k_S"], 
+                          c_SI = par["c_SI"], a = par["a"], d = par["d"],
+                         times = times, mode = mode, nI = nI,
+                         init_S = init_S, init_I = init_I)
+  } else if (mode == "SInP") {
+    sim_dens <- run_ode_sim(u_S = par["u_S"], k_S = par["k_S"], 
+                            c_SI = par["c_SI"], a = par["a"], 
+                            d = par["d"], b = par["b"],
+                            times = times, mode = mode, nI = nI,
+                            init_S = init_S, init_I = init_I, init_moi = init_moi)
   }
+  
+  #Calculate and return error
+  err <- 0
+  if (!is.null(B_dens)) {
+    B_sim_dens <- rowSums(sim_dens[, 2:(nI+1)])
+    err <- err + sum((log10(B_sim_dens)-log10(B_dens))**2)
+  } else {
+    if (!is.null(S_dens)) {
+      err <- err + sum((log10(sim_dens[, ])-log10(S_dens))**2)
+    }
+    if (!is.null(I_dens)) {
+      I_sim_dens <- rowSums(sim_dens[, 3:nI+2])
+      err <- err + sum((log10(I_sim_dens)-log10(I_dens))**2)
+    }
+  }
+  if (!is.null(P_dens)) {
+    err <- err + sum((log10(sim_dens[, nI+2])-log10(P_dens))**2)
+  }
+  return(err)
 }
 
-calc_ode_sim_err(u_S = .04, k_S = 10**9, c_SI = 1, a = 10**-10, d = 10**-2.5,
+##Define optim w/ fixed pars function
+optifix <- function(par, fixed, fn, gr = NULL, ..., 
+                    method = c("Nelder-Mead", "BFGS", "CG", "L-BFGS-B", "SANN"), 
+                    lower = -Inf, upper = Inf, 
+                    control = list(), hessian = FALSE) {
+  ##Written by Barry Rowlingson <b.rowlingson@lancaster.ac.uk> October 2011
+  # This file released under a CC By-SA license: 
+  # http://creativecommons.org/licenses/by-sa/3.0/
+  # and must retain the text: "Originally written by Barry Rowlingson" in comments.
+  # specify a second argument 'fixed', a vector of TRUE/FALSE values. 
+  # If TRUE, the corresponding parameter in fn() is fixed. 
+  # Otherwise its variable and optimised over.
+  # The return thing is the return thing from optim() but with a couple 
+  # of extra bits - a vector of all the parameters and 
+  # a vector copy of the 'fixed' argument.
+  stopifnot(length(method) == 1,
+            method %in% c("Nelder-Mead", "BFGS", "CG", "L-BFGS-B", "SANN"))
+  browser()
+  force(fn)
+  force(fixed)
+  .npar = length(par)
+  .fixValues = par[fixed]
+  .parStart = par[!fixed]
+  .fn <- function(par, ...) {
+    .par = rep(NA, sum(!fixed))
+    .par[!fixed] = par
+    .par[fixed] = .fixValues
+    fn(.par, ...)
+  }
+  if (!is.null(gr)) {
+    .gr <- function(par, ...) {
+      .gpar = rep(NA, sum(!fixed))
+      .gpar[!fixed] = par
+      .gpar[fixed] = .fixValues
+      gr(.gpar, ...)[!fixed]
+    }
+  }
+  else {
+    .gr <- NULL
+  }
+  .opt = optim(.parStart, .fn, .gr, ..., method = method, 
+               lower = lower, control = control, hessian = hessian)
+  .opt$fullpars = rep(NA, sum(!fixed))
+  .opt$fullpars[fixed] = .fixValues
+  .opt$fullpars[!fixed] = .opt$par
+  .opt$fixed = fixed
+  return(.opt)
+}
+
+# optifix2 <- function(par, fixed, fn, gr = NULL, ..., 
+#                      method = c("Nelder-Mead", "BFGS", "CG", "L-BFGS-B", "SANN"), 
+#                      lower = -Inf, upper = Inf, 
+#                      control = list(), hessian = FALSE) {
+#   stopifnot(length(method) == 1,
+#             method %in% c("Nelder-Mead", "BFGS", "CG", "L-BFGS-B", "SANN"))
+#   
+#   #fn_rewrite <- function(par
+# }
+
+
+test <- ybig2[ybig2$uniq_run == 1, ]
+
+calc_ode_sim_err(par = c(a = 10**-10, d = 10**-10,
+                         u_S = test$u_S[1], k_S = test$k_S[1], 
+                         c_SI = test$c_SI[1]),
                  times = unique(test$time), 
-                 init_S = 10**6, init_I = 10**4,
+                 init_S = test$init_S_dens[1], 
+                 init_I = test$init_S_dens[1]*test$init_moi[1],
                  mode = "SI", B_dens = test$Density[test$Pop == "B"])
 
-temp <- tidyr::pivot_longer(
-  run_ode_sim(u_S = .04, k_S = 10**9, c_SI = 1, 
+temp <- run_ode_sim(u_S = .04, k_S = 10**9, c_SI = 1, 
                     a = 10**-10, d = 10**-2.5,
                     times = unique(test$time), 
-                    init_S = 10**6, init_I = 10**4,
-              mode = "SI"),
+                    init_S = test$init_S_dens[1], 
+                    init_I = test$init_S_dens[1]*test$init_moi[1],
+                    mode = "SI")
+temp <- tidyr::pivot_longer(temp,
   -time, names_to = "Pop", values_to = "Density")
 
 ggplot(data = test, aes(x = time, y = Density, color = Pop)) +
-  geom_line(lwd = 1.5, a = 0.9) +
+  geom_line(lwd = 1.5, alpha = 0.9) +
   scale_y_continuous(trans = "log10", limits = c(1, NA)) +
   geom_line(data = temp, lty = 2)
 
-optim(par = c(a = 10**-10, d = 10**-10), fn = calc_SI_err,
-      u_S = u_S, k_S = k_S, c_SI = c_SI, init_S = init_S, init_I = init_I,
-      S_dens = ...)
+optifix(par = c(a = 10**-10, d = 10**-10,
+                u_S = test$u_S[1], k_S = test$k_S[1], c_SI = test$c_SI[1]),
+        fixed = c(F, F, T, T, T),
+        fn = calc_ode_sim_err,
+      init_S = test$init_S_dens[1], init_I = test$init_S_dens[1]*test$init_moi[1],
+      B_dens = test$Density[test$Pop == "B"], mode = "SI",
+      times = unique(test$time),
+      method = "BFGS")
+
+optim(par = c(a = 10**-10, d = 10**-10,
+                u_S = test$u_S[1], k_S = test$k_S[1], c_SI = test$c_SI[1]),
+        fn = calc_ode_sim_err,
+        init_S = test$init_S_dens[1], init_I = test$init_S_dens[1]*test$init_moi[1],
+        B_dens = test$Density[test$Pop == "B"], mode = "SI",
+        times = unique(test$time),
+        method = "BFGS")
 
 yout <- run_sim_SI(u_S = .04, k_S = 10**9, c_SI = 1, a = 10**-10, d = 10**-2.5,
                    times = seq(from = 0, to = 12*60, by = 15), 
