@@ -2162,7 +2162,8 @@ calc_ode_sim_err <- function(par = c(u_S = NULL, k_S = NULL, c_SI = NULL,
                              times, init_S, init_I, init_moi, nI,
                              S_dens = NULL, I_dens = NULL, 
                              P_dens = NULL, B_dens = NULL,
-                             mode = c("SIn", "SInP")) {
+                             mode = c("SIn", "SInP"), log10_pars = FALSE) {
+  
   #Input checks
   if (length(mode) > 1) {stop("mode must be specified")}
   
@@ -2179,19 +2180,36 @@ calc_ode_sim_err <- function(par = c(u_S = NULL, k_S = NULL, c_SI = NULL,
   
   #browser()
   
-  #Run simulation
-  if(mode == "SIn") {
-    sim_dens <- run_ode_sim(u_S = par["u_S"], k_S = par["k_S"], 
-                          c_SI = par["c_SI"], a = par["a"], d = par["d"],
-                         times = times, mode = mode, nI = nI,
-                         init_S = init_S, init_I = init_I)
-  } else if (mode == "SInP") {
-    sim_dens <- run_ode_sim(u_S = par["u_S"], k_S = par["k_S"], 
-                            c_SI = par["c_SI"], a = par["a"], 
-                            d = par["d"], b = par["b"],
-                            times = times, mode = mode, nI = nI,
-                            init_S = init_S, init_I = init_I, init_moi = init_moi)
+  #Convert parameters from powers of 10 to actual numbers
+  if(any(log10_pars)) {
+    if(length(log10_pars) != 1 & length(log10_pars) != length(par)) {
+      stop("log10_pars must be length 1 or same length as par")}
+    for (i in 1:length(par)) {
+      if(rep_len(log10_pars, length(par))[i]) {par[i] <- 10**par[i]}
+    }
   }
+  
+  if(any(par < 0) | any(par[c("k_S", "d")] == 0)) {return(Inf)}
+  
+  #Run simulation
+  sim_dens <- tryCatch(
+    {
+      if(mode == "SIn") {
+        run_ode_sim(u_S = par["u_S"], k_S = par["k_S"], 
+                           c_SI = par["c_SI"], a = par["a"], d = par["d"],
+                           times = times, mode = mode, nI = nI,
+                           init_S = init_S, init_I = init_I)
+      } else if (mode == "SInP") {
+        run_ode_sim(u_S = par["u_S"], k_S = par["k_S"], 
+                           c_SI = par["c_SI"], a = par["a"], 
+                           d = par["d"], b = par["b"],
+                           times = times, mode = mode, nI = nI,
+                           init_S = init_S, init_I = init_I, 
+                           init_moi = init_moi)
+      }
+    }, error = function(cond) {NULL}
+  )
+  if(is.null(sim_dens)) {return(Inf)}
   
   #Calculate and return error
   #(treat all densities <= 1 as 1)
@@ -2311,13 +2329,48 @@ calc_ode_sim_err(par = c(u_S = .04, k_S = 10**9, c_SI = 1,
                  nI = 3,
                  mode = "SInP", B_dens = test$Density[test$Pop == "B"])
 
-optim(par = c(a = 10**-10, d = 10**-10,
-              u_S = test$u_S[1], k_S = test$k_S[1], c_SI = test$c_SI[1]),
-      fn = calc_ode_sim_err,
-      init_S = test$init_S_dens[1], init_I = test$init_S_dens[1]*test$init_moi[1],
-      B_dens = test$Density[test$Pop == "B"], mode = "SI",
-      times = unique(test$time),
-      method = "BFGS")
+calc_ode_sim_err(par = c(u_S = 0.04, k_S = 9, c_SI = 1, 
+                         a = -12, d = 2, b = 5),
+                 times = unique(test$time), 
+                 init_S = test$init_S_dens[1], 
+                 init_I = 0, init_moi = test$init_moi[1],
+                 nI = 3,
+                 mode = "SInP", B_dens = test$Density[test$Pop == "B"],
+                 log10_pars = c(F, T, F, T, T, F))
+
+optim_res <- optim(par = c(u_S = 0.04, k_S = 9, c_SI = 1, 
+                           a = -12, d = 2, b = 5),
+                   fn = calc_ode_sim_err,
+                   init_S = test$init_S_dens[1], 
+                   init_I = 0,
+                   init_moi = test$init_moi[1],
+                   B_dens = test$Density[test$Pop == "B"], 
+                   mode = "SInP", nI = 1,
+                   times = unique(test$time),
+                   method = "BFGS", log10_pars = c(F, T, F, T, T, F))
+
+temp <- run_ode_sim(u_S = optim_res$par["u_S"], 
+                    k_S = 10**optim_res$par["k_S"], 
+                    c_SI = optim_res$par["c_SI"], 
+                    a = 10**optim_res$par["a"], d = 10**optim_res$par["d"], 
+                    b = optim_res$par["b"],
+                    times = unique(test$time), 
+                    init_S = test$init_S_dens[1], 
+                    init_I = 0, init_moi = test$init_moi[1],
+                    nI = 1,
+                    mode = "SInP")
+temp <- tidyr::pivot_longer(temp,
+                            -time, names_to = "Pop", values_to = "Density")
+
+ggplot(data = test[test$Pop %in% c("S", "I", "P"), ], 
+       aes(x = time, y = Density+1, color = Pop)) +
+  geom_line(lwd = 1.5, alpha = 0.9) +
+  scale_y_continuous(trans = "log10", limits = c(1, NA)) +
+  geom_line(data = temp,
+            #data = temp[temp$Pop %in% c("I1", "I2"), ], 
+            lty = 3, lwd = 1) +
+  #xlim(0, 500) +
+  NULL
 
 optifix(par = c(a = 10**-10, d = 10**-10,
                 u_S = test$u_S[1], k_S = test$k_S[1], c_SI = test$c_SI[1]),
