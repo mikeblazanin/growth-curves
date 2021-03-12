@@ -1001,6 +1001,83 @@ if (glob_make_curveplots) {
     )
     dev.off()
   }
+  
+  temp <- ybig1[ybig1$uniq_run == 5 & ybig1$Pop == "B",]
+  temp$Density[temp$Density <= 0] <- 0
+  dens_offset <- 1
+  tiff("./run1_dens_curves/5_Bonly.tiff",
+       width = 5, height = 5, units = "in", res = 300)
+  print(
+    ggplot(data = temp, 
+           aes(x = time, y = Density+dens_offset)) +
+      geom_line(lwd = 1.5, alpha = 1, color = "black") + 
+      geom_point(data = y_summarized1[y_summarized1$uniq_run == 5, ],
+                 aes(x = max_time, y = max_dens+dens_offset), 
+                 color = "red", size = 3) +
+      geom_point(data = y_summarized1[y_summarized1$uniq_run == 5, ],
+                 aes(x = extin_time, y = extin_dens+dens_offset), 
+                 color = "red", size = 3) +
+      scale_y_continuous(trans = "log10") +
+      scale_x_continuous(breaks = seq(from = 0, to = 200, by = 20)) +
+      #geom_hline(yintercept = dens_offset, lty = 2) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1),
+            title = element_text(size = 9)) +
+      # ggtitle(paste(ybig1[min(which(ybig1$uniq_run == run)), 6:8],
+      #               collapse = ", ")) +
+      labs(y = paste("Density +", dens_offset)) +
+      NULL)
+  dev.off()
+  
+  tiff("./run1_dens_curves/5_Bonly_addlines.tiff",
+       width = 5, height = 5, units = "in", res = 300)
+  print(
+    ggplot(data = temp, 
+           aes(x = time, y = Density+dens_offset)) +
+      geom_line(lwd = 1.5, alpha = 1, color = "black") + 
+      geom_point(data = y_summarized1[y_summarized1$uniq_run == 5, ],
+                 aes(x = max_time, y = max_dens+dens_offset), 
+                 color = "red", size = 3) +
+      geom_point(data = y_summarized1[y_summarized1$uniq_run == 5, ],
+                 aes(x = extin_time, y = extin_dens+dens_offset), 
+                 color = "red", size = 3) +
+      scale_y_continuous(trans = "log10") +
+      scale_x_continuous(breaks = seq(from = 0, to = 200, by = 20)) +
+      geom_segment(aes(y = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                    "max_dens"] +
+                                        dens_offset),
+                       yend = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                       "max_dens"] +
+                                           dens_offset),
+                       x = 0,
+                       xend = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                       "max_time"])),
+                   lty = 2, size = 1.5, color = "red", alpha = 0.8) +
+      geom_segment(aes(y = 0 + dens_offset,
+                       yend = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                       "max_dens"] +
+                                           dens_offset),
+                       x = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                    "max_time"]),
+                       xend = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                       "max_time"])),
+                   lty = 2, size = 1.5, color = "red", alpha = 0.8) +
+      geom_segment(aes(y = 0 + dens_offset,
+                       yend = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                       "extin_dens"] +
+                                           dens_offset),
+                       x = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                    "extin_time"]),
+                       xend = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                       "extin_time"])),
+                   lty = 2, size = 1.5, color = "red", alpha = 0.8) +
+      #geom_hline(yintercept = dens_offset, lty = 2) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1),
+            title = element_text(size = 9)) +
+      # ggtitle(paste(ybig1[min(which(ybig1$uniq_run == run)), 6:8],
+      #               collapse = ", ")) +
+      labs(y = paste("Density +", dens_offset)) +
+      NULL)
+  dev.off()
 }
 
 #Plot summarized statistics ----
@@ -1350,6 +1427,24 @@ if (glob_make_statplots) {
     theme_bw() +
     ggtitle("a (top), tau (side)") +
     NULL)
+  dev.off()
+  
+  tiff("./run1_statplots/B_plots_subpanel.tiff", width = 4, height = 4, 
+       units = "in", res = 300)
+  print(ggplot(data = ybig1[ybig1$Pop == "B" &
+                              ybig1$Density > 0 &
+                              ybig1$b == 500 &
+                              ybig1$tau == 10, ],
+               aes(x = time, y = Density+10, color = as.factor(a))) +
+          geom_line(lwd = 2.5, alpha = 0.75) +
+          geom_hline(yintercept = 10, lty = 2) +
+          #facet_grid(tau~b, scales = "free") +
+          scale_y_continuous(trans = "log10") +
+          scale_color_manual(name = "Infection rate",
+                             values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+          theme_bw() +
+          #ggtitle("b (top), tau (side)") +
+          NULL)
   dev.off()
 }
 
