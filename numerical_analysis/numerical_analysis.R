@@ -1,4 +1,9 @@
 #TODO:
+# Kevin Mtg:
+#   Use random forest machine learning
+#   use generalized additive model for time series
+#     or for peak density based on params
+# 
 # think about how phagefinal-burstsize-maxtime relationship
 #   inter-relates to extinction time – phage r relationship
 # Perhaps should measure something like P density at bact peak? 
