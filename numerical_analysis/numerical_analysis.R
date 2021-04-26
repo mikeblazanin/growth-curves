@@ -1,4 +1,6 @@
 #TODO:
+# Implement improved extin-time using linear projection
+# 
 # Kevin Mtg:
 #   Use random forest machine learning
 #   use generalized additive model for time series
@@ -1768,6 +1770,18 @@ if (glob_make_statplots) {
 
   summary(temp)
   summary(temp2)
+  
+  print(ggplot(data = y_summarized2[y_summarized2$near_k == 0 &
+                                      y_summarized2$u_S == 0.0119, ],
+               aes(x = max_time, y = extin_time_sincemax)) +
+          geom_point(alpha = 0.5, size = 2,
+                     aes(color = as.factor(a), shape = as.factor(near_k))) +
+          #geom_abline(intercept = 0, slope = 1, lty = 3) +
+          #scale_x_continuous(trans = "log10") +
+          #scale_y_continuous(trans = "log10") +
+          theme_bw() +
+          facet_wrap(~u_S) +
+          NULL)
 }
 
 #Calculate max time and extin time ranks w/in u_S
