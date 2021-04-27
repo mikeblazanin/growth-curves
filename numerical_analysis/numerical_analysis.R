@@ -1009,6 +1009,37 @@ if (glob_make_curveplots) {
     dev.off()
   }
   
+  temp <- ybig1[ybig1$uniq_run == 5 &
+                  ybig1$Pop %in% c("S", "I", "P"),]
+  temp$Density[temp$Density <= 0] <- 0
+  dens_offset <- 1
+  tiff("./run1_dens_curves/5_clean.tiff",
+       width = 6, height = 4, units = "in", res = 300)
+  print(
+    ggplot(data = temp, 
+           aes(x = time/60, y = Density+dens_offset, color = as.factor(Pop))) +
+      geom_line(lwd = 1.5, alpha = 1) + 
+      scale_y_continuous(trans = "log10",
+                         breaks = scales::trans_breaks("log10", function(x) 10^x),
+                         labels = scales::trans_format("log10", 
+                                                       scales::math_format(10^.x))) +
+      scale_x_continuous(breaks = seq(from = 0, to = 3.34, by = 1)) +
+      scale_color_manual(limits = c("S", "I", "P"),
+                         values = my_cols[c(2, 3, 1)],
+                         labels = c("Susceptible", "Infected", "Phage")) +
+      geom_hline(yintercept = 1, lty = 2) +
+      theme_bw() +
+      theme(axis.text.x = element_text(size = 18),
+            axis.text.y = element_text(size = 18),
+            axis.title = element_text(size = 20),
+            legend.text = element_text(size = 18),
+            legend.title = element_text(size = 20),
+            plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "in")) +
+      labs(y = "Density", color = "Population", x = "Time (hr)") +
+      NULL
+  )
+  dev.off()
+  
   temp <- ybig1[ybig1$uniq_run == 5 & ybig1$Pop == "B",]
   temp$Density[temp$Density <= 0] <- 0
   dens_offset <- 1
@@ -1016,39 +1047,70 @@ if (glob_make_curveplots) {
        width = 5, height = 5, units = "in", res = 300)
   print(
     ggplot(data = temp, 
-           aes(x = time, y = Density+dens_offset)) +
+           aes(x = time/60, y = Density+dens_offset)) +
       geom_line(lwd = 1.5, alpha = 1, color = "black") + 
-      geom_point(data = y_summarized1[y_summarized1$uniq_run == 5, ],
-                 aes(x = max_time, y = max_dens+dens_offset), 
-                 color = "red", size = 3) +
-      geom_point(data = y_summarized1[y_summarized1$uniq_run == 5, ],
-                 aes(x = extin_time, y = extin_dens+dens_offset), 
-                 color = "red", size = 3) +
-      scale_y_continuous(trans = "log10") +
-      scale_x_continuous(breaks = seq(from = 0, to = 200, by = 20)) +
+      scale_y_continuous(trans = "log10",
+                         breaks = scales::trans_breaks("log10", function(x) 10^x),
+                         labels = scales::trans_format("log10", 
+                                                       scales::math_format(10^.x))) +
+      scale_x_continuous(breaks = seq(from = 0, to = 3.34, by = 1)) +
       #geom_hline(yintercept = dens_offset, lty = 2) +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1),
-            title = element_text(size = 9)) +
-      # ggtitle(paste(ybig1[min(which(ybig1$uniq_run == run)), 6:8],
-      #               collapse = ", ")) +
-      labs(y = paste("Density +", dens_offset)) +
+      theme_bw() +
+      theme(axis.text.x = element_text(size = 18),
+            axis.text.y = element_text(size = 18),
+            axis.title = element_text(size = 20),
+            legend.text = element_text(size = 18),
+            legend.title = element_text(size = 20),
+            plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "in")) +
+      labs(y = "Density", x = "Time (hr)") +
       NULL)
   dev.off()
   
-  tiff("./run1_dens_curves/5_Bonly_addlines.tiff",
+  tiff("./run1_dens_curves/5_Bonly_addpts.tiff",
        width = 5, height = 5, units = "in", res = 300)
   print(
     ggplot(data = temp, 
-           aes(x = time, y = Density+dens_offset)) +
+           aes(x = time/60, y = Density+dens_offset)) +
       geom_line(lwd = 1.5, alpha = 1, color = "black") + 
       geom_point(data = y_summarized1[y_summarized1$uniq_run == 5, ],
-                 aes(x = max_time, y = max_dens+dens_offset), 
+                 aes(x = max_time/60, y = max_dens+dens_offset),
                  color = "red", size = 3) +
       geom_point(data = y_summarized1[y_summarized1$uniq_run == 5, ],
-                 aes(x = extin_time, y = extin_dens+dens_offset), 
+                 aes(x = extin_time/60, y = extin_dens+dens_offset),
                  color = "red", size = 3) +
-      scale_y_continuous(trans = "log10") +
-      scale_x_continuous(breaks = seq(from = 0, to = 200, by = 20)) +
+      scale_y_continuous(trans = "log10",
+                         breaks = scales::trans_breaks("log10", function(x) 10^x),
+                         labels = scales::trans_format("log10", 
+                                                       scales::math_format(10^.x))) +
+      scale_x_continuous(breaks = seq(from = 0, to = 3.34, by = 1)) +
+      #geom_hline(yintercept = dens_offset, lty = 2) +
+      theme_bw() +
+      theme(axis.text.x = element_text(size = 18),
+            axis.text.y = element_text(size = 18),
+            axis.title = element_text(size = 20),
+            legend.text = element_text(size = 18),
+            legend.title = element_text(size = 20),
+            plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "in")) +
+      # ggtitle(paste(ybig1[min(which(ybig1$uniq_run == run)), 6:8],
+      #               collapse = ", ")) +
+      labs(y = "Density", x = "Time (hr)") +
+      NULL)
+  dev.off()
+  
+  tiff("./run1_dens_curves/5_Bonly_peakdens.tiff",
+       width = 5, height = 5, units = "in", res = 300)
+  print(
+    ggplot(data = temp, 
+           aes(x = time/60, y = Density+dens_offset)) +
+      geom_line(lwd = 1.5, alpha = 1, color = "black") + 
+      geom_point(data = y_summarized1[y_summarized1$uniq_run == 5, ],
+                 aes(x = max_time/60, y = max_dens+dens_offset), 
+                 color = "red", size = 3) +
+      scale_y_continuous(trans = "log10",
+                         breaks = scales::trans_breaks("log10", function(x) 10^x),
+                         labels = scales::trans_format("log10", 
+                                                       scales::math_format(10^.x))) +
+      scale_x_continuous(breaks = seq(from = 0, to = 3.34, by = 1)) +
       geom_segment(aes(y = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
                                                     "max_dens"] +
                                         dens_offset),
@@ -1057,32 +1119,178 @@ if (glob_make_curveplots) {
                                            dens_offset),
                        x = 0,
                        xend = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
-                                                       "max_time"])),
+                                                       "max_time"])/60),
+                   lty = 2, size = 1.5, color = "red", alpha = 0.8) +
+      #geom_hline(yintercept = dens_offset, lty = 2) +
+      theme_bw() +
+      theme(axis.text.x = element_text(size = 18),
+            axis.text.y = element_text(size = 18),
+            axis.title = element_text(size = 20),
+            legend.text = element_text(size = 18),
+            legend.title = element_text(size = 20),
+            plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "in")) +
+      labs(y = "Density", x = "Time (hr)") +
+      NULL)
+  dev.off()
+  
+  tiff("./run1_dens_curves/5_Bonly_peakdens_peaktime.tiff",
+       width = 5, height = 5, units = "in", res = 300)
+  print(
+    ggplot(data = temp, 
+           aes(x = time/60, y = Density+dens_offset)) +
+      geom_line(lwd = 1.5, alpha = 1, color = "black") + 
+      geom_point(data = y_summarized1[y_summarized1$uniq_run == 5, ],
+                 aes(x = max_time/60, y = max_dens+dens_offset), 
+                 color = "red", size = 3) +
+      scale_y_continuous(trans = "log10",
+                         breaks = scales::trans_breaks("log10", function(x) 10^x),
+                         labels = scales::trans_format("log10", 
+                                                       scales::math_format(10^.x))) +
+      scale_x_continuous(breaks = seq(from = 0, to = 3.34, by = 1)) +
+      geom_segment(aes(y = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                    "max_dens"] +
+                                        dens_offset),
+                       yend = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                       "max_dens"] +
+                                           dens_offset),
+                       x = 0,
+                       xend = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                       "max_time"])/60),
                    lty = 2, size = 1.5, color = "red", alpha = 0.8) +
       geom_segment(aes(y = 0 + dens_offset,
                        yend = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
                                                        "max_dens"] +
                                            dens_offset),
                        x = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
-                                                    "max_time"]),
+                                                    "max_time"])/60,
                        xend = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
-                                                       "max_time"])),
+                                                       "max_time"])/60),
+                   lty = 2, size = 1.5, color = "red", alpha = 0.8) +
+      #geom_hline(yintercept = dens_offset, lty = 2) +
+      theme_bw() +
+      theme(axis.text.x = element_text(size = 18),
+            axis.text.y = element_text(size = 18),
+            axis.title = element_text(size = 20),
+            legend.text = element_text(size = 18),
+            legend.title = element_text(size = 20),
+            plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "in")) +
+      labs(y = "Density", x = "Time (hr)") +
+      NULL)
+  dev.off()
+  
+  tiff("./run1_dens_curves/5_Bonly_alllines.tiff",
+       width = 5, height = 5, units = "in", res = 300)
+  print(
+    ggplot(data = temp, 
+           aes(x = time/60, y = Density+dens_offset)) +
+      geom_line(lwd = 1.5, alpha = 1, color = "black") + 
+      geom_point(data = y_summarized1[y_summarized1$uniq_run == 5, ],
+                 aes(x = max_time/60, y = max_dens+dens_offset), 
+                 color = "red", size = 3) +
+      geom_point(data = y_summarized1[y_summarized1$uniq_run == 5, ],
+                 aes(x = extin_time/60, y = extin_dens+dens_offset), 
+                 color = "red", size = 3) +
+      scale_y_continuous(trans = "log10",
+                         breaks = scales::trans_breaks("log10", function(x) 10^x),
+                         labels = scales::trans_format("log10", 
+                                                       scales::math_format(10^.x))) +
+      scale_x_continuous(breaks = seq(from = 0, to = 3.34, by = 1)) +
+      geom_segment(aes(y = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                    "max_dens"] +
+                                        dens_offset),
+                       yend = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                       "max_dens"] +
+                                           dens_offset),
+                       x = 0,
+                       xend = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                       "max_time"])/60),
+                   lty = 2, size = 1.5, color = "red", alpha = 0.8) +
+      geom_segment(aes(y = 0 + dens_offset,
+                       yend = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                       "max_dens"] +
+                                           dens_offset),
+                       x = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                    "max_time"])/60,
+                       xend = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                       "max_time"])/60),
                    lty = 2, size = 1.5, color = "red", alpha = 0.8) +
       geom_segment(aes(y = 0 + dens_offset,
                        yend = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
                                                        "extin_dens"] +
                                            dens_offset),
                        x = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
-                                                    "extin_time"]),
+                                                    "extin_time"])/60,
                        xend = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
-                                                       "extin_time"])),
+                                                       "extin_time"])/60),
                    lty = 2, size = 1.5, color = "red", alpha = 0.8) +
       #geom_hline(yintercept = dens_offset, lty = 2) +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1),
-            title = element_text(size = 9)) +
-      # ggtitle(paste(ybig1[min(which(ybig1$uniq_run == run)), 6:8],
-      #               collapse = ", ")) +
-      labs(y = paste("Density +", dens_offset)) +
+      theme_bw() +
+      theme(axis.text.x = element_text(size = 18),
+            axis.text.y = element_text(size = 18),
+            axis.title = element_text(size = 20),
+            legend.text = element_text(size = 18),
+            legend.title = element_text(size = 20),
+            plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "in")) +
+      labs(y = "Density", x = "Time (hr)") +
+      NULL)
+  dev.off()
+  
+  temp <- ybig1[ybig1$uniq_run == 100 &
+                  ybig1$Pop %in% c("S", "I", "P"),]
+  temp$Density[temp$Density <= 0] <- 0
+  dens_offset <- 1
+  tiff("./run1_dens_curves/100_clean.tiff",
+       width = 6, height = 4, units = "in", res = 300)
+  print(
+    ggplot(data = temp, 
+           aes(x = time/60, y = Density+dens_offset, color = as.factor(Pop))) +
+      geom_line(lwd = 1.5, alpha = 1) + 
+      scale_y_continuous(trans = "log10",
+                         breaks = scales::trans_breaks("log10", function(x) 10^x),
+                         labels = scales::trans_format("log10", 
+                                                       scales::math_format(10^.x))) +
+      scale_x_continuous(breaks = seq(from = 0, to = 7.34, by = 2),
+                         limits = c(NA, 7.33)) +
+      scale_color_manual(limits = c("S", "I", "P"),
+                         values = my_cols[c(2, 3, 1)],
+                         labels = c("Susceptible", "Infected", "Phage")) +
+      geom_hline(yintercept = 1, lty = 2) +
+      theme_bw() +
+      theme(axis.text.x = element_text(size = 18),
+            axis.text.y = element_text(size = 18),
+            axis.title = element_text(size = 20),
+            legend.text = element_text(size = 18),
+            legend.title = element_text(size = 20),
+            plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "in")) +
+      labs(y = "Density", color = "Population", x = "Time (hr)") +
+      NULL
+  )
+  dev.off()
+  
+  temp <- ybig1[ybig1$uniq_run == 100 & ybig1$Pop == "B",]
+  temp$Density[temp$Density <= 0] <- 0
+  dens_offset <- 1
+  tiff("./run1_dens_curves/100_Bonly.tiff",
+       width = 5, height = 5, units = "in", res = 300)
+  print(
+    ggplot(data = temp, 
+           aes(x = time/60, y = Density+dens_offset)) +
+      geom_line(lwd = 1.5, alpha = 1, color = "black") + 
+      scale_y_continuous(trans = "log10",
+                         breaks = scales::trans_breaks("log10", function(x) 10^x),
+                         labels = scales::trans_format("log10", 
+                                                       scales::math_format(10^.x))) +
+      scale_x_continuous(breaks = seq(from = 0, to = 7.34, by = 2),
+                         limits = c(NA, 7.33)) +
+      #geom_hline(yintercept = dens_offset, lty = 2) +
+      theme_bw() +
+      theme(axis.text.x = element_text(size = 18),
+            axis.text.y = element_text(size = 18),
+            axis.title = element_text(size = 20),
+            legend.text = element_text(size = 18),
+            legend.title = element_text(size = 20),
+            plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "in")) +
+      labs(y = "Density", x = "Time (hr)") +
       NULL)
   dev.off()
 }
@@ -1436,21 +1644,35 @@ if (glob_make_statplots) {
     NULL)
   dev.off()
   
+  temp <- ybig1[ybig1$Pop == "B" &
+                  ybig1$b == 500 & ybig1$tau == 10, ]
+  temp$Density[temp$Density < 0] <- 0
   tiff("./run1_statplots/B_plots_subpanel.tiff", width = 4, height = 4, 
        units = "in", res = 300)
-  print(ggplot(data = ybig1[ybig1$Pop == "B" &
-                              ybig1$Density > 0 &
-                              ybig1$b == 500 &
-                              ybig1$tau == 10, ],
-               aes(x = time, y = Density+10, color = as.factor(a))) +
-          geom_line(lwd = 2.5, alpha = 0.75) +
-          geom_hline(yintercept = 10, lty = 2) +
-          #facet_grid(tau~b, scales = "free") +
-          scale_y_continuous(trans = "log10") +
-          scale_color_manual(name = "Infection rate",
-                             values = colorRampPalette(colors = c("gold", "dark red"))(5)) +
+  print(ggplot(data = temp,
+               aes(x = time/60, y = Density+1, color = as.factor(a))) +
+          geom_line(lwd = 2.5, alpha = 0.85) +
+          geom_hline(yintercept = 1, lty = 2) +
+          scale_y_continuous(trans = "log10",
+                             breaks = 10**c(2, 5, 8),
+                             labels = c(parse(text = "10^2"),
+                                        parse(text = "10^5"),
+                                        parse(text = "10^8"))) +
+          scale_color_manual(name = "Infection\nrate",
+                             values = colorRampPalette(colors = c("gray60", "dark blue"))(5),
+                             breaks = 10**(-12:-8),
+                             labels = c(parse(text = "10^-12"),
+                                        parse(text = "10^-11"),
+                                        parse(text = "10^-10"),
+                                        parse(text = "10^-9"),
+                                        parse(text = "10^-8"))) +
           theme_bw() +
-          #ggtitle("b (top), tau (side)") +
+          theme(legend.text.align = 0,
+                axis.title = element_text(size = 16),
+                axis.text = element_text(size = 12),
+                legend.title = element_text(size = 16),
+                legend.text = element_text(size = 12)) +
+          labs(y = "Density (cfu/mL)", x = "Time (hr)") +
           NULL)
   dev.off()
 }
@@ -1673,6 +1895,53 @@ if (glob_make_statplots) {
   #   )
   #   dev.off()
   # }
+  
+  temp <- y_summarized2[y_summarized2$u_S == 0.00798, ]
+  tiff("./run2_statplots/maxdens_maxtime_clean.tiff",
+       width = 5, height = 4, units = "in", res = 300)
+  print(ggplot(data = temp,
+               aes(x = max_time/60, y = max_dens, color = as.factor(a), 
+                   shape = as.factor(b), fill = as.factor(tau))) +
+          geom_point(alpha = 0.5, size = 3) +
+          scale_y_continuous(trans = "log10",
+                             breaks = 10**(6:9),
+                             labels = c(parse(text = "10^6"), parse(text = "10^7"),
+                                        parse(text = "10^8"), parse(text = "10^9"))) +
+          scale_color_manual(values = my_cols) +
+          scale_fill_manual(values = my_cols) +
+          scale_shape_manual(values = 21:25) +
+          theme_bw() +
+          theme(legend.position = "none",
+                axis.text = element_text(size = 18),
+                axis.title = element_text(size = 24),
+                plot.margin = margin(r = 0.2, t = 0.2, l = 0.2, b = 0.2, unit = "in")) +
+          labs(x = "Peak Time (hr)", y = "Peak Density (cfu/mL)") +
+          NULL)
+  dev.off()
+  
+  tiff("./run2_statplots/maxdens_maxtime_clean_wline.tiff",
+       width = 5, height = 4, units = "in", res = 300)
+  print(ggplot(data = temp,
+               aes(x = max_time/60, y = max_dens, color = as.factor(a), 
+                   shape = as.factor(b), fill = as.factor(tau))) +
+          geom_point(alpha = 0.5, size = 3) +
+          geom_line(aes(x = max_time/60, y = pred_maxdens), 
+                    inherit.aes = FALSE, color = "black", lty = 1, lwd = 1.5) +
+          scale_y_continuous(trans = "log10",
+                             breaks = 10**(6:9),
+                             labels = c(parse(text = "10^6"), parse(text = "10^7"),
+                                        parse(text = "10^8"), parse(text = "10^9"))) +
+          scale_color_manual(values = my_cols) +
+          scale_fill_manual(values = my_cols) +
+          scale_shape_manual(values = 21:25) +
+          theme_bw() +
+          theme(legend.position = "none",
+                axis.text = element_text(size = 18),
+                axis.title = element_text(size = 24),
+                plot.margin = margin(r = 0.2, t = 0.2, l = 0.2, b = 0.2, unit = "in")) +
+          labs(x = "Peak Time (hr)", y = "Peak Density (cfu/mL)") +
+          NULL)
+  dev.off()
 }
 
 #Relating phage_final to max_dens and b
@@ -1711,6 +1980,73 @@ if (glob_make_statplots) {
     geom_line(aes(x = max_dens, y = pred_phage_final, color = as.factor(b))) +
     facet_grid(~u_S) +
     NULL)
+  dev.off()
+  
+  tiff("./run2_statplots/phagefinal_peakdens_clean.tiff",
+       width = 5, height = 4, units = "in", res = 300)
+  print(ggplot(data = y_summarized2[y_summarized2$u_S == 0.00798, ], 
+               aes(x = max_dens, y = phage_final, 
+                   color = as.factor(b))) +
+          geom_point(alpha = 0.9, size = 2) +
+          scale_y_continuous(trans = "log10",
+                             breaks = 10**(7:11),
+                             labels = c(parse(text = "10^7"),
+                                        parse(text = "10^8"),
+                                        parse(text = "10^9"),
+                                        parse(text = "10^10"),
+                                        parse(text = "10^11"))) +
+          scale_x_continuous(trans = "log10",
+                             breaks = 10**(6:9),
+                             labels = c(parse(text = "10^6"),
+                                        parse(text = "10^7"),
+                                        parse(text = "10^8"),
+                                        parse(text = "10^9"))) +          
+          scale_color_manual(values = colorRampPalette(colors = c("gray60", "dark blue"))(5),
+                             labels = round(unique(y_summarized2$b)),
+                             guide = guide_legend(reverse = TRUE)) +
+          theme_bw() +
+          theme(axis.text = element_text(size = 12),
+                axis.title = element_text(size = 16),
+                legend.title = element_text(size = 16),
+                legend.text = element_text(size = 12)) +
+          labs(x = "Peak Bacterial Density (cfu/mL)", 
+               y = "Final Phage Density (pfu/mL)", color = "Phage\nBurst\nSize") +
+          
+          NULL)
+  dev.off()
+  
+  tiff("./run2_statplots/phagefinal_peakdens_pred_clean.tiff",
+       width = 5, height = 4, units = "in", res = 300)
+  print(ggplot(data = y_summarized2[y_summarized2$u_S == 0.00798, ], 
+               aes(x = max_dens, y = phage_final, 
+                   color = as.factor(b))) +
+          geom_point(alpha = 0.9, size = 2) +
+          geom_line(aes(x = max_dens, y = pred_phage_final, color = as.factor(b))) +
+          scale_y_continuous(trans = "log10",
+                             breaks = 10**(7:11),
+                             labels = c(parse(text = "10^7"),
+                                        parse(text = "10^8"),
+                                        parse(text = "10^9"),
+                                        parse(text = "10^10"),
+                                        parse(text = "10^11"))) +
+          scale_x_continuous(trans = "log10",
+                             breaks = 10**(6:9),
+                             labels = c(parse(text = "10^6"),
+                                        parse(text = "10^7"),
+                                        parse(text = "10^8"),
+                                        parse(text = "10^9"))) +          
+          scale_color_manual(values = colorRampPalette(colors = c("gray60", "dark blue"))(5),
+                             labels = round(unique(y_summarized2$b)),
+                             guide = guide_legend(reverse = TRUE)) +
+          theme_bw() +
+          theme(axis.text = element_text(size = 12),
+                axis.title = element_text(size = 16),
+                legend.title = element_text(size = 16),
+                legend.text = element_text(size = 12)) +
+          labs(x = "Peak Bacterial Density (cfu/mL)", 
+               y = "Final Phage Density (pfu/mL)", color = "Phage\nBurst\nSize") +
+          
+          NULL)
   dev.off()
 }
 
@@ -1762,7 +2098,52 @@ if (glob_make_statplots) {
     theme_bw() +
     NULL)
   dev.off()
+  
+  tiff("./run2_statplots/peaktime_extintime_simple_linear.tiff",
+       width = 5, height = 4, units = "in", res = 300)
+  print(ggplot(data = y_summarized2[y_summarized2$near_k == 0, ],
+               aes(x = max_time/60, y = extin_time/60)) +
+          geom_point(alpha = 0.5, size = 2) +
+          geom_abline(intercept = 0, slope = 1, lty = 3) +
+          labs(x = "Peak Time (hr)", y = "Extinction Time (hr)") +
+          theme_bw() +
+          theme(axis.text = element_text(size = 16),
+                axis.title = element_text(size = 20),
+                plot.margin = margin(t = 0.2, l = 0.2, r = 0.2, b = 0.2, unit = "in")) +
+          NULL)
+  dev.off()
+  
+  tiff("./run2_statplots/peaktime_extintime_simple_log.tiff",
+       width = 5, height = 4, units = "in", res = 300)
+  print(ggplot(data = y_summarized2[y_summarized2$near_k == 0, ],
+               aes(x = max_time/60, y = extin_time/60)) +
+          geom_point(alpha = 0.5, size = 2) +
+          geom_abline(intercept = 0, slope = 1, lty = 3) +
+          scale_x_continuous(trans = "log10") +
+          scale_y_continuous(trans = "log10") +
+          labs(x = "Peak Time (hr)", y = "Extinction Time (hr)") +
+          theme_bw() +
+          theme(axis.text = element_text(size = 16),
+                axis.title = element_text(size = 20),
+                plot.margin = margin(t = 0.2, l = 0.2, r = 0.2, b = 0.2, unit = "in")) +
+          NULL)
+  dev.off()
 
+  tiff("./run2_statplots/extintime_rel_to_maxtime.tiff",
+       width = 5, height = 4, units = "in", res = 300)
+  print(ggplot(data = y_summarized2[y_summarized2$near_k == 0, ],
+               aes(x = max_time, y = extin_time/max_time,
+                   color = as.factor(tau), shape = as.factor(a))) +
+          geom_point(alpha = 0.5, size = 2) +
+          geom_abline(intercept = 0, slope = 1, lty = 3) +
+          #geom_abline(intercept = 0.319, slope = 0.913, color = "red") +
+          # scale_x_continuous(trans = "log10") +
+          # scale_y_continuous(trans = "log10") +
+          theme_bw() +
+          facet_wrap(~u_S, scales = "free") +
+          NULL)
+  dev.off()
+  
   temp <- lm(extin_time ~ max_time,
      data = y_summarized2[y_summarized2$max_dens < 0.8*10**9, ])
   temp2 <- lm(extin_time_log10 ~ max_time_log10,
@@ -3461,6 +3842,37 @@ if (glob_make_statplots) {
     guides(fill = guide_legend(ncol = 2)) +
     NULL
   print(p1)
+  dev.off()
+  
+  tiff("./run10_statplots/maxtime_contour1_nocoinf.tiff", width = 8, height = 3,
+       units = "in", res = 300)
+  print(ggplot(data = y_summarized10[y_summarized10$z == 0, ], 
+               aes(x = as.numeric(as.character(a)), 
+                   y = as.numeric(as.character(b)))) +
+    geom_contour_filled(aes(z = max_time/60)) +
+    scale_fill_viridis_d(direction = -1) +
+    geom_point(aes(color = as.factor(near_k))) +
+    scale_color_manual(breaks = c(0, 1),
+                       values = c(NA, "gray")) +
+    facet_grid(.~tau) +
+    scale_x_continuous(trans = "log10",
+                       breaks = 10**c(-11, -9),
+                       labels = c(parse(text = "10^-11"),
+                                  parse(text = "10^-9"))) +
+    scale_y_continuous(trans = "log10") +
+    theme_bw() +
+    theme(axis.text = element_text(size = 12),
+          axis.title = element_text(size = 20),
+          strip.text = element_text(size = 16),
+          plot.subtitle = element_text(size = 20),
+          legend.title = element_text(size = 20),
+          legend.text = element_text(size = 12)) +
+    ylab("Burst Size") +
+    xlab("Infection Rate") +
+    labs(fill = "Peak Time\n(hrs)", subtitle = "Lysis Time (min)") +
+    guides(fill = guide_legend(ncol = 2),
+           color = FALSE) +
+    NULL)
   dev.off()
   
   tiff("./run10_statplots/maxtime_contour2.tiff", width = 8, height = 4,
