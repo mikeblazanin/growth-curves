@@ -2099,6 +2099,20 @@ if (glob_make_statplots) {
     NULL)
   dev.off()
   
+  tiff("./run2_statplots/peaktime_extintime_belowk.tiff",
+       width = 5, height = 4, units = "in", res = 300)
+  print(ggplot(data = y_summarized2[y_summarized2$near_k == 0, ],
+               aes(x = max_time, y = extin_time)) +
+          geom_point(alpha = 0.5, size = 2,
+                     aes(color = as.factor(u_S), shape = as.factor(near_k))) +
+          geom_abline(intercept = 0, slope = 1, lty = 3) +
+          #geom_abline(intercept = 0.319, slope = 0.913, color = "red") +
+          #scale_x_continuous(trans = "log10") +
+          #scale_y_continuous(trans = "log10") +
+          theme_bw() +
+          NULL)
+  dev.off()
+  
   tiff("./run2_statplots/peaktime_extintime_simple_linear.tiff",
        width = 5, height = 4, units = "in", res = 300)
   print(ggplot(data = y_summarized2[y_summarized2$near_k == 0, ],
@@ -2132,10 +2146,10 @@ if (glob_make_statplots) {
   tiff("./run2_statplots/extintime_rel_to_maxtime.tiff",
        width = 5, height = 4, units = "in", res = 300)
   print(ggplot(data = y_summarized2[y_summarized2$near_k == 0, ],
-               aes(x = max_time, y = extin_time/max_time,
-                   color = as.factor(tau), shape = as.factor(a))) +
-          geom_point(alpha = 0.5, size = 2) +
-          geom_abline(intercept = 0, slope = 1, lty = 3) +
+               aes(x = max_time/60, y = extin_time/max_time,
+                   color = as.factor(tau), shape = as.factor(near_k))) +
+          geom_point(alpha = 0.8, size = 1.5) +
+          #geom_abline(intercept = 0, slope = 1, lty = 3) +
           #geom_abline(intercept = 0.319, slope = 0.913, color = "red") +
           # scale_x_continuous(trans = "log10") +
           # scale_y_continuous(trans = "log10") +
@@ -2152,17 +2166,19 @@ if (glob_make_statplots) {
   summary(temp)
   summary(temp2)
   
-  print(ggplot(data = y_summarized2[y_summarized2$near_k == 0 &
-                                      y_summarized2$u_S == 0.0119, ],
-               aes(x = max_time, y = extin_time_sincemax)) +
-          geom_point(alpha = 0.5, size = 2,
+  tiff("./run2_statplots/extintime_since_maxtime.tiff",
+       width = 5, height = 4, units = "in", res = 300)
+  print(ggplot(data = y_summarized2[y_summarized2$near_k == 0, ],
+               aes(x = max_time/60, y = extin_time_sincemax/60)) +
+          geom_point(alpha = 0.8, size = 1.5,
                      aes(color = as.factor(a), shape = as.factor(near_k))) +
           #geom_abline(intercept = 0, slope = 1, lty = 3) +
           #scale_x_continuous(trans = "log10") +
           #scale_y_continuous(trans = "log10") +
           theme_bw() +
-          facet_wrap(~u_S) +
+          facet_wrap(~u_S, scales = "free") +
           NULL)
+  dev.off()
 }
 
 #Calculate max time and extin time ranks w/in u_S
