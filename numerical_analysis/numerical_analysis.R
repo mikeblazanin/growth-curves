@@ -2092,7 +2092,6 @@ if (glob_make_statplots) {
     geom_point(alpha = 0.5, size = 2,
                aes(color = as.factor(u_S), shape = as.factor(near_k))) +
     geom_abline(intercept = 0, slope = 1, lty = 3) +
-    #geom_abline(intercept = 0.319, slope = 0.913, color = "red") +
     scale_x_continuous(trans = "log10") +
     scale_y_continuous(trans = "log10") +
     theme_bw() +
@@ -2106,9 +2105,21 @@ if (glob_make_statplots) {
           geom_point(alpha = 0.5, size = 2,
                      aes(color = as.factor(u_S), shape = as.factor(near_k))) +
           geom_abline(intercept = 0, slope = 1, lty = 3) +
-          #geom_abline(intercept = 0.319, slope = 0.913, color = "red") +
           #scale_x_continuous(trans = "log10") +
           #scale_y_continuous(trans = "log10") +
+          theme_bw() +
+          NULL)
+  dev.off()
+  
+  tiff("./run2_statplots/peaktime_extintime_belowk_log.tiff",
+       width = 5, height = 4, units = "in", res = 300)
+  print(ggplot(data = y_summarized2[y_summarized2$near_k == 0, ],
+               aes(x = max_time, y = extin_time)) +
+          geom_point(alpha = 0.5, size = 2,
+                     aes(color = as.factor(u_S), shape = as.factor(near_k))) +
+          geom_abline(intercept = 0, slope = 1, lty = 3) +
+          scale_x_continuous(trans = "log10") +
+          scale_y_continuous(trans = "log10") +
           theme_bw() +
           NULL)
   dev.off()
