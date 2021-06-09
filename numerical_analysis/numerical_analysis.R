@@ -6,6 +6,17 @@
 #   use generalized additive model for time series
 #     or for peak density based on params
 # 
+# Paul mtg:
+# Look at what frac of bact are infected over time, how that varies w/
+#   extintime/maxtime ratio or other params
+# Maybe it's about the degree of phage "overshoot", such that later peaking
+#   phages overshoot more strongly so extin time is shorter rel to maxtime
+# something about "farming" hosts optimally
+# 
+# Priyanga mtg:
+# Maybe it's like a lotka-volterra time lag?
+# Basically it's predator overshoot, should be lots of theory out there about this
+# 
 # think about how phagefinal-burstsize-maxtime relationship
 #   inter-relates to extinction time – phage r relationship
 # Perhaps should measure something like P density at bact peak? 
