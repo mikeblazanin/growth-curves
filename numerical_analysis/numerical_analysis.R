@@ -923,6 +923,8 @@ find_local_extrema <- function(values,
 #Burst size ranges from 4.5 to 1000
 #Phage resistance mutation rate from 10^-8 to 10^-2
 #     with 10^-7 to 10^-4 most common range
+#     
+#Detection limits (extin dens) for our plate reader is ~1 - 5 x 10^6 cfu/mL
 
 ## Global Settings ----
 glob_read_files <- TRUE
@@ -945,18 +947,29 @@ run1 <- run_sims_filewrapper(name = "run1",
                              print_info = TRUE,
                              read_file = glob_read_files)
 
+warning("AUC calculations written in shorthand, need to be fixed to use right indices")
+
 #Find peaks & extinction via summarize
 ybig1 <- group_by_at(run1[[1]], .vars = 1:17)
 y_summarized1 <- summarize(ybig1,
                           max_dens = max(Density[Pop == "B"]),
                           max_time = time[Pop == "B" & 
                                             Density[Pop == "B"] == max_dens],
+                          extin_dens = 10**4,
                           extin_index = min(which(Pop == "B" &
-                                                    Density <= 10**4)),
-                          extin_dens = Density[extin_index],
-                          extin_time = time[extin_index],
-                          auc = sum(Density[Pop == "B" & time < extin_time])*
-                            extin_time,
+                                                    Density <= extin_dens)),
+                          #using linear interpolation to find extin time
+                          extin_time = time[extin_index] - 
+                            (Density[extin_index] - extin_dens)*
+                            (time[extin_index] - time[extin_index - 1])/
+                            (Density[extin_index] - Density[extin_index - 1]),
+                          #using trapezoid rule to find auc
+                          auc = 
+                            (time[2]-time[1])/2*
+                            (Density[1] + 2*sum(Density[2:(extin_index-2)]) +
+                               Density[extin_index-1]) +
+                            (extin_time-time[extin_index-1])/2*
+                            (Density[extin_index-1] + extin_dens),
                           phage_final = max(Density[Pop == "P"]),
                           phage_extin = Density[Pop == "P" & time == extin_time],
                           phage_r = (log(phage_final)-
