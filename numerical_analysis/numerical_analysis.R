@@ -1,4 +1,8 @@
 #TODO:
+# implement improved extin time and auc for all runs
+#
+# Need to do something with predator overshoot, but I'm not sure how to 
+# calculate that or anything so not sure what the next step is
 # 
 # Kevin Mtg:
 #   Use random forest machine learning
