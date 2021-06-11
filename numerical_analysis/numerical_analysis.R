@@ -1,5 +1,4 @@
 #TODO:
-# Implement improved extin-time using linear projection
 # 
 # Kevin Mtg:
 #   Use random forest machine learning
@@ -21,7 +20,7 @@
 #   inter-relates to extinction time – phage r relationship
 # Perhaps should measure something like P density at bact peak? 
 #   Or P r up to bact peak?
-# figure out how to calculate area-under-curve consistently
+#   
 # fix resistance equil checking
 # use netrd (see Scarpino mtg)
 # 
@@ -947,37 +946,63 @@ run1 <- run_sims_filewrapper(name = "run1",
                              print_info = TRUE,
                              read_file = glob_read_files)
 
-warning("AUC calculations written in shorthand, need to be fixed to use right indices")
-
 #Find peaks & extinction via summarize
-ybig1 <- group_by_at(run1[[1]], .vars = 1:17)
-y_summarized1 <- summarize(ybig1,
-                          max_dens = max(Density[Pop == "B"]),
-                          max_time = time[Pop == "B" & 
-                                            Density[Pop == "B"] == max_dens],
-                          extin_dens = 10**4,
-                          extin_index = min(which(Pop == "B" &
-                                                    Density <= extin_dens)),
-                          #using linear interpolation to find extin time
-                          extin_time = time[extin_index] - 
-                            (Density[extin_index] - extin_dens)*
-                            (time[extin_index] - time[extin_index - 1])/
-                            (Density[extin_index] - Density[extin_index - 1]),
-                          #using trapezoid rule to find auc
-                          auc = 
-                            (time[2]-time[1])/2*
-                            (Density[1] + 2*sum(Density[2:(extin_index-2)]) +
-                               Density[extin_index-1]) +
-                            (extin_time-time[extin_index-1])/2*
-                            (Density[extin_index-1] + extin_dens),
-                          phage_final = max(Density[Pop == "P"]),
-                          phage_extin = Density[Pop == "P" & time == extin_time],
-                          phage_r = (log(phage_final)-
-                                       log(init_S_dens[1]*init_moi[1]))/
-                            extin_time,
-                          run_time = max(time)
-)
-                          
+ybig1 <- group_by_at(run1[[1]], .vars = 1)
+y_summarized1 <- 
+  dplyr::summarize(ybig1,
+            max_dens = max(Density[Pop == "B"]),
+            max_time = time[Pop == "B" & 
+                              Density[Pop == "B"] == max_dens],
+            #Make references for finding extin point
+            extin_dens = 10**4,
+            #Technically this is the first index after extinction
+            extin_index = min(which(Pop == "B" &
+                                      Density <= extin_dens)),
+            extin_index_back1 = which(Pop == "B")[
+              match(extin_index, which(Pop == "B")) - 1],
+            #use linear interpolation to find extin time
+            extin_time = time[extin_index] -
+              (Density[extin_index] - extin_dens)*
+              (time[extin_index] - time[extin_index_back1])/
+              (Density[extin_index] - Density[extin_index_back1]),
+            # #make references for auc (here indices are within Pop == "B")
+            extin_index_winB = which(which(Pop == "B") == extin_index),
+            extin_index_back1_winB = which(which(Pop == "B") == extin_index)-1,
+            extin_index_back2_winB = which(which(Pop == "B") == extin_index)-2,
+            #using trapezoid rule to find auc
+            auc =
+              #trapezoids of all intervals before one ending at extin time
+              (time[Pop == "B"][2] - time[Pop == "B"][1])/2 *
+              (Density[Pop == "B"][1] +
+                 2*sum(Density[Pop == "B"][2:extin_index_back2_winB]) +
+                 Density[Pop == "B"][extin_index_back1_winB]) +
+              #trapezoid that ends at extin time
+              (extin_time-time[extin_index_back1])/2 *
+              (Density[extin_index_back1] + extin_dens),
+            phage_final = max(Density[Pop == "P"]),
+            #make references for phage extin dens
+            phage_dens_y1 = Density[max(which(Pop == "P" & time < extin_time))],
+            phage_dens_y2 = Density[which(Pop == "P" & time == time[extin_index])],
+            phage_time_x1 = time[max(which(Pop == "P" & time < extin_time))],
+            phage_time_x2 = time[which(Pop == "P" & time == time[extin_index])],
+            #using linear interpolation to find phage dens at bact extinction
+            phage_extin =
+              phage_dens_y1 +
+              (phage_dens_y2-phage_dens_y1)/(phage_time_x2-phage_time_x1)*
+              (extin_time-phage_time_x1)
+            # phage_r =
+            #   (log(phage_final)- log(init_S_dens[1]*init_moi[1]))/extin_time,
+            # phage_r_extin =
+            #   (log(phage_extin) - log(init_S_dens[1]*init_moi[1]))/extin_time,
+            # run_time = max(time)
+  )
+y_summarized1 <- 
+  y_summarized1[, !colnames(y_summarized1) %in% 
+                  c("extin_index_back1", "extin_index_winB",
+                     "extin_index_back1_winB", "extin_index_back2_winB",
+                     "phage_dens_y1", "phage_dens_y2",
+                     "phage_time_x1", "phage_time_x2")]
+
 
 #Calculate derivatives
 ybig1$deriv <- calc_deriv(density = ybig1$Density, 
@@ -1022,12 +1047,13 @@ if (glob_make_curveplots) {
                                                             "time"])/10))) +
         scale_color_manual(limits = c("S", "I", "P"),
                            values = my_cols[c(2, 3, 1)]) +
-        geom_hline(yintercept = 10, lty = 2) +
+        geom_hline(yintercept = dens_offset, lty = 2) +
         theme(axis.text.x = element_text(angle = 45, hjust = 1),
               title = element_text(size = 9)) +
         ggtitle(paste(ybig1[min(which(ybig1$uniq_run == run)), 6:8],
                       collapse = ", ")) +
         labs(y = paste("Density +", dens_offset)) +
+        geom_hline(yintercept = dens_offset+10**4, lty = 3) +
         NULL
     )
     dev.off()
