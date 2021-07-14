@@ -1,5 +1,4 @@
 ## Import libraries ----
-
 library(deSolve)
 library(ggplot2)
 library(dplyr)
@@ -763,3 +762,45 @@ glob_read_files <- TRUE
 glob_make_curveplots <- FALSE
 glob_make_statplots <- FALSE
 
+#Parameter values to be used ----
+# u_S: 2^(-5, -5.5, -6, -6.5, -7)/min (doub time 22, 31, 44, 63, 88 mins)
+# K: 10^(6, 7, 8, 9, 10) cfu/mL
+# a: 10^(-8, -10, -12, -14, -16) /min
+#       (range of wt adsorption is -8 to -12, -14 or -16 are plausible resis)
+# tau: 10^(1.2, 1.4, 1.6, 1.8, 2)
+# b: 10^(1, 1.5, 2, 2.5, 3)
+# c: 1
+# init_dens: 10^(4, 5, 6, 7, 8)
+# init_moi: 10^(-4, -3, -2, -1, 0)
+
+##Run 1: phage variants ----
+run1 <- run_sims_filewrapper(name = "run1",
+                     u_Svals = signif(2**c(-5.5, -6.5), 2),
+                     k_Svals = 10**c(7, 9),
+                     avals = 10**c(-8, -10, -12, -14, -16),
+                     tauvals = signif(10**c(1.2, 1.4, 1.6, 1.8, 2), 2),
+                     bvals = signif(10**c(1, 1.5, 2, 2.5, 3), 2),
+                     c_SIvals = 1,
+                     init_S_dens_vals = 10**6,
+                     init_moi_vals = 10**-2,
+                     min_dens = 100,
+                     init_time = 100,
+                     init_stepsize = 1,
+                     print_info = TRUE,
+                     read_file = glob_read_files)
+
+##Run 2: bact variants ----
+run2 <- run_sims_filewrapper(name = "run2",
+                     u_Svals = signif(2**c(-5, -5.5, -6, -6.5, -7), 2),
+                     k_Svals = 10**c(6, 7, 8, 9, 10),
+                     avals = 10**c(-8, -10, -12, -14, -16),
+                     tauvals = signif(10**c(1.4, 1.8), 2),
+                     bvals = signif(10**c(1.5, 2.5), 2),
+                     c_SIvals = 1,
+                     init_S_dens_vals = 10**6,
+                     init_moi_vals = 10**-2,
+                     min_dens = 100,
+                     init_time = 100,
+                     init_stepsize = 1,
+                     print_info = TRUE,
+                     read_file = glob_read_files)
