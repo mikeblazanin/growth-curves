@@ -961,7 +961,8 @@ y_summarized1 <-
             extin_dens = 10**4,
             #Technically this is the first index after extinction
             extin_index = min(which(Pop == "B" &
-                                      Density <= extin_dens)),
+                                      Density <= extin_dens &
+                                      time >= max_time)),
             extin_index_back1 = which(Pop == "B")[
               match(extin_index, which(Pop == "B")) - 1],
             #use linear interpolation to find extin time
@@ -1759,21 +1760,58 @@ y_summarized2 <- dplyr::summarize(ybig2,
                            max_dens = max(Density[Pop == "B"]),
                            max_time = time[Pop == "B" & 
                                              Density[Pop == "B"] == max_dens],
+                           #Make references for finding extin point
+                           extin_dens = 10**4,
+                           #Technically this is the first index after extinction
                            extin_index = min(which(Pop == "B" &
-                                                     Density <= 10**4)),
-                           extin_dens = Density[extin_index],
-                           extin_time = time[extin_index],
+                                                     Density <= extin_dens &
+                                                     time >= max_time)),
+                           extin_index_back1 = which(Pop == "B")[
+                             match(extin_index, which(Pop == "B")) - 1],
+                           #use linear interpolation to find extin time
+                           extin_time = time[extin_index] -
+                             (Density[extin_index] - extin_dens)*
+                             (time[extin_index] - time[extin_index_back1])/
+                             (Density[extin_index] - Density[extin_index_back1]),
                            extin_time_sincemax = extin_time-max_time,
-                           auc = sum(Density[Pop == "B" & time < extin_time])*
-                             extin_time,
+                           #make references for auc (here indices are within Pop == "B")
+                           extin_index_winB = which(which(Pop == "B") == extin_index),
+                           extin_index_back1_winB = which(which(Pop == "B") == extin_index)-1,
+                           extin_index_back2_winB = which(which(Pop == "B") == extin_index)-2,
+                           #using trapezoid rule to find auc
+                           auc =
+                             #trapezoids of all intervals before one ending at extin time
+                             (time[Pop == "B"][2] - time[Pop == "B"][1])/2 *
+                             (Density[Pop == "B"][1] +
+                                2*sum(Density[Pop == "B"][2:extin_index_back2_winB]) +
+                                Density[Pop == "B"][extin_index_back1_winB]) +
+                             #trapezoid that ends at extin time
+                             (extin_time-time[extin_index_back1])/2 *
+                             (Density[extin_index_back1] + extin_dens),
                            phage_final = max(Density[Pop == "P"]),
-                           phage_extin = Density[Pop == "P" & time == extin_time],
-                           phage_r = (log(phage_final)-
-                                        log(init_S_dens[1]*init_moi[1]))/
-                             extin_time,
+                           #make references for phage extin dens
+                           phage_dens_y1 = Density[max(which(Pop == "P" & time < extin_time))],
+                           phage_dens_y2 = Density[which(Pop == "P" & time == time[extin_index])],
+                           phage_time_x1 = time[max(which(Pop == "P" & time < extin_time))],
+                           phage_time_x2 = time[which(Pop == "P" & time == time[extin_index])],
+                           #using linear interpolation to find phage dens at bact extinction
+                           phage_extin =
+                             phage_dens_y1 +
+                             (phage_dens_y2-phage_dens_y1)/(phage_time_x2-phage_time_x1)*
+                             (extin_time-phage_time_x1),
+                           phage_r =
+                             (log(phage_final)- log(init_S_dens[1]*init_moi[1]))/extin_time,
+                           phage_r_extin =
+                             (log(phage_extin) - log(init_S_dens[1]*init_moi[1]))/extin_time,
                            phage_atmaxdens = Density[Pop == "P" & time == max_time],
                            near_k = if(max_dens >= 0.95*k_S[1]) {1} else{0}
 )
+y_summarized2 <- 
+  y_summarized2[, !colnames(y_summarized2) %in% 
+                  c("extin_index_back1", "extin_index_winB",
+                    "extin_index_back1_winB", "extin_index_back2_winB",
+                    "phage_dens_y1", "phage_dens_y2",
+                    "phage_time_x1", "phage_time_x2")]
 
 ## Plot summarized stats ----
 y_sum_melt2 <- reshape2::melt(y_summarized2,
@@ -2979,9 +3017,9 @@ run2_SI_fits <- as.data.frame(matrix(NA, nrow = length(unique(ybig2$uniq_run)),
                                               ncol = length(temp)))
 colnames(run2_SI_fits) <- temp
   
-i <- 1
-for (my_run in unique(ybig2$uniq_run)) {
-  myrows <- which(ybig2$uniq_run == my_run)
+# i <- 1
+# for (my_run in unique(ybig2$uniq_run)) {
+#   myrows <- which(ybig2$uniq_run == my_run)
 
 
 ##Run #3: r, a, b, tau, init_dens, init_moi ----
@@ -3008,23 +3046,59 @@ run3[[3]]
 #Find peaks & extinction via summarize
 ybig3 <- group_by_at(run3[[1]], .vars = 1:17)
 ybig3 <- ybig3[complete.cases(ybig3), ]
-y_summarized3 <- summarize(ybig3,
-                           max_dens = max(Density[Pop == "B"]),
-                           max_time = time[Pop == "B" & 
-                                             Density[Pop == "B"] == max_dens],
-                           extin_index = min(which(Pop == "B" &
-                                                     Density <= 10**3)),
-                           extin_dens = Density[extin_index],
-                           extin_time = time[extin_index],
-                           extin_time_sincemax = extin_time-max_time,
-                           auc = sum(Density[Pop == "B" & time < extin_time])*
-                             extin_time,
-                           phage_final = max(Density[Pop == "P"]),
-                           phage_extin = Density[Pop == "P" & time == extin_time],
-                           phage_r = (log(phage_final)-
-                                        log(init_S_dens[1]*init_moi[1]))/
-                             extin_time
-)
+y_summarized3 <- 
+  summarize(ybig3,
+            max_dens = max(Density[Pop == "B"]),
+            max_time = time[Pop == "B" & 
+                              Density[Pop == "B"] == max_dens],
+            #Make references for finding extin point
+            extin_dens = 10**4,
+            #Technically this is the first index after extinction
+            extin_index = min(which(Pop == "B" &
+                                      Density <= extin_dens &
+                                      time >= max_time)),
+            extin_index_back1 = which(Pop == "B")[
+              match(extin_index, which(Pop == "B")) - 1],
+            #use linear interpolation to find extin time
+            extin_time = time[extin_index] -
+              (Density[extin_index] - extin_dens)*
+              (time[extin_index] - time[extin_index_back1])/
+              (Density[extin_index] - Density[extin_index_back1]),
+            extin_time_sincemax = extin_time-max_time,
+            #make references for auc (here indices are within Pop == "B")
+            extin_index_winB = which(which(Pop == "B") == extin_index),
+            extin_index_back1_winB = which(which(Pop == "B") == extin_index)-1,
+            extin_index_back2_winB = which(which(Pop == "B") == extin_index)-2,
+            #using trapezoid rule to find auc
+            auc =
+              #trapezoids of all intervals before one ending at extin time
+              (time[Pop == "B"][2] - time[Pop == "B"][1])/2 *
+              (Density[Pop == "B"][1] +
+                 2*sum(Density[Pop == "B"][2:extin_index_back2_winB]) +
+                 Density[Pop == "B"][extin_index_back1_winB]) +
+              #trapezoid that ends at extin time
+              (extin_time-time[extin_index_back1])/2 *
+              (Density[extin_index_back1] + extin_dens),
+            phage_final = max(Density[Pop == "P"]),
+            #make references for phage extin dens
+            phage_dens_y1 = Density[max(which(Pop == "P" & time < extin_time))],
+            phage_dens_y2 = Density[which(Pop == "P" & time == time[extin_index])],
+            phage_time_x1 = time[max(which(Pop == "P" & time < extin_time))],
+            phage_time_x2 = time[which(Pop == "P" & time == time[extin_index])],
+            #using linear interpolation to find phage dens at bact extinction
+            phage_extin =
+              phage_dens_y1 +
+              (phage_dens_y2-phage_dens_y1)/(phage_time_x2-phage_time_x1)*
+              (extin_time-phage_time_x1),
+            phage_r =
+              (log(phage_final)- log(init_S_dens[1]*init_moi[1]))/extin_time
+  )
+y_summarized3 <- 
+  y_summarized3[, !colnames(y_summarized3) %in% 
+                  c("extin_index_back1", "extin_index_winB",
+                    "extin_index_back1_winB", "extin_index_back2_winB",
+                    "phage_dens_y1", "phage_dens_y2",
+                    "phage_time_x1", "phage_time_x2")]
 
 #Make plots of density against time ----
 dir.create("run3_dens_curves", showWarnings = FALSE)
