@@ -294,8 +294,10 @@ run_sims <- function(u_Svals,
                            parms = params, hmax = hmax_val))
       })
       
-      #Infinite loop prevention check (j = 10 is 24 hrs)
-      if (j >= 10 | k >= 15 | j+k >= 20) {
+      #Infinite loop prevention check 
+      # (6400 mins = 4.4 days)
+      # (0.001 mins = 0.06 secs)
+      if (init_time*2**j > 6400 | hmax_val <= 0.001) {
         keep_running <- FALSE
         at_equil <- FALSE
       }
@@ -765,19 +767,23 @@ glob_make_statplots <- FALSE
 #Parameter values to be used ----
 # u_S: 2^(-5, -5.5, -6, -6.5, -7)/min (doub time 22, 31, 44, 63, 88 mins)
 # K: 10^(6, 7, 8, 9, 10) cfu/mL
-# a: 10^(-8, -10, -12, -14, -16) /min
-#       (range of wt adsorption is -8 to -12, -14 or -16 are plausible resis)
+# a: 10^(-8, -9, -10, -11, -12) /min
+#       (range of wt adsorption is -8 to -12,
+#       and slower infec leads to gc lasting > 3 days or bact near k
+#       (discovered from sims including -14 and -16 in a range))
 # tau: 10^(1.2, 1.4, 1.6, 1.8, 2)
 # b: 10^(1, 1.5, 2, 2.5, 3)
 # c: 1
 # init_dens: 10^(4, 5, 6, 7, 8)
 # init_moi: 10^(-4, -3, -2, -1, 0)
+# 
+#Units: cfu/mL, pfu/mL, minutes
 
 ##Run 1: phage variants ----
 run1 <- run_sims_filewrapper(name = "run1",
                      u_Svals = signif(2**c(-5.5, -6.5), 2),
                      k_Svals = 10**c(7, 9),
-                     avals = 10**c(-8, -10, -12, -14, -16),
+                     avals = 10**c(-8, -9, -10, -11, -12),
                      tauvals = signif(10**c(1.2, 1.4, 1.6, 1.8, 2), 2),
                      bvals = signif(10**c(1, 1.5, 2, 2.5, 3), 2),
                      c_SIvals = 1,
@@ -789,11 +795,66 @@ run1 <- run_sims_filewrapper(name = "run1",
                      print_info = TRUE,
                      read_file = glob_read_files)
 
+ybig1 <- run1[[1]]
+
+dir.create("./run1_noequil/", showWarnings = F)
+run1[[2]]$maxtimes <- NA
+for (myrun in run1[[2]]$uniq_run) {
+  tiff(paste("./run1_noequil/", myrun, ".tiff", sep = ""),
+       width = 4, height = 4, units = "in", res = 200)
+  print(ggplot(data = ybig1[ybig1$uniq_run == myrun &
+                              ybig1$Pop %in% c("S", "I", "P"), ],
+               aes(x = time, y = Density+1, color = Pop)) +
+          geom_line(lwd = 1.5, alpha = 0.5) +
+          scale_y_continuous(trans = "log10"))
+  dev.off()
+  
+  run1[[2]]$maxtimes[run1[[2]]$uniq_run == myrun] <-
+    max(ybig1$time[ybig1$uniq_run == myrun])
+}
+
+dir.create("./run1_equil/", showWarnings = F)
+for (myrun in unique(ybig1$uniq_run[ybig1$equil == TRUE])) {
+  tiff(paste("./run1_equil/", myrun, ".tiff", sep = ""),
+       width = 4, height = 4, units = "in", res = 200)
+  print(ggplot(data = ybig1[ybig1$uniq_run == myrun &
+                              ybig1$Pop %in% c("S", "I", "P"), ],
+               aes(x = time, y = Density+1, color = Pop)) +
+          geom_line(lwd = 1.5, alpha = 0.5) +
+          scale_y_continuous(trans = "log10"))
+  dev.off()
+}
+
+ybig1 <- group_by_at(ybig1, .vars = 1:17, .drop = FALSE)
+
+y_summarized1 <- 
+  dplyr::summarize(ybig1,
+                   run_time = max(time),
+                   equil = equil[1])
+
+for (myu in unique(y_summarized1$u_S)) {
+  for (myk in unique(y_summarized1$k_S)) {
+    print(ggplot(y_summarized1[y_summarized1$u_S == myu &
+                           y_summarized1$k_S == myk, ],
+           aes(x = a, y = b, color = equil)) +
+             geom_point() +
+             facet_wrap(~tau) +
+            scale_x_continuous(trans = "log10") +
+            scale_y_continuous(trans = "log10") +
+            ggtitle(paste("u=", myu, " k=", myk, sep = "")) +
+            NULL)
+  }
+}
+
+
+          
+
+
 ##Run 2: bact variants ----
 run2 <- run_sims_filewrapper(name = "run2",
                      u_Svals = signif(2**c(-5, -5.5, -6, -6.5, -7), 2),
                      k_Svals = 10**c(6, 7, 8, 9, 10),
-                     avals = 10**c(-8, -10, -12, -14, -16),
+                     avals = 10**c(-8, -9, -10, -11, -12),
                      tauvals = signif(10**c(1.4, 1.8), 2),
                      bvals = signif(10**c(1.5, 2.5), 2),
                      c_SIvals = 1,
