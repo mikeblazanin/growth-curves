@@ -825,29 +825,148 @@ for (myrun in unique(ybig1$uniq_run[ybig1$equil == TRUE])) {
   dev.off()
 }
 
-ybig1 <- group_by_at(ybig1, .vars = 1:17, .drop = FALSE)
+ybig1 <- group_by_at(ybig1, .vars = 1:17)
 
+#Summarize equil runs
 y_summarized1 <- 
-  dplyr::summarize(ybig1,
+  dplyr::summarize(ybig1[ybig1$equil == TRUE, ],
+                   max_dens = max(Density[Pop == "B"]),
+                   max_time = time[Pop == "B" & 
+                                     Density[Pop == "B"] == max_dens],
+                   #Make references for finding extin point
+                   extin_dens = 10**4,
+                   #Technically this is the first index after extinction
+                   extin_index = min(which(Pop == "B" &
+                                             Density <= extin_dens &
+                                             time >= max_time)),
+                   extin_index_back1 = which(Pop == "B")[
+                     match(extin_index, which(Pop == "B")) - 1],
+                   #use linear interpolation to find extin time
+                   extin_time = time[extin_index] -
+                     (Density[extin_index] - extin_dens)*
+                     (time[extin_index] - time[extin_index_back1])/
+                     (Density[extin_index] - Density[extin_index_back1]),
+                   #make references for auc (here indices are within Pop == "B")
+                   extin_index_winB = which(which(Pop == "B") == extin_index),
+                   extin_index_back1_winB = which(which(Pop == "B") == extin_index)-1,
+                   extin_index_back2_winB = which(which(Pop == "B") == extin_index)-2,
+                   #using trapezoid rule to find auc
+                   auc =
+                     #trapezoids of all intervals before one ending at extin time
+                     (time[Pop == "B"][2] - time[Pop == "B"][1])/2 *
+                     (Density[Pop == "B"][1] +
+                        2*sum(Density[Pop == "B"][2:extin_index_back2_winB]) +
+                        Density[Pop == "B"][extin_index_back1_winB]) +
+                     #trapezoid that ends at extin time
+                     (extin_time-time[extin_index_back1])/2 *
+                     (Density[extin_index_back1] + extin_dens),
+                   phage_final = max(Density[Pop == "P"]),
+                   #make references for phage extin dens
+                   phage_dens_y1 = Density[max(which(Pop == "P" & time < extin_time))],
+                   phage_dens_y2 = Density[which(Pop == "P" & time == time[extin_index])],
+                   phage_time_x1 = time[max(which(Pop == "P" & time < extin_time))],
+                   phage_time_x2 = time[which(Pop == "P" & time == time[extin_index])],
+                   #using linear interpolation to find phage dens at bact extinction
+                   phage_extin =
+                     phage_dens_y1 +
+                     (phage_dens_y2-phage_dens_y1)/(phage_time_x2-phage_time_x1)*
+                     (extin_time-phage_time_x1),
+                   # phage_r =
+                   #   (log(phage_final)- log(init_S_dens[1]*init_moi[1]))/extin_time,
+                   # phage_r_extin =
+                   #   (log(phage_extin) - log(init_S_dens[1]*init_moi[1]))/extin_time,
+                   maxdens_k_ratio = max_dens/k_S[1],
                    run_time = max(time),
-                   equil = equil[1])
+                   equil = equil[1]
+                   )
+#Drop unneeded columns
+y_summarized1 <- subset(y_summarized1,
+                        select = -c(extin_index, extin_index_back1,
+                                  extin_index_winB, extin_index_back1_winB,
+                                  extin_index_back2_winB, phage_dens_y1,
+                                  phage_dens_y2, phage_time_x1,
+                                  phage_time_x2))
+
+#Summarize non-equil runs & combine
+y_summarized1 <- 
+  rbind(y_summarized1,
+        dplyr::summarize(ybig1[ybig1$equil == FALSE, ],
+                         max_dens = max(Density[Pop == "B"]),
+                         max_time = time[Pop == "B" & 
+                                           Density[Pop == "B"] == max_dens],
+                         extin_dens = 10**4,
+                         extin_time = NA,
+                         auc = NA,
+                         phage_final = NA,
+                         phage_extin = NA,
+                         maxdens_k_ratio = max_dens/k_S[1],
+                         run_time = max(time),
+                         equil = equil[1]
+        ))
+
+#Code for visualizing which runs didn't equil
+# for (myu in unique(y_summarized1$u_S)) {
+#   for (myk in unique(y_summarized1$k_S)) {
+#     print(ggplot(y_summarized1[y_summarized1$u_S == myu &
+#                            y_summarized1$k_S == myk, ],
+#            aes(x = a, y = b, color = equil)) +
+#              geom_point() +
+#              facet_wrap(~tau) +
+#             scale_x_continuous(trans = "log10") +
+#             scale_y_continuous(trans = "log10") +
+#             ggtitle(paste("u=", myu, " k=", myk, sep = "")) +
+#             NULL)
+#   }
+# }
+
+#Max dens-max time plots
+if (glob_make_statplots) {
+  ggplot(data = y_summarized1,
+         aes(x = max_time, y = max_dens)) +
+    facet_grid(k_S ~ u_S, scales = "free") +
+    #scale_y_continuous(trans = "log10") +
+    geom_point()
+  
+  ggplot(data = ybig1[ybig1$a == 10**-10 & ybig1$b == 100 &
+                        ybig1$Pop == "B", ],
+         aes(x = time, y = Density, color = as.factor(tau), group = uniq_run)) +
+    geom_line(lwd = 1.5) +
+    facet_grid(k_S ~ u_S, scales = "free") +
+    scale_y_continuous(trans = "log10")
+  
+  ggplot(data = ybig1[ybig1$b == 100 & ybig1$tau == 40 &
+                        ybig1$Pop == "B" & ybig1$Density >= 10**2, ],
+         aes(x = time, y = Density, color = as.factor(a), group = uniq_run)) +
+    geom_line(lwd = 1.5) +
+    facet_grid(k_S ~ u_S, scales = "free") +
+    scale_y_continuous(trans = "log10") +
+    xlim(NA, 2500) +
+    NULL
+  
+  ggplot(data = ybig1[ybig1$a == 10**-10 & ybig1$tau == 40 &
+                        ybig1$Pop == "B" & ybig1$Density >= 10**2, ],
+         aes(x = time, y = Density, color = as.factor(b), group = uniq_run)) +
+    geom_line(lwd = 1.5) +
+    facet_grid(k_S ~ u_S, scales = "free") +
+    scale_y_continuous(trans = "log10") +
+    xlim(NA, 1500) +
+    NULL
+}
 
 for (myu in unique(y_summarized1$u_S)) {
   for (myk in unique(y_summarized1$k_S)) {
-    print(ggplot(y_summarized1[y_summarized1$u_S == myu &
-                           y_summarized1$k_S == myk, ],
-           aes(x = a, y = b, color = equil)) +
-             geom_point() +
-             facet_wrap(~tau) +
-            scale_x_continuous(trans = "log10") +
-            scale_y_continuous(trans = "log10") +
-            ggtitle(paste("u=", myu, " k=", myk, sep = "")) +
+    print(ggplot(data = ybig1[ybig1$u_S == myu & ybig1$k_S == myk &
+                                ybig1$Pop == "B", ],
+                 aes(x = time, y = Density, group = uniq_run,
+                     color = as.factor(tau), lty = as.factor(a))) +
+            geom_line() +
+            #xlim(NA, 5000) +
+            scale_y_continuous(trans = "log10", limits = c(10**4, NA)) +
+            #facet_grid(a ~ b, scales = "free")
+            facet_wrap(~b, scales = "free") +
             NULL)
   }
 }
-
-
-          
 
 
 ##Run 2: bact variants ----
