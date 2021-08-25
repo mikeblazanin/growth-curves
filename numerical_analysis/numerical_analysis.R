@@ -2247,17 +2247,49 @@ if (glob_make_statplots) {
   dev.off()
 
   tiff("./run2_statplots/extintime_rel_to_maxtime.tiff",
-       width = 5, height = 4, units = "in", res = 300)
+       width = 6, height = 4, units = "in", res = 300)
   print(ggplot(data = y_summarized2[y_summarized2$near_k == 0, ],
                aes(x = max_time/60, y = extin_time/max_time,
-                   color = as.factor(tau), shape = as.factor(near_k))) +
+                   color = as.factor(tau), shape = as.factor(a))) +
           geom_point(alpha = 0.8, size = 1.5) +
           #geom_abline(intercept = 0, slope = 1, lty = 3) +
           #geom_abline(intercept = 0.319, slope = 0.913, color = "red") +
           # scale_x_continuous(trans = "log10") +
           # scale_y_continuous(trans = "log10") +
+          scale_shape_manual(values = 15:19) +
           theme_bw() +
           facet_wrap(~u_S, scales = "free") +
+          NULL)
+  dev.off()
+  
+  tiff("./run2_statplots/extinrate_phageatmax1.tiff",
+       width = 6, height = 5, units = "in", res = 300)
+  print(ggplot(data = y_summarized2[y_summarized2$near_k == 0, ],
+               aes(x = phage_atmaxdens, y = extin_time/max_time,
+                   color = as.factor(tau), shape = as.factor(a))) +
+          geom_point(alpha = 0.8, size = 1.5) +
+          #geom_abline(intercept = 0, slope = 1, lty = 3) +
+          #geom_abline(intercept = 0.319, slope = 0.913, color = "red") +
+          scale_x_continuous(trans = "log10") +
+          # scale_y_continuous(trans = "log10") +
+          scale_shape_manual(values = 15:19) +
+          theme_bw() +
+          facet_wrap(~u_S, scales = "free_x") +
+          NULL)
+  dev.off()
+  
+  tiff("./run2_statplots/extinrate_phageatmax2.tiff",
+       width = 6, height = 5, units = "in", res = 300)
+  print(ggplot(data = y_summarized2[y_summarized2$near_k == 0, ],
+               aes(x = phage_atmaxdens, y = extin_time/max_time,
+                   color = as.factor(b))) +
+          geom_point(alpha = 0.8, size = 1.5) +
+          #geom_abline(intercept = 0, slope = 1, lty = 3) +
+          #geom_abline(intercept = 0.319, slope = 0.913, color = "red") +
+          scale_x_continuous(trans = "log10") +
+          # scale_y_continuous(trans = "log10") +
+          theme_bw() +
+          facet_wrap(~u_S, scales = "free_x") +
           NULL)
   dev.off()
   
