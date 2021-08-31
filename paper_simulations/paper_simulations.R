@@ -925,6 +925,35 @@ if (glob_make_statplots) {
   }
 }
 
+library(plotly)
+
+if (glob_make_statplots) {
+  for (myu in unique(y_summarized1$u_S)) {
+    for (myk in unique(y_summarized1$k_S)) {
+      temp <- y_summarized1[y_summarized1$u_S == myu & y_summarized1$k_S == myk, ]
+      plt <- plot_ly(x = log10(temp$a), y = log10(temp$b), 
+                     z = log10(temp$tau), type = "scatter3d", 
+                     mode = "markers", color = temp$equil,
+                     marker = list(size = 5)) %>%
+        layout(title = "Extinction within 4 days?",
+               scene = list(xaxis = list(title = "a", tickvals = c(-11, -9),
+                                         ticktext = c("10^-11", "10^-9")), 
+                            yaxis = list(title = "b", 
+                                         tickvals = c(log10(32), log10(320)),
+                                         ticktext = c("32", "320")),
+                            zaxis = list(title = "tau",
+                                         tickvals = c(log10(25), log10(63)),
+                                         ticktext = c("25", "63")),
+                            camera = list(eye = list(x = -1.77, y = 1.21, z = 1.5))))
+      print(plt)
+      readline(prompt = paste("Plotting u_S=", myu,
+                              ", k_S=", myk, 
+                              ". Save, then press any key to continue",
+                              sep = ""))
+    }
+  }
+}
+
 #Max dens-max time plots
 dir.create("./plots/", showWarnings = F)
 if (glob_make_statplots) {
