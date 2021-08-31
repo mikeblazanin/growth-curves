@@ -2248,15 +2248,17 @@ if (glob_make_statplots) {
 
   tiff("./run2_statplots/extintime_rel_to_maxtime.tiff",
        width = 6, height = 4, units = "in", res = 300)
-  print(ggplot(data = y_summarized2[y_summarized2$near_k == 0, ],
+  print(ggplot(data = y_summarized2[y_summarized2$near_k == 0 &
+                                      y_summarized2$tau == 31.6, ],
                aes(x = max_time/60, y = extin_time/max_time,
-                   color = as.factor(tau), shape = as.factor(a))) +
+                   fill = as.factor(b), color = as.factor(b), 
+                   shape = as.factor(a))) +
           geom_point(alpha = 0.8, size = 1.5) +
           #geom_abline(intercept = 0, slope = 1, lty = 3) +
           #geom_abline(intercept = 0.319, slope = 0.913, color = "red") +
           # scale_x_continuous(trans = "log10") +
           # scale_y_continuous(trans = "log10") +
-          scale_shape_manual(values = 15:19) +
+          scale_shape_manual(values = 21:25) +
           theme_bw() +
           facet_wrap(~u_S, scales = "free") +
           NULL)
@@ -2264,19 +2266,33 @@ if (glob_make_statplots) {
   
   tiff("./run2_statplots/extinrate_phageatmax1.tiff",
        width = 6, height = 5, units = "in", res = 300)
-  print(ggplot(data = y_summarized2[y_summarized2$near_k == 0, ],
+  print(ggplot(data = y_summarized2[y_summarized2$near_k == 0  &
+                                      y_summarized2$tau == 31.6, ],
                aes(x = phage_atmaxdens, y = extin_time/max_time,
-                   color = as.factor(tau), shape = as.factor(a))) +
+                   fill = as.factor(b), color = as.factor(b),
+                   shape = as.factor(a))) +
           geom_point(alpha = 0.8, size = 1.5) +
           #geom_abline(intercept = 0, slope = 1, lty = 3) +
           #geom_abline(intercept = 0.319, slope = 0.913, color = "red") +
           scale_x_continuous(trans = "log10") +
           # scale_y_continuous(trans = "log10") +
-          scale_shape_manual(values = 15:19) +
+          scale_shape_manual(values = 21:25) +
           theme_bw() +
           facet_wrap(~u_S, scales = "free_x") +
           NULL)
   dev.off()
+  
+  ggplot(data = ybig2[ybig2$uniq_run %in% 
+                        unique(
+                          y_summarized2$uniq_run[y_summarized2$u_S == 0.0179 & 
+                                                   y_summarized2$a == 10**-10 & 
+                                                   y_summarized2$tau == 31.6]) &
+                        ybig2$Pop %in% c("S", "I", "P"), ],
+         aes(x = time/60, y = Density, color = Pop)) +
+    geom_line(lwd = 1.2) +
+    facet_wrap(~uniq_run) +
+    scale_y_continuous(trans = "log10", limits = c(10**2, NA)) +
+    xlim(NA, 750/60)
   
   tiff("./run2_statplots/extinrate_phageatmax2.tiff",
        width = 6, height = 5, units = "in", res = 300)
