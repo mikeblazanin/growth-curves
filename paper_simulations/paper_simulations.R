@@ -800,29 +800,33 @@ ybig1 <- run1[[1]]
 dir.create("./run1_noequil/", showWarnings = F)
 run1[[2]]$maxtimes <- NA
 for (myrun in run1[[2]]$uniq_run) {
-  tiff(paste("./run1_noequil/", myrun, ".tiff", sep = ""),
-       width = 4, height = 4, units = "in", res = 200)
-  print(ggplot(data = ybig1[ybig1$uniq_run == myrun &
-                              ybig1$Pop %in% c("S", "I", "P"), ],
-               aes(x = time, y = Density+1, color = Pop)) +
-          geom_line(lwd = 1.5, alpha = 0.5) +
-          scale_y_continuous(trans = "log10"))
-  dev.off()
+  if (glob_make_curveplots) {
+    tiff(paste("./run1_noequil/", myrun, ".tiff", sep = ""),
+         width = 4, height = 4, units = "in", res = 200)
+    print(ggplot(data = ybig1[ybig1$uniq_run == myrun &
+                                ybig1$Pop %in% c("S", "I", "P"), ],
+                 aes(x = time, y = Density+1, color = Pop)) +
+            geom_line(lwd = 1.5, alpha = 0.5) +
+            scale_y_continuous(trans = "log10"))
+    dev.off()
+  }
   
   run1[[2]]$maxtimes[run1[[2]]$uniq_run == myrun] <-
     max(ybig1$time[ybig1$uniq_run == myrun])
 }
 
 dir.create("./run1_equil/", showWarnings = F)
-for (myrun in unique(ybig1$uniq_run[ybig1$equil == TRUE])) {
-  tiff(paste("./run1_equil/", myrun, ".tiff", sep = ""),
-       width = 4, height = 4, units = "in", res = 200)
-  print(ggplot(data = ybig1[ybig1$uniq_run == myrun &
-                              ybig1$Pop %in% c("S", "I", "P"), ],
-               aes(x = time, y = Density+1, color = Pop)) +
-          geom_line(lwd = 1.5, alpha = 0.5) +
-          scale_y_continuous(trans = "log10"))
-  dev.off()
+if (glob_make_curveplots) {
+  for (myrun in unique(ybig1$uniq_run[ybig1$equil == TRUE])) {
+    tiff(paste("./run1_equil/", myrun, ".tiff", sep = ""),
+         width = 4, height = 4, units = "in", res = 200)
+    print(ggplot(data = ybig1[ybig1$uniq_run == myrun &
+                                ybig1$Pop %in% c("S", "I", "P"), ],
+                 aes(x = time, y = Density+1, color = Pop)) +
+            geom_line(lwd = 1.5, alpha = 0.5) +
+            scale_y_continuous(trans = "log10"))
+    dev.off()
+  }
 }
 
 ybig1 <- group_by_at(ybig1, .vars = 1:17)
@@ -905,21 +909,24 @@ y_summarized1 <-
         ))
 
 #Code for visualizing which runs didn't equil
-# for (myu in unique(y_summarized1$u_S)) {
-#   for (myk in unique(y_summarized1$k_S)) {
-#     print(ggplot(y_summarized1[y_summarized1$u_S == myu &
-#                            y_summarized1$k_S == myk, ],
-#            aes(x = a, y = b, color = equil)) +
-#              geom_point() +
-#              facet_wrap(~tau) +
-#             scale_x_continuous(trans = "log10") +
-#             scale_y_continuous(trans = "log10") +
-#             ggtitle(paste("u=", myu, " k=", myk, sep = "")) +
-#             NULL)
-#   }
-# }
+if (glob_make_statplots) {
+  for (myu in unique(y_summarized1$u_S)) {
+    for (myk in unique(y_summarized1$k_S)) {
+      print(ggplot(y_summarized1[y_summarized1$u_S == myu &
+                                   y_summarized1$k_S == myk, ],
+                   aes(x = a, y = b, color = equil)) +
+              geom_point() +
+              facet_wrap(~tau) +
+              scale_x_continuous(trans = "log10") +
+              scale_y_continuous(trans = "log10") +
+              ggtitle(paste("u=", myu, " k=", myk, sep = "")) +
+              NULL)
+    }
+  }
+}
 
 #Max dens-max time plots
+dir.create("./plots/", showWarnings = F)
 if (glob_make_statplots) {
   ggplot(data = y_summarized1,
          aes(x = max_time, y = max_dens)) +
@@ -927,45 +934,86 @@ if (glob_make_statplots) {
     #scale_y_continuous(trans = "log10") +
     geom_point()
   
+  tiff("./plots/run1_Bcurves_tau.tiff", width = 5, height = 4, 
+       res = 300, units = "in")
   ggplot(data = ybig1[ybig1$a == 10**-10 & ybig1$b == 100 &
                         ybig1$Pop == "B", ],
-         aes(x = time, y = Density, color = as.factor(tau), group = uniq_run)) +
-    geom_line(lwd = 1.5) +
+         aes(x = time/60, y = Density, color = as.factor(tau), group = uniq_run)) +
+    geom_line(lwd = 1.5, alpha = 0.7) +
     facet_grid(k_S ~ u_S, scales = "free") +
-    scale_y_continuous(trans = "log10")
+    scale_y_continuous(trans = "log10") +
+    scale_x_continuous(breaks = c(0, 6, 12, 18, 24)) +
+    coord_cartesian(ylim = c(10**5, NA), xlim = c(0, 24)) +
+    scale_color_viridis(discrete = TRUE) +
+    NULL
+  dev.off()
   
+  tiff("./plots/run1_Bcurves_a.tiff", width = 5, height = 4, 
+       res = 300, units = "in")
   ggplot(data = ybig1[ybig1$b == 100 & ybig1$tau == 40 &
                         ybig1$Pop == "B" & ybig1$Density >= 10**2, ],
-         aes(x = time, y = Density, color = as.factor(a), group = uniq_run)) +
-    geom_line(lwd = 1.5) +
+         aes(x = time/60, y = Density, color = as.factor(a), group = uniq_run)) +
+    geom_line(lwd = 1.5, alpha = 0.7) +
     facet_grid(k_S ~ u_S, scales = "free") +
     scale_y_continuous(trans = "log10") +
-    xlim(NA, 2500) +
+    scale_x_continuous(breaks = c(0, 6, 12, 18, 24)) +
+    coord_cartesian(ylim = c(10**5, NA), xlim = c(0, 24)) +
+    scale_color_viridis(discrete = TRUE) +
     NULL
+  dev.off()
   
+  tiff("./plots/run1_Bcurves_b.tiff", width = 5, height = 4, 
+       res = 300, units = "in")
   ggplot(data = ybig1[ybig1$a == 10**-10 & ybig1$tau == 40 &
                         ybig1$Pop == "B" & ybig1$Density >= 10**2, ],
-         aes(x = time, y = Density, color = as.factor(b), group = uniq_run)) +
-    geom_line(lwd = 1.5) +
+         aes(x = time/60, y = Density, color = as.factor(b), group = uniq_run)) +
+    geom_line(lwd = 1.5, alpha = 0.7) +
     facet_grid(k_S ~ u_S, scales = "free") +
     scale_y_continuous(trans = "log10") +
-    xlim(NA, 1500) +
+    scale_x_continuous(breaks = c(0, 6, 12, 18, 24)) +
+    coord_cartesian(ylim = c(10**5, NA), xlim = c(0, 24)) +
+    scale_color_viridis(discrete = TRUE) +
     NULL
-}
-
-for (myu in unique(y_summarized1$u_S)) {
-  for (myk in unique(y_summarized1$k_S)) {
-    print(ggplot(data = ybig1[ybig1$u_S == myu & ybig1$k_S == myk &
-                                ybig1$Pop == "B", ],
-                 aes(x = time, y = Density, group = uniq_run,
-                     color = as.factor(tau), lty = as.factor(a))) +
-            geom_line() +
-            #xlim(NA, 5000) +
-            scale_y_continuous(trans = "log10", limits = c(10**4, NA)) +
-            #facet_grid(a ~ b, scales = "free")
-            facet_wrap(~b, scales = "free") +
-            NULL)
-  }
+  dev.off()
+  
+  tiff("./plots/run1_maxdens_maxtime_a.tiff", width = 5, height = 4, 
+       res = 300, units = "in")
+  ggplot(data = y_summarized1,
+         aes(x = max_time/60, y = max_dens, color = as.factor(a))) +
+    geom_point() +
+    facet_grid(k_S ~ u_S, scales = "free") +
+    scale_y_continuous(trans = "log10") +
+    scale_x_continuous(breaks = c(0, 12, 24)) +
+    #coord_cartesian(xlim = c(0, 36)) +
+    scale_color_viridis(discrete = TRUE) +
+    NULL
+  dev.off()
+  
+  tiff("./plots/run1_maxdens_maxtime_b.tiff", width = 5, height = 4, 
+       res = 300, units = "in")
+  ggplot(data = y_summarized1,
+         aes(x = max_time/60, y = max_dens, color = as.factor(b))) +
+    geom_point() +
+    facet_grid(k_S ~ u_S, scales = "free") +
+    scale_y_continuous(trans = "log10") +
+    scale_x_continuous(breaks = c(0, 12, 24)) +
+    #coord_cartesian(xlim = c(0, 36)) +
+    scale_color_viridis(discrete = TRUE) +
+    NULL
+  dev.off()
+  
+  tiff("./plots/run1_maxdens_maxtime_tau.tiff", width = 5, height = 4, 
+       res = 300, units = "in")
+  ggplot(data = y_summarized1,
+         aes(x = max_time/60, y = max_dens, color = as.factor(tau))) +
+    geom_point() +
+    facet_grid(k_S ~ u_S, scales = "free") +
+    scale_y_continuous(trans = "log10") +
+    scale_x_continuous(breaks = c(0, 12, 24)) +
+    #coord_cartesian(xlim = c(0, 36)) +
+    scale_color_viridis(discrete = TRUE) +
+    NULL
+  dev.off()
 }
 
 
