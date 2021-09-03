@@ -77,9 +77,11 @@ library(dplyr)
 
 #Setwd
 mywd_split <- strsplit(getwd(), split = "/") 
-if (mywd_split[[1]][length(mywd_split[[1]])] != "numerical_analysis") {
+if (mywd_split[[1]][length(mywd_split[[1]])] == "growth-curves") {
   dir.create("numerical_analysis", showWarnings = FALSE)
   setwd("./numerical_analysis/")
+} else {
+  stop("Not in correct root directory")
 }
 
 #Okabe and Ito 2008 colorblind-safe qualitative color scale
@@ -2293,6 +2295,13 @@ if (glob_make_statplots) {
     facet_wrap(~uniq_run) +
     scale_y_continuous(trans = "log10", limits = c(10**2, NA)) +
     xlim(NA, 750/60)
+  
+  ggplot(data = y_summarized2,
+         aes(y = phage_atmaxdens, x = max_dens, color = as.factor(b))) +
+    geom_point() +
+    scale_y_continuous(trans = "log10") +
+    scale_x_continuous(trans = "log10") +
+    facet_grid(. ~ u_S)
   
   tiff("./run2_statplots/extinrate_phageatmax2.tiff",
        width = 6, height = 5, units = "in", res = 300)
