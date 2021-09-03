@@ -2,11 +2,15 @@
 library(deSolve)
 library(ggplot2)
 library(dplyr)
+library(plotly)
 
 #Setwd
 mywd_split <- strsplit(getwd(), split = "/") 
-if (mywd_split[[1]][length(mywd_split[[1]])] != "paper_simulations") {
+if (mywd_split[[1]][length(mywd_split[[1]])] == "growth-curves") {
+  dir.create("paper_simulations", showWarnings = FALSE)
   setwd("./paper_simulations/")
+} else {
+  stop("Not in correct root directory")
 }
 
 #Okabe and Ito 2008 colorblind-safe qualitative color scale
@@ -906,9 +910,11 @@ y_summarized1 <-
                          maxdens_k_ratio = max_dens/k_S[1],
                          run_time = max(time),
                          equil = equil[1]
-        ))
+        )
+        )
+y_summarized1 <- as.data.frame(y_summarized1)
 
-#Code for visualizing which runs didn't equil
+#Run 1: Code for visualizing which runs didn't equil----
 if (glob_make_statplots) {
   for (myu in unique(y_summarized1$u_S)) {
     for (myk in unique(y_summarized1$k_S)) {
@@ -925,8 +931,7 @@ if (glob_make_statplots) {
   }
 }
 
-library(plotly)
-
+#Code for Plotly 3D plot of non-equil runs
 if (glob_make_statplots) {
   for (myu in unique(y_summarized1$u_S)) {
     for (myk in unique(y_summarized1$k_S)) {
@@ -954,7 +959,7 @@ if (glob_make_statplots) {
   }
 }
 
-#Max dens-max time plots
+#Run 1: Max dens-max time plots ----
 dir.create("./plots/", showWarnings = F)
 if (glob_make_statplots) {
   ggplot(data = y_summarized1,
@@ -1044,6 +1049,9 @@ if (glob_make_statplots) {
     NULL
   dev.off()
 }
+
+#Run 1: final phage vs peak bacteria ----
+
 
 
 ##Run 2: bact variants ----
