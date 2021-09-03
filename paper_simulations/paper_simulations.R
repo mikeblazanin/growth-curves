@@ -1051,7 +1051,55 @@ if (glob_make_statplots) {
 }
 
 #Run 1: final phage vs peak bacteria ----
+y_summarized1$pred_phage_final <- y_summarized1$b * y_summarized1$max_dens
 
+if (glob_make_statplots) {
+  tiff("./plots/run1_maxdens_phagefinal.tiff", width = 5, height = 4, 
+       res = 300, units = "in")
+  ggplot(data = y_summarized1[y_summarized1$k_S == 10**9 &
+                                y_summarized1$u_S == 0.011, ],
+         aes(x = max_dens, y = phage_final, color = as.factor(b))) +
+           geom_point() +
+    geom_line(aes(y = pred_phage_final)) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    #facet_grid(u_S ~ k_S) +
+    scale_color_viridis(discrete = TRUE, end = 0.95) +
+    theme_bw() +
+    NULL
+  dev.off()
+}
+
+##Run 1: landscape of peak time ----
+#Code for Plotly 3D plot
+
+
+
+if (glob_make_statplots) {
+  for (myu in unique(y_summarized1$u_S)) {
+    for (myk in unique(y_summarized1$k_S)) {
+      temp <- y_summarized1[y_summarized1$u_S == myu & y_summarized1$k_S == myk, ]
+      temp <- temp[order(temp$a, temp$b), ]
+      temp$maxtime_scld <- c(scale(temp$max_time,
+                                center = min(temp$max_time),
+                                scale = max(temp$max_time)))
+      #Make plot with surfaces by tau
+      plt <- plot_ly(x = unique(log10(temp$a)), y = unique(log10(temp$b)))
+      for (i in 1:length(unique(y_summarized1$tau))) {
+        mytau <- unique(y_summarized1$tau)[i]
+        plt <- plt %>% 
+          add_surface(z = matrix(temp$maxtime_scld[temp$tau == mytau],
+                                 nrow = 5, ncol = 5)+(i-1),
+                      opacity = 1.1-0.1*i)
+      }
+      plt
+    }
+  }
+}
+
+#Make the surfaces plot by "faking it" and adding arbitrary z axis
+#to the data so that ea surface is at dift z point
+#Plotly can do it!
 
 
 ##Run 2: bact variants ----
