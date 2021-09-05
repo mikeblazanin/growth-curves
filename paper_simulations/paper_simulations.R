@@ -1171,7 +1171,17 @@ if(glob_make_statplots) {
   dev.off()
 }
 
-
+#Run 1: max time - exinction time ----
+if (glob_make_statplots) {
+  ggplot(data = y_summarized1,
+         aes(x = max_time/60, y = extin_time/60,
+             color = as.factor(a))) +
+    geom_point() +
+    # scale_y_continuous(trans = "log10") +
+    # scale_x_continuous(trans = "log10") +
+    facet_grid(u_S ~ k_S) +
+    coord_cartesian(ylim = c(0, 36), xlim = c(0, 24))
+}
 
 ##Run 2: bact variants ----
 run2 <- run_sims_filewrapper(name = "run2",
