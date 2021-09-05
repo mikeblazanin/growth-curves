@@ -1056,7 +1056,7 @@ y_summarized1$pred_phage_final <- y_summarized1$b * y_summarized1$max_dens
 if (glob_make_statplots) {
   tiff("./plots/run1_maxdens_phagefinal.tiff", width = 5, height = 4, 
        res = 300, units = "in")
-  ggplot(data = y_summarized1[y_summarized1$k_S == 10**9 &
+  print(ggplot(data = y_summarized1[y_summarized1$k_S == 10**9 &
                                 y_summarized1$u_S == 0.011, ],
          aes(x = max_dens, y = phage_final, color = as.factor(b))) +
            geom_point() +
@@ -1066,15 +1066,12 @@ if (glob_make_statplots) {
     #facet_grid(u_S ~ k_S) +
     scale_color_viridis(discrete = TRUE, end = 0.95) +
     theme_bw() +
-    NULL
+    NULL)
   dev.off()
 }
 
 ##Run 1: landscape of peak time ----
 #Code for Plotly 3D plot
-
-
-
 if (glob_make_statplots) {
   for (myu in unique(y_summarized1$u_S)) {
     for (myk in unique(y_summarized1$k_S)) {
@@ -1088,7 +1085,7 @@ if (glob_make_statplots) {
       for (i in 1:length(unique(y_summarized1$tau))) {
         mytau <- unique(y_summarized1$tau)[i]
         plt <- plt %>% 
-          add_surface(z = matrix(temp$maxtime_scld[temp$tau == mytau],
+          add_surface(z = 0.5*matrix(temp$maxtime_scld[temp$tau == mytau],
                                  nrow = 5, ncol = 5)+(i-1),
                       opacity = 1.1-0.1*i)
       }
@@ -1097,9 +1094,83 @@ if (glob_make_statplots) {
   }
 }
 
-#Make the surfaces plot by "faking it" and adding arbitrary z axis
-#to the data so that ea surface is at dift z point
-#Plotly can do it!
+#Code for 2D contours
+if(glob_make_statplots) {
+  tiff("./plots/run1_peaktime_contour_b100.tiff", width = 5, height = 4,
+       units = "in", res = 300)
+  print(ggplot(data = y_summarized1[y_summarized1$b == 100, ],
+               aes(x = log10(a), y = tau)) +
+          geom_contour_filled(aes(z = max_time), alpha = 0.5) +
+          geom_point(aes(color = max_time/60),
+                     size = 3, pch = 16) +
+          scale_color_viridis(name = "Peak time (hr)",
+                              breaks = c(6, 12, 18, 24)) +
+          scale_y_continuous(trans = "log10", breaks = c(16, 40, 100)) +
+          xlab("Log10(infection rate) (/min)") +
+          ylab("Lysis time (min)") +
+          guides(fill = FALSE) +
+          NULL)
+  dev.off()
+  
+  #b in facets
+  tiff("./plots/run1_peaktime_contour_facetb.tiff", width = 8, height = 2.5,
+       units = "in", res = 300)
+  print(ggplot(data = y_summarized1,
+               aes(x = log10(a), y = tau)) +
+          geom_contour_filled(aes(z = max_time), alpha = 0.7) +
+          geom_point(aes(color = max_time/60), 
+                     size = 1.5, pch = 16) +
+          scale_color_viridis(name = "Peak time (hr)",
+                              breaks = c(6, 12, 18, 24)) +
+          facet_wrap(~b, nrow = 1) +
+          scale_y_continuous(trans = "log10", breaks = c(16, 40, 100)) +
+          xlab("Log10(infection rate) (/min)") +
+          ylab("Lysis time (min)") +
+          guides(fill = FALSE) +
+          labs(subtitle = "Burst size") +
+          NULL)
+  dev.off()
+  
+  #a in facets
+  tiff("./plots/run1_peaktime_contour_faceta.tiff", width = 8, height = 2.5,
+       units = "in", res = 300)
+  print(ggplot(data = y_summarized1,
+               aes(x = b, y = tau)) +
+          geom_contour_filled(aes(z = max_time), alpha = 0.7) +
+          geom_point(aes(color = max_time/60), 
+                     size = 1.5, pch = 16) +
+          scale_color_viridis(name = "Peak time (hr)",
+                              breaks = c(6, 12, 18, 24)) +
+          facet_wrap(~a, nrow = 1) +
+          scale_x_continuous(trans = "log10") +
+          scale_y_continuous(trans = "log10", breaks = c(16, 40, 100)) +
+          xlab("Burst size") +
+          ylab("Lysis time (min)") +
+          guides(fill = FALSE) +
+          labs(subtitle = "Log10(infection rate) (/min)") +
+          NULL)
+  dev.off()
+  
+  #tau in facets
+  tiff("./plots/run1_peaktime_contour_facettau.tiff", width = 8, height = 2.5,
+       units = "in", res = 300)
+  print(ggplot(data = y_summarized1,
+               aes(x = log10(a), y = b)) +
+          geom_contour_filled(aes(z = max_time), alpha = 0.7) +
+          geom_point(aes(color = max_time/60), 
+                     size = 1.5, pch = 16) +
+          scale_color_viridis(name = "Peak time (hr)",
+                              breaks = c(6, 12, 18, 24)) +
+          facet_wrap(~tau, nrow = 1) +
+          scale_y_continuous(trans = "log10") +
+          xlab("Log10(infection rate) (/min)") +
+          ylab("Burst size") +
+          guides(fill = FALSE) +
+          labs(subtitle = "Lysis time (min)") +
+          NULL)
+  dev.off()
+}
+
 
 
 ##Run 2: bact variants ----
