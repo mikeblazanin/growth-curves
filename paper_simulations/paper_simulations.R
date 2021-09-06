@@ -912,11 +912,16 @@ if (glob_make_statplots) {
     for (myk in unique(y_summarized1$k_S)) {
       print(ggplot(y_summarized1[y_summarized1$u_S == myu &
                                    y_summarized1$k_S == myk, ],
-                   aes(x = a, y = b, color = equil)) +
+                   aes(x = a, y = b, 
+                       color = as.character(!is.na(extin_time)))) +
               geom_point() +
               facet_wrap(~tau) +
               scale_x_continuous(trans = "log10") +
               scale_y_continuous(trans = "log10") +
+              scale_color_manual(name = "Reached\nExtinction",
+                                 limits = c("TRUE", "FALSE"),
+                                 values = c("black", "gray"),
+                                 drop = FALSE) +
               ggtitle(paste("u=", myu, " k=", myk, sep = "")) +
               NULL)
     }
@@ -930,7 +935,8 @@ if (glob_make_statplots) {
       temp <- y_summarized1[y_summarized1$u_S == myu & y_summarized1$k_S == myk, ]
       plt <- plot_ly(x = log10(temp$a), y = log10(temp$b), 
                      z = log10(temp$tau), type = "scatter3d", 
-                     mode = "markers", color = temp$equil,
+                     mode = "markers", 
+                     color = as.character(!is.na(temp$extin_time)),
                      marker = list(size = 5)) %>%
         layout(title = "Extinction within 4 days?",
                scene = list(xaxis = list(title = "a", tickvals = c(-11, -9),
