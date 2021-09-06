@@ -867,21 +867,71 @@ y_summarized1 <- subset(y_summarized1,
 #Summarize non-equil runs & combine
 y_summarized1 <- 
   rbind(y_summarized1,
-        dplyr::summarize(ybig1[ybig1$equil == FALSE, ],
-                         max_dens = max(Density[Pop == "B"]),
-                         max_time = time[Pop == "B" & 
-                                           Density[Pop == "B"] == max_dens],
-                         extin_dens = 10**4,
-                         extin_time = NA,
-                         auc = NA,
-                         phage_final = NA,
-                         phage_extin = NA,
-                         phage_atmaxdens = Density[Pop == "P" & time == max_time],
-                         maxdens_k_ratio = max_dens/k_S[1],
-                         run_time = max(time),
-                         equil = equil[1]
+        dplyr::summarize(
+          ybig1[ybig1$equil == FALSE, ],
+          max_dens = max(Density[Pop == "B"]),
+          max_time = time[Pop == "B" & Density[Pop == "B"] == max_dens],
+          #Make references for finding extin point
+          extin_dens = 10**4,
+          #Technically this is the first index after extinction
+          extin_index =
+            ifelse(any(Pop == "B" & Density <= extin_dens &
+                         time >= max_time),
+                   min(which(Pop == "B" &
+                               Density <= extin_dens &
+                               time >= max_time)),
+                   NA),
+          extin_index_back1 = 
+            ifelse(is.na(extin_index), NA,
+                   which(Pop == "B")[
+                     match(extin_index, which(Pop == "B")) - 1]),
+          #use linear interpolation to find extin time
+          extin_time = 
+            ifelse(is.na(extin_index), NA,
+                   time[extin_index] -
+                     (Density[extin_index] - extin_dens)*
+                     (time[extin_index] - time[extin_index_back1])/
+                     (Density[extin_index] - Density[extin_index_back1])),
+          #make references for auc (here indices are within Pop == "B")
+          extin_index_winB = ifelse(is.na(extin_time), NA,
+                                    which(which(Pop == "B") == extin_index)),
+          extin_index_back1_winB = 
+            ifelse(is.na(extin_time), NA,
+                   which(which(Pop == "B") == extin_index)-1),
+          extin_index_back2_winB = ifelse(is.na(extin_time), NA, 
+                                          which(which(Pop == "B") == extin_index)-2),
+          #using trapezoid rule to find auc
+          auc =
+            ifelse(is.na(extin_time), NA,
+                   #trapezoids of all intervals before one ending at extin time
+                   (time[Pop == "B"][2] - time[Pop == "B"][1])/2 *
+                     (Density[Pop == "B"][1] +
+                        2*sum(Density[Pop == "B"][2:extin_index_back2_winB]) +
+                        Density[Pop == "B"][extin_index_back1_winB]) +
+                     #trapezoid that ends at extin time
+                     (extin_time-time[extin_index_back1])/2 *
+                     (Density[extin_index_back1] + extin_dens)),
+          phage_final = NA,
+          #make references for phage extin dens
+          phage_dens_y1 = ifelse(is.na(extin_time), NA,
+                                 Density[max(which(Pop == "P" & time < extin_time))]),
+          phage_dens_y2 = ifelse(is.na(extin_time), NA,
+                                 Density[which(Pop == "P" & time == time[extin_index])]),
+          phage_time_x1 = ifelse(is.na(extin_time), NA,
+                                 time[max(which(Pop == "P" & time < extin_time))]),
+          phage_time_x2 = ifelse(is.na(extin_time), NA,
+                                 time[which(Pop == "P" & time == time[extin_index])]),
+          #using linear interpolation to find phage dens at bact extinction
+          phage_extin = ifelse(is.na(extin_time), NA,
+                               phage_dens_y1 +
+                                 (phage_dens_y2-phage_dens_y1)/(phage_time_x2-phage_time_x1)*
+                                 (extin_time-phage_time_x1)),
+          phage_atmaxdens = Density[Pop == "P" & time == max_time],
+          maxdens_k_ratio = max_dens/k_S[1],
+          run_time = max(time),
+          equil = equil[1]
         )
-        )
+  )
 y_summarized1 <- as.data.frame(y_summarized1)
 
 #Run 1: density dynamics ----
