@@ -879,9 +879,8 @@ y_summarized1 <- as.data.frame(y_summarized1)
 
 #Run 1: density dynamics ----
 dir.create("./run1_noequil/", showWarnings = F)
-run1[[2]]$maxtimes <- NA
-for (myrun in run1[[2]]$uniq_run) {
-  if (glob_make_curveplots) {
+if (glob_make_curveplots) {
+  for (myrun in unique(ybig1$uniq_run[ybig1$equil == FALSE])) {
     tiff(paste("./run1_noequil/", myrun, ".tiff", sep = ""),
          width = 4, height = 4, units = "in", res = 200)
     print(ggplot(data = ybig1[ybig1$uniq_run == myrun &
@@ -891,9 +890,6 @@ for (myrun in run1[[2]]$uniq_run) {
             scale_y_continuous(trans = "log10"))
     dev.off()
   }
-  
-  run1[[2]]$maxtimes[run1[[2]]$uniq_run == myrun] <-
-    max(ybig1$time[ybig1$uniq_run == myrun])
 }
 
 dir.create("./run1_equil/", showWarnings = F)
