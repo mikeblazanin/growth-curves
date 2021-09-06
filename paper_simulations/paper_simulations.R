@@ -783,7 +783,7 @@ glob_make_statplots <- FALSE
 # 
 #Units: cfu/mL, pfu/mL, minutes
 
-##Run 1: phage variants ----
+##Run 1: phage variants simulation & summarization ----
 run1 <- run_sims_filewrapper(name = "run1",
                      u_Svals = signif(2**c(-5.5, -6.5), 2),
                      k_Svals = 10**c(7, 9),
@@ -800,38 +800,6 @@ run1 <- run_sims_filewrapper(name = "run1",
                      read_file = glob_read_files)
 
 ybig1 <- run1[[1]]
-
-dir.create("./run1_noequil/", showWarnings = F)
-run1[[2]]$maxtimes <- NA
-for (myrun in run1[[2]]$uniq_run) {
-  if (glob_make_curveplots) {
-    tiff(paste("./run1_noequil/", myrun, ".tiff", sep = ""),
-         width = 4, height = 4, units = "in", res = 200)
-    print(ggplot(data = ybig1[ybig1$uniq_run == myrun &
-                                ybig1$Pop %in% c("S", "I", "P"), ],
-                 aes(x = time, y = Density+1, color = Pop)) +
-            geom_line(lwd = 1.5, alpha = 0.5) +
-            scale_y_continuous(trans = "log10"))
-    dev.off()
-  }
-  
-  run1[[2]]$maxtimes[run1[[2]]$uniq_run == myrun] <-
-    max(ybig1$time[ybig1$uniq_run == myrun])
-}
-
-dir.create("./run1_equil/", showWarnings = F)
-if (glob_make_curveplots) {
-  for (myrun in unique(ybig1$uniq_run[ybig1$equil == TRUE])) {
-    tiff(paste("./run1_equil/", myrun, ".tiff", sep = ""),
-         width = 4, height = 4, units = "in", res = 200)
-    print(ggplot(data = ybig1[ybig1$uniq_run == myrun &
-                                ybig1$Pop %in% c("S", "I", "P"), ],
-                 aes(x = time, y = Density+1, color = Pop)) +
-            geom_line(lwd = 1.5, alpha = 0.5) +
-            scale_y_continuous(trans = "log10"))
-    dev.off()
-  }
-}
 
 ybig1 <- group_by_at(ybig1, .vars = 1:17)
 
@@ -883,6 +851,7 @@ y_summarized1 <-
                    #   (log(phage_final)- log(init_S_dens[1]*init_moi[1]))/extin_time,
                    # phage_r_extin =
                    #   (log(phage_extin) - log(init_S_dens[1]*init_moi[1]))/extin_time,
+                   phage_atmaxdens = Density[Pop == "P" & time == max_time],
                    maxdens_k_ratio = max_dens/k_S[1],
                    run_time = max(time),
                    equil = equil[1]
@@ -907,6 +876,7 @@ y_summarized1 <-
                          auc = NA,
                          phage_final = NA,
                          phage_extin = NA,
+                         phage_atmaxdens = Density[Pop == "P" & time == max_time],
                          maxdens_k_ratio = max_dens/k_S[1],
                          run_time = max(time),
                          equil = equil[1]
@@ -914,7 +884,40 @@ y_summarized1 <-
         )
 y_summarized1 <- as.data.frame(y_summarized1)
 
-#Run 1: Code for visualizing which runs didn't equil----
+#Run 1: density dynamics ----
+dir.create("./run1_noequil/", showWarnings = F)
+run1[[2]]$maxtimes <- NA
+for (myrun in run1[[2]]$uniq_run) {
+  if (glob_make_curveplots) {
+    tiff(paste("./run1_noequil/", myrun, ".tiff", sep = ""),
+         width = 4, height = 4, units = "in", res = 200)
+    print(ggplot(data = ybig1[ybig1$uniq_run == myrun &
+                                ybig1$Pop %in% c("S", "I", "P"), ],
+                 aes(x = time, y = Density+1, color = Pop)) +
+            geom_line(lwd = 1.5, alpha = 0.5) +
+            scale_y_continuous(trans = "log10"))
+    dev.off()
+  }
+  
+  run1[[2]]$maxtimes[run1[[2]]$uniq_run == myrun] <-
+    max(ybig1$time[ybig1$uniq_run == myrun])
+}
+
+dir.create("./run1_equil/", showWarnings = F)
+if (glob_make_curveplots) {
+  for (myrun in unique(ybig1$uniq_run[ybig1$equil == TRUE])) {
+    tiff(paste("./run1_equil/", myrun, ".tiff", sep = ""),
+         width = 4, height = 4, units = "in", res = 200)
+    print(ggplot(data = ybig1[ybig1$uniq_run == myrun &
+                                ybig1$Pop %in% c("S", "I", "P"), ],
+                 aes(x = time, y = Density+1, color = Pop)) +
+            geom_line(lwd = 1.5, alpha = 0.5) +
+            scale_y_continuous(trans = "log10"))
+    dev.off()
+  }
+}
+
+#Run 1: visualizing which runs didn't equil----
 if (glob_make_statplots) {
   for (myu in unique(y_summarized1$u_S)) {
     for (myk in unique(y_summarized1$k_S)) {
@@ -959,7 +962,7 @@ if (glob_make_statplots) {
   }
 }
 
-#Run 1: Max dens-max time plots ----
+#Run 1: max dens-max time plots ----
 dir.create("./plots/", showWarnings = F)
 if (glob_make_statplots) {
   ggplot(data = y_summarized1,
@@ -1173,14 +1176,63 @@ if(glob_make_statplots) {
 
 #Run 1: max time - exinction time ----
 if (glob_make_statplots) {
-  ggplot(data = y_summarized1,
+  ggplot(data = y_summarized1[y_summarized1$max_dens < 0.95*y_summarized1$k_S, ],
          aes(x = max_time/60, y = extin_time/60,
              color = as.factor(a))) +
     geom_point() +
-    # scale_y_continuous(trans = "log10") +
-    # scale_x_continuous(trans = "log10") +
     facet_grid(u_S ~ k_S) +
-    coord_cartesian(ylim = c(0, 36), xlim = c(0, 24))
+    #coord_cartesian(ylim = c(0, 36), xlim = c(0, 24)) +
+    geom_abline(slope = 1, intercept = 0, lty = 2)
+  
+  ggplot(data = y_summarized1[y_summarized1$max_dens < 0.95*y_summarized1$k_S, ],
+         aes(x = max_time/60, y = extin_time/max_time,
+             color = as.factor(a), shape = as.factor(b))) +
+    geom_point() +
+    facet_grid(u_S ~ k_S, scales = "free") +
+    NULL
+  
+  ggplot(data = y_summarized1[y_summarized1$max_dens < 0.95*y_summarized1$k_S, ],
+         aes(x = max_time/60, y = (extin_time-max_time)/60,
+             color = as.factor(a), shape = as.factor(b))) +
+    geom_point() +
+    facet_grid(u_S ~ k_S, scales = "free") +
+    NULL
+  
+  ggplot(data = y_summarized1[y_summarized1$max_dens < 0.95*y_summarized1$k_S, ],
+         aes(x = max_time/60, y = phage_atmaxdens,
+             color = as.factor(a), shape = as.factor(b))) +
+    geom_point() +
+    scale_y_continuous(trans = "log10") +
+    facet_grid(u_S ~ k_S, scales = "free") +
+    #coord_cartesian(ylim = c(0, 36), xlim = c(0, 24)) +
+    NULL
+  
+  ggplot(data = y_summarized1[y_summarized1$max_dens < 0.95*y_summarized1$k_S, ],
+         aes(x = max_time/60, y = phage_atmaxdens,
+             color = as.factor(a), shape = as.factor(b))) +
+    geom_point() +
+    scale_y_continuous(trans = "log10") +
+    facet_grid(u_S ~ k_S, scales = "free") +
+    #coord_cartesian(ylim = c(0, 36), xlim = c(0, 24)) +
+    NULL
+  
+  ggplot(data = y_summarized1[y_summarized1$max_dens < 0.95*y_summarized1$k_S, ],
+         aes(x = phage_atmaxdens, y = extin_time/max_time,
+             color = as.factor(a), shape = as.factor(b))) +
+    geom_point() +
+    scale_x_continuous(trans = "log10") +
+    facet_grid(u_S ~ k_S, scales = "free") +
+    #coord_cartesian(ylim = c(0, 36), xlim = c(0, 24)) +
+    NULL
+  
+  ggplot(data = y_summarized1[y_summarized1$max_dens < 0.95*y_summarized1$k_S, ],
+         aes(x = phage_atmaxdens, y = (extin_time - max_time)/60,
+             color = as.factor(a), shape = as.factor(b))) +
+    geom_point() +
+    scale_x_continuous(trans = "log10") +
+    facet_grid(u_S ~ k_S, scales = "free") +
+    #coord_cartesian(ylim = c(0, 36), xlim = c(0, 24)) +
+    NULL
 }
 
 ##Run 2: bact variants ----
