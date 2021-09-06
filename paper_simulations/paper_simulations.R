@@ -928,6 +928,7 @@ if (glob_make_statplots) {
   }
 }
 
+###TODO: fix colors here
 #Code for Plotly 3D plot of non-equil runs
 if (glob_make_statplots) {
   for (myu in unique(y_summarized1$u_S)) {
@@ -960,15 +961,15 @@ if (glob_make_statplots) {
 #Run 1: max dens-max time plots ----
 dir.create("./plots/", showWarnings = F)
 if (glob_make_statplots) {
-  ggplot(data = y_summarized1,
+  print(ggplot(data = y_summarized1,
          aes(x = max_time, y = max_dens)) +
     facet_grid(k_S ~ u_S, scales = "free") +
     #scale_y_continuous(trans = "log10") +
-    geom_point()
+    geom_point())
   
   tiff("./plots/run1_Bcurves_tau.tiff", width = 5, height = 4, 
        res = 300, units = "in")
-  ggplot(data = ybig1[ybig1$a == 10**-10 & ybig1$b == 100 &
+  print(ggplot(data = ybig1[ybig1$a == 10**-10 & ybig1$b == 100 &
                         ybig1$Pop == "B", ],
          aes(x = time/60, y = Density, color = as.factor(tau), group = uniq_run)) +
     geom_line(lwd = 1.5, alpha = 0.7) +
@@ -977,12 +978,12 @@ if (glob_make_statplots) {
     scale_x_continuous(breaks = c(0, 6, 12, 18, 24)) +
     coord_cartesian(ylim = c(10**5, NA), xlim = c(0, 24)) +
     scale_color_viridis(discrete = TRUE) +
-    NULL
+    NULL)
   dev.off()
   
   tiff("./plots/run1_Bcurves_a.tiff", width = 5, height = 4, 
        res = 300, units = "in")
-  ggplot(data = ybig1[ybig1$b == 100 & ybig1$tau == 40 &
+  print(ggplot(data = ybig1[ybig1$b == 100 & ybig1$tau == 40 &
                         ybig1$Pop == "B" & ybig1$Density >= 10**2, ],
          aes(x = time/60, y = Density, color = as.factor(a), group = uniq_run)) +
     geom_line(lwd = 1.5, alpha = 0.7) +
@@ -991,12 +992,12 @@ if (glob_make_statplots) {
     scale_x_continuous(breaks = c(0, 6, 12, 18, 24)) +
     coord_cartesian(ylim = c(10**5, NA), xlim = c(0, 24)) +
     scale_color_viridis(discrete = TRUE) +
-    NULL
+    NULL)
   dev.off()
   
   tiff("./plots/run1_Bcurves_b.tiff", width = 5, height = 4, 
        res = 300, units = "in")
-  ggplot(data = ybig1[ybig1$a == 10**-10 & ybig1$tau == 40 &
+  print(ggplot(data = ybig1[ybig1$a == 10**-10 & ybig1$tau == 40 &
                         ybig1$Pop == "B" & ybig1$Density >= 10**2, ],
          aes(x = time/60, y = Density, color = as.factor(b), group = uniq_run)) +
     geom_line(lwd = 1.5, alpha = 0.7) +
@@ -1005,12 +1006,12 @@ if (glob_make_statplots) {
     scale_x_continuous(breaks = c(0, 6, 12, 18, 24)) +
     coord_cartesian(ylim = c(10**5, NA), xlim = c(0, 24)) +
     scale_color_viridis(discrete = TRUE) +
-    NULL
+    NULL)
   dev.off()
   
   tiff("./plots/run1_maxdens_maxtime_a.tiff", width = 5, height = 4, 
        res = 300, units = "in")
-  ggplot(data = y_summarized1,
+  print(ggplot(data = y_summarized1,
          aes(x = max_time/60, y = max_dens, color = as.factor(a))) +
     geom_point() +
     facet_grid(k_S ~ u_S, scales = "free") +
@@ -1018,12 +1019,12 @@ if (glob_make_statplots) {
     scale_x_continuous(breaks = c(0, 12, 24)) +
     #coord_cartesian(xlim = c(0, 36)) +
     scale_color_viridis(discrete = TRUE) +
-    NULL
+    NULL)
   dev.off()
   
   tiff("./plots/run1_maxdens_maxtime_b.tiff", width = 5, height = 4, 
        res = 300, units = "in")
-  ggplot(data = y_summarized1,
+  print(ggplot(data = y_summarized1,
          aes(x = max_time/60, y = max_dens, color = as.factor(b))) +
     geom_point() +
     facet_grid(k_S ~ u_S, scales = "free") +
@@ -1031,12 +1032,12 @@ if (glob_make_statplots) {
     scale_x_continuous(breaks = c(0, 12, 24)) +
     #coord_cartesian(xlim = c(0, 36)) +
     scale_color_viridis(discrete = TRUE) +
-    NULL
+    NULL)
   dev.off()
   
   tiff("./plots/run1_maxdens_maxtime_tau.tiff", width = 5, height = 4, 
        res = 300, units = "in")
-  ggplot(data = y_summarized1,
+  print(ggplot(data = y_summarized1,
          aes(x = max_time/60, y = max_dens, color = as.factor(tau))) +
     geom_point() +
     facet_grid(k_S ~ u_S, scales = "free") +
@@ -1044,7 +1045,7 @@ if (glob_make_statplots) {
     scale_x_continuous(breaks = c(0, 12, 24)) +
     #coord_cartesian(xlim = c(0, 36)) +
     scale_color_viridis(discrete = TRUE) +
-    NULL
+    NULL)
   dev.off()
 }
 
@@ -1087,7 +1088,7 @@ if (glob_make_statplots) {
                                  nrow = 5, ncol = 5)+(i-1),
                       opacity = 1.1-0.1*i)
       }
-      plt
+      print(plt)
     }
   }
 }
@@ -1139,7 +1140,7 @@ if(glob_make_statplots) {
                      size = 1.5, pch = 16) +
           scale_color_viridis(name = "Peak time (hr)",
                               breaks = c(6, 12, 18, 24)) +
-          facet_wrap(~a, nrow = 1) +
+          facet_wrap(~log10(a), nrow = 1) +
           scale_x_continuous(trans = "log10") +
           scale_y_continuous(trans = "log10", breaks = c(16, 40, 100)) +
           xlab("Burst size") +
