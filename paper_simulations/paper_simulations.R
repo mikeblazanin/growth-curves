@@ -1102,14 +1102,15 @@ if(glob_make_statplots) {
                                       y_summarized1$k_S == 10**9, ],
                aes(x = log10(a), y = tau)) +
           geom_contour_filled(aes(z = max_time/60), alpha = 0.5) +
-          geom_point(aes(color = max_time/60),
-                     size = 3, pch = 16) +
+          geom_point(aes(color = max_time/60, shape = maxdens_k_ratio < 0.95),
+                     size = 3) +
           scale_color_viridis(name = "Peak time (hr)",
                               breaks = c(6, 12, 18, 24)) +
+          scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
           scale_y_continuous(trans = "log10", breaks = c(16, 40, 100)) +
           xlab("Log10(infection rate) (/min)") +
           ylab("Lysis time (min)") +
-          guides(fill = FALSE) +
+          guides(fill = FALSE, shape = FALSE) +
           NULL)
   dev.off()
   
@@ -1119,15 +1120,16 @@ if(glob_make_statplots) {
   print(ggplot(data = y_summarized1,
                aes(x = log10(a), y = tau)) +
           geom_contour_filled(aes(z = max_time), alpha = 0.7) +
-          geom_point(aes(color = max_time/60), 
-                     size = 1.5, pch = 16) +
+          geom_point(aes(color = max_time/60, shape = maxdens_k_ratio < 0.95),
+                     size = 1.5) +
           scale_color_viridis(name = "Peak time (hr)",
                               breaks = c(6, 12, 18, 24)) +
+          scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
           facet_grid(u_S*k_S~b) +
           scale_y_continuous(trans = "log10", breaks = c(16, 40, 100)) +
           xlab("Log10(infection rate) (/min)") +
           ylab("Lysis time (min)") +
-          guides(fill = FALSE) +
+          guides(fill = FALSE, shape = FALSE) +
           labs(subtitle = "Burst size") +
           NULL)
   dev.off()
@@ -1138,16 +1140,17 @@ if(glob_make_statplots) {
   print(ggplot(data = y_summarized1,
                aes(x = b, y = tau)) +
           geom_contour_filled(aes(z = max_time), alpha = 0.7) +
-          geom_point(aes(color = max_time/60), 
-                     size = 1.5, pch = 16) +
+          geom_point(aes(color = max_time/60, shape = maxdens_k_ratio < 0.95),
+                     size = 1.5) +
           scale_color_viridis(name = "Peak time (hr)",
                               breaks = c(6, 12, 18, 24)) +
+          scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
           facet_grid(u_S*k_S~log10(a)) +
           scale_x_continuous(trans = "log10") +
           scale_y_continuous(trans = "log10", breaks = c(16, 40, 100)) +
           xlab("Burst size") +
           ylab("Lysis time (min)") +
-          guides(fill = FALSE) +
+          guides(fill = FALSE, shape = FALSE) +
           labs(subtitle = "Log10(infection rate) (/min)") +
           NULL)
   dev.off()
@@ -1158,15 +1161,16 @@ if(glob_make_statplots) {
   print(ggplot(data = y_summarized1,
                aes(x = log10(a), y = b)) +
           geom_contour_filled(aes(z = max_time), alpha = 0.7) +
-          geom_point(aes(color = max_time/60), 
-                     size = 1.5, pch = 16) +
+          geom_point(aes(color = max_time/60, shape = maxdens_k_ratio < 0.95),
+                     size = 1.5) +
           scale_color_viridis(name = "Peak time (hr)",
                               breaks = c(6, 12, 18, 24)) +
+          scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
           facet_grid(u_S*k_S~tau) +
           scale_y_continuous(trans = "log10") +
           xlab("Log10(infection rate) (/min)") +
           ylab("Burst size") +
-          guides(fill = FALSE) +
+          guides(fill = FALSE, shape = FALSE) +
           labs(subtitle = "Lysis time (min)") +
           NULL)
   dev.off()
@@ -1366,14 +1370,15 @@ if(glob_make_statplots) {
                                       y_summarized2$tau == 63, ],
                aes(x = log10(a), y = u_S)) +
           geom_contour_filled(aes(z = max_time/60), alpha = 0.5) +
-          geom_point(aes(color = max_time/60),
-                     size = 3, pch = 16) +
+          geom_point(aes(color = max_time/60, shape = maxdens_k_ratio < 0.95),
+                     size = 3) +
           scale_color_viridis(name = "Peak time (hr)", 
                               breaks = c(6, 12, 18, 24, 30)) +
+          scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
           scale_y_continuous(trans = "log10") +
           xlab("Log10(infection rate) (/min)") +
           ylab("Bacterial growth rate (/min)") +
-          guides(fill = FALSE) +
+          guides(fill = FALSE, shape = FALSE) +
           NULL)
   dev.off()
   
@@ -1383,15 +1388,16 @@ if(glob_make_statplots) {
   print(ggplot(data = y_summarized2,
                aes(x = log10(a), y = u_S)) +
           geom_contour_filled(aes(z = max_time), alpha = 0.7) +
-          geom_point(aes(color = max_time/60), 
-                     size = 1.5, pch = 16) +
+          geom_point(aes(color = max_time/60, shape = maxdens_k_ratio < 0.95),
+                     size = 1.5) +
           scale_color_viridis(name = "Peak time (hr)",
                               breaks = c(6, 12, 18, 24, 30, 36)) +
+          scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
           facet_grid(b*tau~k_S) +
           scale_y_continuous(trans = "log10") +
           xlab("Log10(infection rate) (/min)") +
           ylab("Bacterial growth rate (/min)") +
-          guides(fill = FALSE) +
+          guides(fill = FALSE, shape = FALSE) +
           labs(subtitle = "Carrying capacity (cfu/mL)") +
           NULL)
   dev.off()
@@ -1402,16 +1408,17 @@ if(glob_make_statplots) {
   print(ggplot(data = y_summarized2,
                aes(x = u_S, y = k_S)) +
           geom_contour_filled(aes(z = max_time), alpha = 0.7) +
-          geom_point(aes(color = max_time/60), 
-                     size = 1.5, pch = 16) +
+          geom_point(aes(color = max_time/60, shape = maxdens_k_ratio < 0.95),
+                     size = 1.5) +
           scale_color_viridis(name = "Peak time (hr)",
                               breaks = c(6, 12, 18, 24, 30, 36)) +
+          scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
           facet_grid(b*tau~log10(a)) +
           scale_x_continuous(trans = "log10") +
           scale_y_continuous(trans = "log10") +
           xlab("Bacterial growth rate (/min)") +
           ylab("Carrying capacity (cfu/mL)") +
-          guides(fill = FALSE) +
+          guides(fill = FALSE, shape = FALSE) +
           labs(subtitle = "Log10(infection rate) (/min)") +
           NULL)
   dev.off()
@@ -1422,15 +1429,16 @@ if(glob_make_statplots) {
   print(ggplot(data = y_summarized2,
                aes(x = log10(a), y = k_S)) +
           geom_contour_filled(aes(z = max_time), alpha = 0.7) +
-          geom_point(aes(color = max_time/60), 
-                     size = 1.5, pch = 16) +
+          geom_point(aes(color = max_time/60, shape = maxdens_k_ratio < 0.95),
+                     size = 1.5) +
           scale_color_viridis(name = "Peak time (hr)",
                               breaks = c(6, 12, 18, 24, 30, 36)) +
+          scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
           facet_grid(b*tau~u_S) +
           scale_y_continuous(trans = "log10") +
           xlab("Log10(infection rate) (/min)") +
           ylab("Carrying capacity (cfu/mL)") +
-          guides(fill = FALSE) +
+          guides(fill = FALSE, shape = FALSE) +
           labs(subtitle = "Bacterial growth rate (/min)") +
           NULL)
   dev.off()
