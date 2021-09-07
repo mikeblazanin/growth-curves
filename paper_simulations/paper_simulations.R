@@ -1095,11 +1095,13 @@ if (glob_make_statplots) {
 
 #Code for 2D contours
 if(glob_make_statplots) {
-  tiff("./plots/run1_peaktime_contour_b100.tiff", width = 5, height = 4,
+  tiff("./plots/run1_peaktime_contour_b100_u011_k1e9.tiff", width = 5, height = 4,
        units = "in", res = 300)
-  print(ggplot(data = y_summarized1[y_summarized1$b == 100, ],
+  print(ggplot(data = y_summarized1[y_summarized1$b == 100 &
+                                      y_summarized1$u_S == 0.011 &
+                                      y_summarized1$k_S == 10**9, ],
                aes(x = log10(a), y = tau)) +
-          geom_contour_filled(aes(z = max_time), alpha = 0.5) +
+          geom_contour_filled(aes(z = max_time/60), alpha = 0.5) +
           geom_point(aes(color = max_time/60),
                      size = 3, pch = 16) +
           scale_color_viridis(name = "Peak time (hr)",
@@ -1112,7 +1114,7 @@ if(glob_make_statplots) {
   dev.off()
   
   #b in facets
-  tiff("./plots/run1_peaktime_contour_facetb.tiff", width = 8, height = 2.5,
+  tiff("./plots/run1_peaktime_contour_facetb.tiff", width = 8, height = 6,
        units = "in", res = 300)
   print(ggplot(data = y_summarized1,
                aes(x = log10(a), y = tau)) +
@@ -1121,7 +1123,7 @@ if(glob_make_statplots) {
                      size = 1.5, pch = 16) +
           scale_color_viridis(name = "Peak time (hr)",
                               breaks = c(6, 12, 18, 24)) +
-          facet_wrap(~b, nrow = 1) +
+          facet_grid(u_S*k_S~b) +
           scale_y_continuous(trans = "log10", breaks = c(16, 40, 100)) +
           xlab("Log10(infection rate) (/min)") +
           ylab("Lysis time (min)") +
@@ -1131,7 +1133,7 @@ if(glob_make_statplots) {
   dev.off()
   
   #a in facets
-  tiff("./plots/run1_peaktime_contour_faceta.tiff", width = 8, height = 2.5,
+  tiff("./plots/run1_peaktime_contour_faceta.tiff", width = 8, height = 6,
        units = "in", res = 300)
   print(ggplot(data = y_summarized1,
                aes(x = b, y = tau)) +
@@ -1140,7 +1142,7 @@ if(glob_make_statplots) {
                      size = 1.5, pch = 16) +
           scale_color_viridis(name = "Peak time (hr)",
                               breaks = c(6, 12, 18, 24)) +
-          facet_wrap(~log10(a), nrow = 1) +
+          facet_grid(u_S*k_S~log10(a)) +
           scale_x_continuous(trans = "log10") +
           scale_y_continuous(trans = "log10", breaks = c(16, 40, 100)) +
           xlab("Burst size") +
@@ -1151,7 +1153,7 @@ if(glob_make_statplots) {
   dev.off()
   
   #tau in facets
-  tiff("./plots/run1_peaktime_contour_facettau.tiff", width = 8, height = 2.5,
+  tiff("./plots/run1_peaktime_contour_facettau.tiff", width = 8, height = 6,
        units = "in", res = 300)
   print(ggplot(data = y_summarized1,
                aes(x = log10(a), y = b)) +
@@ -1160,7 +1162,7 @@ if(glob_make_statplots) {
                      size = 1.5, pch = 16) +
           scale_color_viridis(name = "Peak time (hr)",
                               breaks = c(6, 12, 18, 24)) +
-          facet_wrap(~tau, nrow = 1) +
+          facet_grid(u_S*k_S~tau) +
           scale_y_continuous(trans = "log10") +
           xlab("Log10(infection rate) (/min)") +
           ylab("Burst size") +
