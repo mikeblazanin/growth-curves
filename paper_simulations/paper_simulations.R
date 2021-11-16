@@ -1178,27 +1178,117 @@ if(glob_make_statplots) {
 
 #Run 1: max time - exinction time ----
 if (glob_make_statplots) {
-  ggplot(data = y_summarized1[y_summarized1$max_dens < 0.95*y_summarized1$k_S, ],
+  #Extin time vs maxtime (zoomed, one facet)
+  tiff("./plots/run1_extintime_maxtime_k1e9_u011.tiff",
+       width = 5, height = 4, units = "in", res = 300)
+  ggplot(data = y_summarized1[y_summarized1$k_S == 10**9 &
+                                y_summarized1$u_S == 0.011, ],
          aes(x = max_time/60, y = extin_time/60,
-             color = as.factor(a))) +
-    geom_point() +
-    facet_grid(u_S ~ k_S) +
-    #coord_cartesian(ylim = c(0, 36), xlim = c(0, 24)) +
-    geom_abline(slope = 1, intercept = 0, lty = 2)
+             color = as.factor(a), shape = maxdens_k_ratio < 0.95)) +
+    geom_point(size = 1.5, alpha = 0.6) +
+    #facet_grid(u_S ~ k_S) +
+    scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
+    scale_color_viridis(name = "Infection\nRate\n(/min)", discrete = TRUE) +
+    coord_cartesian(ylim = c(0, 22), xlim = c(0, 16)) +
+    geom_abline(slope = 1, intercept = 0, lty = 2) +
+    labs(x = "Peak Bacterial Density Time (hrs)",
+         y = "Bacterial Extinction Time (hrs)") +
+    guides(shape = FALSE)
+  dev.off()
   
-  ggplot(data = y_summarized1[y_summarized1$max_dens < 0.95*y_summarized1$k_S, ],
+  #Extin time vs maxtime (all data)
+  tiff("./plots/run1_extintime_maxtime.tiff",
+       width = 5, height = 4, units = "in", res = 300)
+  ggplot(data = y_summarized1[!is.na(y_summarized1$max_time) &
+                                !is.na(y_summarized1$extin_time), ],
+         aes(x = max_time/60, y = extin_time/60,
+             color = as.factor(a), shape = maxdens_k_ratio < 0.95)) +
+    geom_point() +
+    facet_grid(u_S ~ k_S, scales = "free") +
+    scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
+    scale_color_viridis(name = "Infection\nRate\n(/min)", discrete = TRUE) +
+    geom_abline(slope = 1, intercept = 0, lty = 2) +
+    labs(x = "Peak Bacterial Density Time (hrs)",
+         y = "Bacterial Extinction Time (hrs)") +
+    guides(shape = FALSE)
+  dev.off()
+  
+  tiff("./plots/run1_extintime_maxtime_zoomed.tiff",
+       width = 5, height = 4, units = "in", res = 300)
+  ggplot(data = y_summarized1[y_summarized1$maxdens_k_ratio < 0.95, ],
+         aes(x = max_time/60, y = extin_time/60,
+             color = as.factor(a), shape = maxdens_k_ratio < 0.95)) +
+    geom_point() +
+    facet_grid(u_S ~ k_S, scales = "free") +
+    scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
+    scale_color_viridis(name = "Infection\nRate\n(/min)", discrete = TRUE) +
+    geom_abline(slope = 1, intercept = 0, lty = 2) +
+    labs(x = "Peak Bacterial Density Time (hrs)",
+         y = "Bacterial Extinction Time (hrs)") +
+    guides(shape = FALSE)
+  dev.off()
+  
+  #Extintime-maxtime ratio vs maxtime (zoomed, one facet)
+  tiff("./plots/run1_extinmaxratio_maxtime_k1e9_u011.tiff",
+       width = 5, height = 4, units = "in", res = 300)
+  ggplot(data = y_summarized1[y_summarized1$k_S == 10**9 &
+                                       y_summarized1$u_S == 0.011, ],
          aes(x = max_time/60, y = extin_time/max_time,
-             color = as.factor(a), shape = as.factor(b))) +
+             color = as.factor(a), shape = maxdens_k_ratio < 0.95)) +
+    geom_point() +
+    scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
+    scale_color_viridis(name = "Infection\nRate\n(/min)", discrete = TRUE) +
+    coord_cartesian(ylim = c(NA, 1.65), xlim = c(0, 16)) +
+    guides(shape = FALSE) +
+    labs(x = "Peak Bacterial Density Time (hrs)",
+         y = "Extinction Time to Peak Density Time Ratio") +
+    NULL
+  dev.off()
+  
+  #Extintime-maxtime ratio vs maxtime (all data)
+  ggplot(data = y_summarized1[y_summarized1$k_S == 10**9 &
+                                y_summarized1$u_S == 0.011, ],
+         aes(x = max_time/60, y = extin_time/max_time,
+             color = as.factor(a), shape = maxdens_k_ratio < 0.95)) +
     geom_point() +
     facet_grid(u_S ~ k_S, scales = "free") +
+    scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
+    scale_color_viridis(name = "Infection\nRate\n(/min)", discrete = TRUE) +
+    coord_cartesian(ylim = c(NA, 1.65), xlim = c(0, 16)) +
+    guides(shape = FALSE) +
+    labs(x = "Peak Bacterial Density Time (hrs)",
+         y = "Ratio of Extinction Time to Peak Density Time") +
     NULL
   
-  ggplot(data = y_summarized1[y_summarized1$max_dens < 0.95*y_summarized1$k_S, ],
+  ggplot(data = y_summarized1[y_summarized1$k_S == 10**9 &
+                                y_summarized1$u_S == 0.011, ],
+         aes(x = max_time/60, y = extin_time/max_time,
+             color = as.factor(a), shape = maxdens_k_ratio < 0.95)) +
+    geom_point() +
+    scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
+    coord_cartesian(ylim = c(NA, 1.8), xlim = c(0, 18)) +
+    #facet_grid(u_S ~ k_S, scales = "free") +
+    NULL
+  
+  
+  
+  
+  tiff("./plots/run1_extin-max_maxtime_k1e9_u011.tiff",
+       width = 5, height = 4, units = "in", res = 300)
+  ggplot(data = y_summarized1[y_summarized1$k_S == 10**9 &
+                                y_summarized1$u_S == 0.011, ],
          aes(x = max_time/60, y = (extin_time-max_time)/60,
-             color = as.factor(a), shape = as.factor(b))) +
+             color = as.factor(a), shape = maxdens_k_ratio < 0.95)) +
     geom_point() +
-    facet_grid(u_S ~ k_S, scales = "free") +
+    scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
+    scale_color_viridis(name = "Infection\nRate\n(/min)", discrete = TRUE) +
+    #facet_grid(u_S ~ k_S, scales = "free") +
+    coord_cartesian(ylim = c(NA, 6), xlim = c(0, 16)) +
+    guides(shape = FALSE) +
+    labs(x = "Peak Bacterial Density Time (hrs)",
+         y = "Extinction Time - Peak Density Time") +
     NULL
+  dev.off()
   
   ggplot(data = y_summarized1[y_summarized1$max_dens < 0.95*y_summarized1$k_S, ],
          aes(x = max_time/60, y = phage_atmaxdens,
@@ -1209,23 +1299,23 @@ if (glob_make_statplots) {
     #coord_cartesian(ylim = c(0, 36), xlim = c(0, 24)) +
     NULL
   
-  ggplot(data = y_summarized1[y_summarized1$max_dens < 0.95*y_summarized1$k_S, ],
-         aes(x = max_time/60, y = phage_atmaxdens,
-             color = as.factor(a), shape = as.factor(b))) +
-    geom_point() +
-    scale_y_continuous(trans = "log10") +
-    facet_grid(u_S ~ k_S, scales = "free") +
-    #coord_cartesian(ylim = c(0, 36), xlim = c(0, 24)) +
-    NULL
-  
-  ggplot(data = y_summarized1[y_summarized1$max_dens < 0.95*y_summarized1$k_S, ],
+  tiff("./plots/run1_extintime_phageatmax_k1e9_u011.tiff",
+       width = 5, height = 4, units = "in", res = 300)
+  ggplot(data = y_summarized1[y_summarized1$k_S == 10**9 &
+                                y_summarized1$u_S == 0.011 &
+                                y_summarized1$maxdens_k_ratio < 0.95, ],
          aes(x = phage_atmaxdens, y = extin_time/max_time,
              color = as.factor(a), shape = as.factor(b))) +
     geom_point() +
     scale_x_continuous(trans = "log10") +
-    facet_grid(u_S ~ k_S, scales = "free") +
-    #coord_cartesian(ylim = c(0, 36), xlim = c(0, 24)) +
+    scale_color_viridis(name = "Infection\nRate\n(/min)", discrete = TRUE) +
+    scale_shape_discrete(name = "Burst\nSize") +
+    #facet_grid(u_S ~ k_S, scales = "free") +
+    coord_cartesian(ylim = c(NA, 1.65)) +
+    labs(x = "Phage Density at Peak Bacterial Density Time (hrs)",
+         y = "Ratio of Extinction Time to Peak Density Time") +
     NULL
+  dev.off()
   
   ggplot(data = y_summarized1[y_summarized1$max_dens < 0.95*y_summarized1$k_S, ],
          aes(x = phage_atmaxdens, y = (extin_time - max_time)/60,
