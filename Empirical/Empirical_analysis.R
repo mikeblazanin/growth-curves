@@ -12,7 +12,8 @@ gcdata_10_25 <-
 colnames(gcdata_10_25)[2] <- "Temp"
 
 gcdata_10_25_lng <- pivot_wide_longer(gcdata_10_25,
-                                   id_cols = c("Time", "Temp"))
+                                   id_cols = c("Time", "Temp"),
+                                   values_to = "OD600")
 
 design_10_25 <- 
   make_tidydesign(
@@ -46,4 +47,22 @@ design_10_25 <-
                                byrow = TRUE),
   )
                                   
-                                                              
+gcdata_10_25_lng <- merge_tidydesign_tidymeasures(design_10_25, gcdata_10_25_lng,
+                                                  by = "Well", drop = TRUE)
+
+gcdata_10_25_lng$Time <- lubridate::hms(gcdata_10_25_lng$Time)
+gcdata_10_25_lng <- smooth_data(OD600 ~ Time,
+                                data = gcdata_10_25_lng,
+                                algorithm = "moving-average",
+                                subset_by = gcdata_10_25_lng$Well,
+                                window_width = 5)
+
+ggplot(data = gcdata_10_25_lng, 
+       aes(x = as.numeric(Time), y = as.numeric(OD600), 
+           group = Well, color = phage)) +
+  geom_point(size = 0.5) +
+  geom_line(aes(y = fitted)) +
+  facet_wrap(~bacteria) +
+  NULL
+
+
