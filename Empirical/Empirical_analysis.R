@@ -1,6 +1,7 @@
 #Import functions ----
 library(growth.curves.pkg)
 library(ggplot2)
+library(dplyr)
 
 #Read data ----
 trav_resis <- read.csv("./Empirical/trav-phage_resis_data.csv")
@@ -65,4 +66,27 @@ ggplot(data = gcdata_10_25_lng,
   facet_wrap(~bacteria) +
   NULL
 
+gcdata_10_25_lng <- group_by(gcdata_10_25_lng,
+                             Well, bacteria, phage)
+gcdata_10_25_sum <- dplyr::summarize(gcdata_10_25_lng,
+                              peak_index = find_local_extrema(fitted,
+                                                 return_minima = FALSE,
+                                                 width_limit = 11,
+                                                 na.rm = TRUE)[1],
+                              peak_time = Time[peak_index],
+                              peak_dens = fitted[peak_index])
 
+ggplot(data = gcdata_10_25_lng[gcdata_10_25_lng$bacteria == "PF", ], 
+       aes(x = as.numeric(Time), y = as.numeric(fitted), 
+           group = Well, color = phage)) +
+  geom_line() +
+  geom_point(data = gcdata_10_25_sum[gcdata_10_25_sum$bacteria == "PF", ],
+             aes(x = peak_time, y = peak_dens),
+             size = 2, color = "black") +
+  facet_wrap(~bacteria) +
+  NULL
+
+ggplot(data = gcdata_10_25_sum,
+       aes(x = bacteria, color = phage, y = as.numeric(peak_time))) +
+  geom_point(alpha = 0.5, size = 2, position = position_dodge(width = 0.5)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
