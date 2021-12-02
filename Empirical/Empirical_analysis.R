@@ -164,8 +164,45 @@ gcdata_sum <- dplyr::summarize(gcdata_lng,
                                peak_time = Time[peak_index],
                                peak_dens = fitted[peak_index])
 
+gcdata_sum_sum <- dplyr::summarise(
+  group_by(gcdata_sum, run, init_bact, init_phage, init_moi, bacteria),
+  peak_time_avg = mean(as.numeric(peak_time)),
+  peak_dens_avg = mean(peak_dens))
 
-#Plot all data sloppily
+#Join in EOP data
+trav_resis_sum <-
+  dplyr::summarize(group_by(trav_resis, Proj, Pop, Treat, Timepoint, Isol),
+                   mean_eop = mean(EOP),
+                   bd = any(bd))
+gcdata_sum_sum <- cbind(gcdata_sum_sum, 
+                    data.frame(Proj = NA, Pop = NA, 
+                               Treat = NA, Timepoint = NA, Isol = NA))
+for (i in 1:nrow(gcdata_sum_sum)) {
+  if(gcdata_sum_sum$bacteria[i] == "PF") {
+    gcdata_sum_sum$Proj[i] <- "125"
+    gcdata_sum_sum$Pop[i] <- "Anc"
+    gcdata_sum_sum$Treat[i] <- "Anc"
+    gcdata_sum_sum$Timepoint[i] <- 0
+    gcdata_sum_sum$Isol[i] <- "Anc"
+  } else if (substr(gcdata_sum_sum$bacteria[i], 1, 2) == "7x") {
+    gcdata_sum_sum$Proj[i] <- "7x"
+    gcdata_sum_sum$Pop[i] <- substr(gcdata_sum_sum$bacteria[i], 3, 3)
+    gcdata_sum_sum$Treat[i] <- substr(gcdata_sum_sum$bacteria[i], 4, 4)
+    gcdata_sum_sum$Timepoint[i] <- 14
+    gcdata_sum_sum$Isol[i] <- substr(gcdata_sum_sum$bacteria[i], 5, 5)
+  } else if (substr(gcdata_sum_sum$bacteria[i], 1, 3) == "125") {
+    gcdata_sum_sum$Proj[i] <- "125"
+    gcdata_sum_sum$Pop[i] <- substr(gcdata_sum_sum$bacteria[i], 4, 4)
+    gcdata_sum_sum$Treat[i] <- substr(gcdata_sum_sum$bacteria[i], 5, 5)
+    gcdata_sum_sum$Timepoint[i] <- 14
+    gcdata_sum_sum$Isol[i] <- substr(gcdata_sum_sum$bacteria[i], 6, 6)
+  }
+}
+
+gcdata_sum_sum <- left_join(gcdata_sum_sum, trav_resis_sum)
+
+
+#Plot all data sloppily ----
 for (run in unique(gcdata_lng$run)) {
   temp <- gcdata_lng[gcdata_lng$run == run, ]
   print(ggplot(data = temp, 
@@ -177,7 +214,7 @@ for (run in unique(gcdata_lng$run)) {
           NULL)
 }
 
-#Plots of run varying init dens & moi
+#Plots of run varying init dens & moi ----
 temp <- gcdata_lng[gcdata_lng$run == "2021-10-15_Emma_Growth_Curve", ]
 temp_sum <- gcdata_sum[gcdata_sum$run == "2021-10-15_Emma_Growth_Curve", ]
 temp_sum_sum <- group_by(temp_sum[temp_sum$init_bact > 0 &
@@ -201,8 +238,7 @@ print(ggplot(data = temp[temp$init_bact > 0, ],
         scale_y_continuous(trans = "log10") +
         NULL)
 
-print(ggplot(data = temp_sum[temp_sum$init_bact > 0 &
-                               temp_sum$init_moi > 0, ],
+print(ggplot(data = temp_sum[temp_sum$init_bact > 0, ],
              aes(x = as.factor(init_moi), y = as.numeric(peak_time))) +
         geom_point(alpha = 0.5) +
         facet_grid(~init_bact))
@@ -214,7 +250,7 @@ print(ggplot(data = temp_sum[temp_sum$init_bact > 0, ],
         geom_point(data = temp_sum_sum, size = 3, alpha = 0.5,
                    aes(x = as.factor(init_moi), y = as.numeric(peak_dens))))
 
-#Plots of varying isolates
+#Plots of varying isolates ----
 temp <- gcdata_lng[gcdata_lng$run %in% 
                      c("2021-10-25_Emma_Growth_Curve", 
                        "2021-10-27_Emma_Growth_Curve",
@@ -223,6 +259,10 @@ temp_sum <- gcdata_sum[gcdata_sum$run %in%
                          c("2021-10-25_Emma_Growth_Curve", 
                            "2021-10-27_Emma_Growth_Curve",
                            "2021-11-03_Emma_Growth_Curve"), ]
+temp_sum_sum <- gcdata_sum_sum[gcdata_sum_sum$run %in% 
+                                 c("2021-10-25_Emma_Growth_Curve", 
+                                   "2021-10-27_Emma_Growth_Curve",
+                                   "2021-11-03_Emma_Growth_Curve"), ]
 
 ggplot(data = temp,
        aes(x = as.numeric(Time), y = fitted, color = bacteria,
@@ -242,4 +282,19 @@ ggplot(data = temp_sum[temp_sum$bacteria != "Blank", ],
   geom_point() +
   facet_wrap(~bacteria, nrow = 2)
 
-#Plot EOP vs peak_time!
+ggplot(data = temp_sum_sum[temp_sum_sum$bacteria != "Blank" &
+                             temp_sum_sum$init_phage > 0 &
+                             temp_sum_sum$peak_time_avg > 10000, ],
+       aes(x = mean_eop, y = peak_time_avg, color = bacteria)) +
+  geom_point(size = 2, alpha = 0.5) +
+  facet_grid(~run) +
+  scale_x_continuous(trans = "log10")
+
+ggplot(data = temp_sum_sum[temp_sum_sum$bacteria != "Blank" &
+                             temp_sum_sum$init_phage > 0 &
+                             temp_sum_sum$peak_time_avg > 10000, ],
+       aes(x = mean_eop, y = peak_dens_avg, color = bacteria)) +
+  geom_point(size = 2, alpha = 0.5) +
+  facet_grid(~run) +
+  scale_x_continuous(trans = "log10")
+
