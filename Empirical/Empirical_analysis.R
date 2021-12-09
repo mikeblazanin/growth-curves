@@ -275,11 +275,18 @@ temp_sum_sum <- gcdata_sum_sum[gcdata_sum_sum$file %in%
                                    "2021-10-27_Emma_Growth_Curve",
                                    "2021-11-03_Emma_Growth_Curve"), ]
 
-ggplot(data = temp,
-       aes(x = as.numeric(Time), y = fitted, color = bacteria,
+ggplot(data = temp[temp$bacteria != "Blank", ],
+       aes(x = as.numeric(Time)/3600, y = fitted, lty = init_phage > 0,
            group = Well)) +
   geom_line() +
-  facet_grid(~file)
+  scale_x_continuous(breaks = c(0, 12)) +
+  facet_grid(file~bacteria,
+             labeller = labeller(file = 
+                                   as_labeller(c("2021-10-25_Emma_Growth_Curve" = "1", 
+                                      "2021-10-27_Emma_Growth_Curve" = "2",
+                                      "2021-11-03_Emma_Growth_Curve" = "3")))) +
+  labs(x = "Time (h)", y = "OD600") +
+  guides(lty = guide_legend(title = "Phage added?"))
 
 ggplot(data = temp_sum[temp_sum$bacteria != "Blank", ],
        aes(x = file, y = peak_dens, 
@@ -291,7 +298,7 @@ ggplot(data = temp_sum[temp_sum$bacteria != "Blank", ],
   guides(shape = guide_legend(title = "Initial Phage\n(pfu/mL)"))
 
 ggplot(data = temp_sum[temp_sum$bacteria != "Blank", ],
-       aes(x = file, y = as.numeric(peak_time)/3600, color = bacteria, 
+       aes(x = file, y = as.numeric(peak_time)/3600, 
            shape = as.factor(init_phage))) +
   geom_point(alpha = 0.5, size = 2) +
   facet_wrap(~bacteria, nrow = 2) +
