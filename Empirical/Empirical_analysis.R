@@ -27,7 +27,7 @@ gcdata <-
     endrow = 126, endcol = 99)
               
 gcdata_lng <- pivot_wide_longer(gcdata,
-                                id_cols = c("Time", "T° 600"),
+                                id_cols = c("file", "Time", "T° 600"),
                                 values_to = "OD600")
 #Create designs ----
 design_diftconcs <- 
@@ -150,11 +150,11 @@ gcdata_lng$Time <- lubridate::hms(gcdata_lng$Time)
 gcdata_lng <- smooth_data(OD600 ~ Time,
                           data = gcdata_lng,
                           algorithm = "moving-average",
-                          subset_by = paste(gcdata_lng$run, gcdata_lng$Well),
+                          subset_by = paste(gcdata_lng$file, gcdata_lng$Well),
                           window_width = 5)
 
 gcdata_lng <- group_by(gcdata_lng,
-                             run, init_bact, init_phage, init_moi, Well, bacteria)
+                             file, init_bact, init_phage, init_moi, Well, bacteria)
 gcdata_sum <- dplyr::summarize(gcdata_lng,
                                peak_index = find_local_extrema(fitted,
                                                                return_minima = FALSE,
@@ -165,7 +165,7 @@ gcdata_sum <- dplyr::summarize(gcdata_lng,
                                peak_dens = fitted[peak_index])
 
 gcdata_sum_sum <- dplyr::summarise(
-  group_by(gcdata_sum, run, init_bact, init_phage, init_moi, bacteria),
+  group_by(gcdata_sum, file, init_bact, init_phage, init_moi, bacteria),
   peak_time_avg = mean(as.numeric(peak_time)),
   peak_dens_avg = mean(peak_dens))
 
@@ -203,20 +203,20 @@ gcdata_sum_sum <- left_join(gcdata_sum_sum, trav_resis_sum)
 
 
 #Plot all data sloppily ----
-for (run in unique(gcdata_lng$run)) {
-  temp <- gcdata_lng[gcdata_lng$run == run, ]
+for (filenm in unique(gcdata_lng$file)) {
+  temp <- gcdata_lng[gcdata_lng$file == filenm, ]
   print(ggplot(data = temp, 
                aes(x = as.numeric(Time), y = fitted, 
                    color = bacteria, group = Well)) +
           geom_line() +
-          geom_point(data = gcdata_sum[gcdata_sum$run == run, ],
+          geom_point(data = gcdata_sum[gcdata_sum$file == filenm, ],
                      aes(x = peak_time, y = peak_dens)) +
           NULL)
 }
 
 #Plots of run varying init dens & moi ----
-temp <- gcdata_lng[gcdata_lng$run == "2021-10-15_Emma_Growth_Curve", ]
-temp_sum <- gcdata_sum[gcdata_sum$run == "2021-10-15_Emma_Growth_Curve", ]
+temp <- gcdata_lng[gcdata_lng$file == "2021-10-15_Emma_Growth_Curve", ]
+temp_sum <- gcdata_sum[gcdata_sum$file == "2021-10-15_Emma_Growth_Curve", ]
 temp_sum_sum <- group_by(temp_sum[temp_sum$init_bact > 0 &
                                     temp_sum$peak_dens < 0.75, ], 
                          init_bact, init_moi) %>%
@@ -224,42 +224,53 @@ temp_sum_sum <- group_by(temp_sum[temp_sum$init_bact > 0 &
                    peak_time = mean(as.numeric(peak_time)))
 
 print(ggplot(data = temp, 
-             aes(x = as.numeric(Time), y = fitted+1, 
+             aes(x = as.numeric(Time)/3600, y = fitted+1, 
                  color = as.factor(init_bact), group = Well)) +
         geom_line() +
-        scale_y_continuous(trans = "log10") +
+        scale_y_continuous(trans = "log10", name = "Smoothed OD600") +
+        labs(color = "Initial Bacteria\n(cfu/mL)", x = "Time (h)") +
         NULL)
 
 print(ggplot(data = temp[temp$init_bact > 0, ], 
-             aes(x = as.numeric(Time), y = fitted+1, 
+             aes(x = as.numeric(Time)/3600, y = fitted+1, 
                  color = as.factor(init_moi), group = Well)) +
         geom_line() +
         facet_wrap(~init_bact) +
-        scale_y_continuous(trans = "log10") +
+        scale_y_continuous(trans = "log10", name = "Smoothed OD600") +
+        labs(color = "Initial MOI\n(pfu/cfu)", x = "Time (h)",
+             subtitle = "Initial Bacteria (cfu/mL)") +
         NULL)
 
 print(ggplot(data = temp_sum[temp_sum$init_bact > 0, ],
-             aes(x = as.factor(init_moi), y = as.numeric(peak_time))) +
-        geom_point(alpha = 0.5) +
-        facet_grid(~init_bact))
+             aes(x = as.factor(init_moi), y = as.numeric(peak_time)/3600)) +
+        geom_point(alpha = 0.5, position = position_jitter(0.2)) +
+        facet_grid(~init_bact) +
+        scale_y_continuous(trans = "log10", name = "Peak time (h)") +
+        labs(subtitle = "Initial Bacteria (cfu/mL)",
+             x = "Initial MOI (pfu/cfu)") +
+        NULL)
 
 print(ggplot(data = temp_sum[temp_sum$init_bact > 0, ],
              aes(x = as.factor(init_moi), y = as.numeric(peak_dens))) +
-        geom_point(alpha = 0.5) +
+        geom_point(alpha = 0.5, position = position_jitter(0.2)) +
         facet_grid(~init_bact) +
-        geom_point(data = temp_sum_sum, size = 3, alpha = 0.5,
-                   aes(x = as.factor(init_moi), y = as.numeric(peak_dens))))
+        # geom_point(data = temp_sum_sum, size = 3, alpha = 0.5,
+        #            aes(x = as.factor(init_moi), y = as.numeric(peak_dens))) +
+        scale_y_continuous(trans = "log10", name = "Peak density (OD600)") +
+        labs(subtitle = "Initial Bacteria (cfu/mL)",
+             x = "Initial MOI (pfu/cfu)") +
+        NULL)
 
 #Plots of varying isolates ----
-temp <- gcdata_lng[gcdata_lng$run %in% 
+temp <- gcdata_lng[gcdata_lng$file %in% 
                      c("2021-10-25_Emma_Growth_Curve", 
                        "2021-10-27_Emma_Growth_Curve",
                        "2021-11-03_Emma_Growth_Curve"), ]
-temp_sum <- gcdata_sum[gcdata_sum$run %in% 
+temp_sum <- gcdata_sum[gcdata_sum$file %in% 
                          c("2021-10-25_Emma_Growth_Curve", 
                            "2021-10-27_Emma_Growth_Curve",
                            "2021-11-03_Emma_Growth_Curve"), ]
-temp_sum_sum <- gcdata_sum_sum[gcdata_sum_sum$run %in% 
+temp_sum_sum <- gcdata_sum_sum[gcdata_sum_sum$file %in% 
                                  c("2021-10-25_Emma_Growth_Curve", 
                                    "2021-10-27_Emma_Growth_Curve",
                                    "2021-11-03_Emma_Growth_Curve"), ]
@@ -268,33 +279,45 @@ ggplot(data = temp,
        aes(x = as.numeric(Time), y = fitted, color = bacteria,
            group = Well)) +
   geom_line() +
-  facet_grid(~run)
+  facet_grid(~file)
 
 ggplot(data = temp_sum[temp_sum$bacteria != "Blank", ],
-       aes(x = run, y = peak_dens, color = bacteria, 
+       aes(x = file, y = peak_dens, 
            shape = as.factor(init_phage))) +
-  geom_point() +
-  facet_wrap(~bacteria, nrow = 2)
+  geom_point(alpha = 0.5, size = 2) +
+  facet_wrap(~bacteria, nrow = 2) +
+  scale_x_discrete(labels = 1:3) +
+  labs(x = "Batch", y = "Peak density (OD600)") +
+  guides(shape = guide_legend(title = "Initial Phage\n(pfu/mL)"))
 
 ggplot(data = temp_sum[temp_sum$bacteria != "Blank", ],
-       aes(x = run, y = as.numeric(peak_time), color = bacteria, 
+       aes(x = file, y = as.numeric(peak_time)/3600, color = bacteria, 
            shape = as.factor(init_phage))) +
-  geom_point() +
-  facet_wrap(~bacteria, nrow = 2)
+  geom_point(alpha = 0.5, size = 2) +
+  facet_wrap(~bacteria, nrow = 2) +
+  scale_x_discrete(labels = 1:3) +
+  labs(x = "Batch", y = "Peak time (h)") +
+  guides(shape = guide_legend(title = "Initial Phage\n(pfu/mL)"))
 
 ggplot(data = temp_sum_sum[temp_sum_sum$bacteria != "Blank" &
                              temp_sum_sum$init_phage > 0 &
                              temp_sum_sum$peak_time_avg > 10000, ],
-       aes(x = mean_eop, y = peak_time_avg, color = bacteria)) +
+       aes(x = log10(mean_eop), y = peak_time_avg/3600, color = bacteria)) +
   geom_point(size = 2, alpha = 0.5) +
-  facet_grid(~run) +
-  scale_x_continuous(trans = "log10")
+  facet_grid(~file, 
+             labeller = as_labeller(c("2021-10-25_Emma_Growth_Curve" = "1", 
+                                      "2021-10-27_Emma_Growth_Curve" = "2",
+                                      "2021-11-03_Emma_Growth_Curve" = "3"))) +
+  labs(subtitle = "Batch", y = "Peak time (h)", x = "log10(EOP)")
 
 ggplot(data = temp_sum_sum[temp_sum_sum$bacteria != "Blank" &
                              temp_sum_sum$init_phage > 0 &
                              temp_sum_sum$peak_time_avg > 10000, ],
-       aes(x = mean_eop, y = peak_dens_avg, color = bacteria)) +
+       aes(x = log10(mean_eop), y = peak_dens_avg, color = bacteria)) +
   geom_point(size = 2, alpha = 0.5) +
-  facet_grid(~run) +
-  scale_x_continuous(trans = "log10")
+  facet_grid(~file, 
+             labeller = as_labeller(c("2021-10-25_Emma_Growth_Curve" = "1", 
+                                      "2021-10-27_Emma_Growth_Curve" = "2",
+                                      "2021-11-03_Emma_Growth_Curve" = "3"))) +
+  labs(subtitle = "Batch", y = "Peak density (OD600)", x = "log10(EOP)")
 
