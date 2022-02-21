@@ -25,6 +25,9 @@
 # Perhaps should measure something like P density at bact peak? 
 #   Or P r up to bact peak?
 #   
+# Would dilution series of phage so that every phage has peak time same 
+# on one host, then compare those dilutions across hosts?
+# 
 # fix resistance equil checking
 # use netrd (see Scarpino mtg)
 # 
