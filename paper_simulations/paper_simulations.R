@@ -1327,6 +1327,104 @@ if (glob_make_statplots) {
     NULL
 }
 
+#Run 1: auc - max time - extin time ----
+if (glob_make_statplots) {
+  #Auc vs maxtime (zoomed, one facet)
+  tiff("./plots/run1_auc_maxtime_k1e9_u011_zoomed.tiff",
+  width = 5, height = 4, units = "in", res = 300)
+  ggplot(data = y_summarized1[y_summarized1$k_S == 10**9 &
+                                y_summarized1$u_S == 0.011, ],
+         aes(x = max_time/60, y = auc/60, color = as.factor(a),
+             shape = maxdens_k_ratio < 0.95)) +
+    geom_point(size = 1.5, alpha = 0.6) +
+    #facet_grid(k_S ~ u_S, scales = "free") +
+    scale_y_continuous(trans = "log10") +
+    scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
+    scale_color_viridis_d(name = "Infection\nRate\n(/min)") +
+    coord_cartesian(xlim = c(0, 16), ylim = c(10**6, 10**10)) +
+    labs(x = "Peak Bacterial Density Time (hrs)",
+         y = "Area Under the Curve (hr cfu/mL)") +
+    guides(shape = FALSE) +
+    theme_bw() +
+    NULL
+  dev.off()
+  
+  #Auc vs maxtime (one facet, not zoomed)
+  tiff("./plots/run1_auc_maxtime_k1e9_u011.tiff",
+       width = 5, height = 4, units = "in", res = 300)
+  ggplot(data = y_summarized1[y_summarized1$k_S == 10**9 &
+                                y_summarized1$u_S == 0.011, ],
+         aes(x = max_time/60, y = auc/60, color = as.factor(a),
+             shape = maxdens_k_ratio < 0.95)) +
+    geom_point(size = 1.5, alpha = 0.6) +
+    #facet_grid(k_S ~ u_S, scales = "free") +
+    scale_y_continuous(trans = "log10") +
+    scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
+    scale_color_viridis_d(name = "Infection\nRate\n(/min)") +
+    labs(x = "Peak Bacterial Density Time (hrs)",
+         y = "Area Under the Curve (hr cfu/mL)") +
+    guides(shape = FALSE) +
+    theme_bw() +
+    NULL
+  dev.off()
+  
+  #Auc vs maxtime (all facets, not zoomed)
+  tiff("./plots/run1_auc_maxtime.tiff",
+       width = 5, height = 4, units = "in", res = 300)
+  ggplot(data = y_summarized1,
+         aes(x = max_time/60, y = auc/60, color = as.factor(a),
+             shape = maxdens_k_ratio < 0.95)) +
+    geom_point(size = 1.5, alpha = 0.6) +
+    facet_grid(k_S ~ u_S, scales = "free") +
+    scale_y_continuous(trans = "log10") +
+    scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
+    scale_color_viridis_d(name = "Infection\nRate\n(/min)") +
+    labs(x = "Peak Bacterial Density Time (hrs)",
+         y = "Area Under the Curve (hr cfu/mL)") +
+    guides(shape = FALSE) +
+    theme_bw() +
+    NULL
+  dev.off()
+  
+  #Auc vs extin time (all facets, not zoomed)
+  tiff("./plots/run1_auc_extintime.tiff",
+       width = 5, height = 4, units = "in", res = 300)
+  ggplot(data = y_summarized1,
+         aes(x = extin_time/60, y = auc/60, color = as.factor(a),
+             shape = maxdens_k_ratio < 0.95)) +
+    geom_point(size = 1.5, alpha = 0.6) +
+    facet_grid(k_S ~ u_S, scales = "free") +
+    scale_y_continuous(trans = "log10") +
+    scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
+    scale_color_viridis_d(name = "Infection\nRate\n(/min)") +
+    labs(x = "Bacterial Extinction Time (hrs)",
+         y = "Area Under the Curve (hr cfu/mL)") +
+    guides(shape = FALSE) +
+    theme_bw() +
+    NULL
+  dev.off()
+  
+  #Auc vs max dens (all facets, not zoomed)
+  tiff("./plots/run1_auc_maxdens.tiff",
+       width = 5, height = 4, units = "in", res = 300)
+  ggplot(data = y_summarized1,
+         aes(x = max_dens, y = auc/60, color = as.factor(a),
+             shape = maxdens_k_ratio < 0.95)) +
+    geom_point(size = 1.5, alpha = 0.6) +
+    facet_grid(u_S ~ k_S, scales = "free") +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
+    scale_color_viridis_d(name = "Infection\nRate\n(/min)") +
+    labs(x = "Peak Bacterial Density (cfu/mL)",
+         y = "Area Under the Curve (hr cfu/mL)") +
+    guides(shape = FALSE) +
+    theme_bw() +
+    NULL
+  dev.off()
+}
+
+
 ##Run 2: bact variants simulation & summarization ----
 run2 <- run_sims_filewrapper(name = "run2",
                      u_Svals = signif(2**c(-5, -5.5, -6, -6.5, -7), 2),
