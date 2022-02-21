@@ -25,6 +25,22 @@ gcdata <-
               "2021-11-03_Emma_Growth_Curve.csv"),
     startrow = 30, startcol = 2,
     endrow = 126, endcol = 99)
+gcdata_211108 <- 
+  import_widemeasures(
+    files = c("2021-11-08_Emma_Growth_Curve_1.csv",
+              "2021-11-08_Emma_Growth_Curve_2.csv",
+              "2021-11-08_Emma_Growth_Curve_3.csv",
+              "2021-11-08_Emma_Growth_Curve_4.csv"),
+    startrow = 30, startcol = 2,
+    endrow = 126, endcol = 99,
+    metadata = list(startdate = c(6, 2), starttime = c(7, 2)),
+    run_names = rep("2021-11-08_Emma_Growth_Curve", 4))
+for (i in 1:length(gcdata_211108)) {
+  gcdata_211108[[i]]$Time <- 
+    lubridate::hms(gcdata_211108[[i]]$Time) +
+    lubridate::parse_date_time(gcdata_211108[[i]]$starttime, orders = "IMSp") -
+    lubridate::hms(gcdata_211108[[1]]$starttime)
+}
               
 gcdata_lng <- pivot_wide_longer(gcdata,
                                 id_cols = c("file", "Time", "T° 600"),
