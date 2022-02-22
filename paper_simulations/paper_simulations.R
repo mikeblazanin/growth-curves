@@ -865,7 +865,17 @@ y_summarized1 <-
     phage_atmaxdens = Density[Pop == "P" & time == max_time],
     maxdens_k_ratio = max_dens/k_S[1],
     run_time = max(time),
-    equil = equil[1]
+    equil = equil[1],
+    auc_tomaxtime = gcplyr::auc(x = time[Pop == "B"], 
+                                y = Density[Pop == "B"], 
+                                xlim = c(NA, max_time)),
+    #Integral of the logistic function
+    # P(t) = K/(1+((K-P_0)/P_0)e^(-rt))
+    # indefinite integral = K((ln(((K - P_0)/P_0)*e^(-rt) + 1))/r + 1) + C
+    # here taking integral from 0 to max_time
+    pred_auc =
+      (k_S[1]*(log((k_S[1]-init_S_dens[1])/init_S_dens[1]*exp(-u_S[1]*max_time) + 1)/u_S[1] + max_time) -
+      k_S[1]*(log((k_S[1]-init_S_dens[1])/init_S_dens[1]*exp(-u_S[1]*0) + 1)/u_S[1] + 0))
   )
 
 #Drop unneeded columns
@@ -1330,14 +1340,16 @@ if (glob_make_statplots) {
 #Run 1: auc - max time - extin time ----
 if (glob_make_statplots) {
   #Auc vs maxtime (zoomed, one facet)
+  # (with prediction line from analytical integral
+  # of logistic curve up to peak time)
   tiff("./plots/run1_auc_maxtime_k1e9_u011_zoomed.tiff",
   width = 5, height = 4, units = "in", res = 300)
   ggplot(data = y_summarized1[y_summarized1$k_S == 10**9 &
                                 y_summarized1$u_S == 0.011, ],
-         aes(x = max_time/60, y = auc/60, color = as.factor(a),
-             shape = maxdens_k_ratio < 0.95)) +
-    geom_point(size = 1.5, alpha = 0.6) +
-    #facet_grid(k_S ~ u_S, scales = "free") +
+         aes(x = max_time/60, y = auc/60)) +
+    geom_point(aes(shape = maxdens_k_ratio < 0.95, color = as.factor(a)),
+               size = 1.5, alpha = 0.6) +
+    geom_line(aes(y = pred_auc/60), color = "black") +
     scale_y_continuous(trans = "log10") +
     scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
     scale_color_viridis_d(name = "Infection\nRate\n(/min)") +
@@ -1372,9 +1384,10 @@ if (glob_make_statplots) {
   tiff("./plots/run1_auc_maxtime.tiff",
        width = 5, height = 4, units = "in", res = 300)
   ggplot(data = y_summarized1,
-         aes(x = max_time/60, y = auc/60, color = as.factor(a),
-             shape = maxdens_k_ratio < 0.95)) +
-    geom_point(size = 1.5, alpha = 0.6) +
+         aes(x = max_time/60, y = auc/60)) +
+    geom_point(aes(shape = maxdens_k_ratio < 0.95, color = as.factor(a)),
+               size = 1.5, alpha = 0.6) +
+    geom_line(aes(y = pred_auc/60), color = "black") +
     facet_grid(k_S ~ u_S, scales = "free") +
     scale_y_continuous(trans = "log10") +
     scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
@@ -1422,6 +1435,51 @@ if (glob_make_statplots) {
     theme_bw() +
     NULL
   dev.off()
+  
+  #Auc (total) vs empirical auc up to peak
+  ggplot(data = y_summarized1[y_summarized1$maxdens_k_ratio < 0.95, ],
+         aes(x = auc, y = auc_tomaxtime, color = as.factor(a),
+             shape = maxdens_k_ratio < 0.95)) +
+    geom_point() +
+    facet_grid(u_S ~ k_S, scales = "free") +
+    scale_y_continuous(trans = "log10") +
+    scale_x_continuous(trans = "log10") +
+    geom_abline(slope = 1, intercept = 0) +
+    scale_color_viridis_d(name = "Infection\nRate\n(/min)") +
+    scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
+    NULL
+  
+  #Auc to predicted auc ratio vs auc (all data)
+  ggplot(data = y_summarized1,
+         aes(x = auc, y = auc/pred_auc,
+             shape = maxdens_k_ratio < 0.95)) +
+    geom_point() +
+    facet_grid(u_S ~ k_S, scales = "free") +
+    scale_x_continuous(trans = "log10") +
+    scale_color_viridis_d(name = "Infection\nRate\n(/min)") +
+    scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
+    NULL
+  
+  #Auc to predicted auc ratio vs auc (just maxdens < 0.95 * k)
+  tiff("./plots/run1_ratio_auc_to_predauc_zoomed.tiff",
+  width = 5, height = 4, units = "in", res = 300)
+  ggplot(data = y_summarized1[y_summarized1$maxdens_k_ratio < 0.95, ],
+         aes(x = auc, y = auc/pred_auc,
+             color = as.factor(a))) +
+    geom_point() +
+    facet_grid(u_S ~ k_S, scales = "free") +
+    scale_x_continuous(trans = "log10") +
+    scale_color_viridis_d(name = "Infection\nRate\n(/min)") +
+    scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
+    labs(x = "Area Under the Curve (hr cfu/mL)",
+         y = "Ratio of Total AUC: AUC at Peak Bacterial Density") +
+    theme_bw() +
+    NULL
+  dev.off()
+  
+  summary(
+    lm(auc/pred_auc ~ log10(auc) * as.factor(k_S) * as.factor(u_S),
+             y_summarized1[y_summarized1$maxdens_k_ratio < 0.95, ]))
 }
 
 
