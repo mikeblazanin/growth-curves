@@ -1028,8 +1028,22 @@ if (glob_make_statplots) {
     scale_y_continuous(trans = "log10") +
     scale_x_continuous(breaks = c(0, 12, 24)) +
     #coord_cartesian(xlim = c(0, 36)) +
-    scale_color_viridis(discrete = TRUE) +
+    scale_color_viridis_d() +
     NULL)
+  dev.off()
+  
+  tiff("./plots/run1_maxdens_maxtime_a_onefacet.tiff", width = 5, height = 4, 
+       res = 300, units = "in")
+  print(ggplot(data = y_summarized1[y_summarized1$u_S == 0.011 &
+                                      y_summarized1$k_S == 10**9, ],
+               aes(x = max_time/60, y = max_dens, color = as.factor(a))) +
+          geom_point() +
+          #facet_grid(k_S ~ u_S, scales = "free") +
+          scale_y_continuous(trans = "log10") +
+          scale_x_continuous(breaks = c(0, 12, 24)) +
+          #coord_cartesian(xlim = c(0, 36)) +
+          scale_color_viridis_d() +
+          NULL)
   dev.off()
   
   tiff("./plots/run1_maxdens_maxtime_b.tiff", width = 5, height = 4, 
