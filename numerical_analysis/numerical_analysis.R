@@ -1295,6 +1295,65 @@ if (glob_make_curveplots) {
       NULL)
   dev.off()
   
+  tiff("./run1_dens_curves/5_Bonly_alllines_auc.tiff",
+       width = 5, height = 5, units = "in", res = 300)
+  print(
+    ggplot(data = temp, 
+           aes(x = time/60, y = Density+dens_offset)) +
+      geom_line(lwd = 1.5, alpha = 1, color = "black") + 
+      geom_point(data = y_summarized1[y_summarized1$uniq_run == 5, ],
+                 aes(x = max_time/60, y = max_dens+dens_offset), 
+                 color = "red", size = 3) +
+      geom_point(data = y_summarized1[y_summarized1$uniq_run == 5, ],
+                 aes(x = extin_time/60, y = extin_dens+dens_offset), 
+                 color = "red", size = 3) +
+      scale_y_continuous(trans = "log10",
+                         breaks = scales::trans_breaks("log10", function(x) 10^x),
+                         labels = scales::trans_format("log10", 
+                                                       scales::math_format(10^.x))) +
+      scale_x_continuous(breaks = seq(from = 0, to = 3.34, by = 1)) +
+      geom_segment(aes(y = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                    "max_dens"] +
+                                        dens_offset),
+                       yend = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                       "max_dens"] +
+                                           dens_offset),
+                       x = 0,
+                       xend = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                       "max_time"])/60),
+                   lty = 2, size = 1.5, color = "red", alpha = 0.8) +
+      geom_segment(aes(y = 0 + dens_offset,
+                       yend = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                       "max_dens"] +
+                                           dens_offset),
+                       x = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                    "max_time"])/60,
+                       xend = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                       "max_time"])/60),
+                   lty = 2, size = 1.5, color = "red", alpha = 0.8) +
+      geom_segment(aes(y = 0 + dens_offset,
+                       yend = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                       "extin_dens"] +
+                                           dens_offset),
+                       x = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                    "extin_time"])/60,
+                       xend = as.numeric(y_summarized1[y_summarized1$uniq_run == 5, 
+                                                       "extin_time"])/60),
+                   lty = 2, size = 1.5, color = "red", alpha = 0.8) +
+      geom_area(aes(y = Density+dens_offset),
+                fill = "red", alpha = 0.5) +
+      #geom_hline(yintercept = dens_offset, lty = 2) +
+      theme_bw() +
+      theme(axis.text.x = element_text(size = 18),
+            axis.text.y = element_text(size = 18),
+            axis.title = element_text(size = 20),
+            legend.text = element_text(size = 18),
+            legend.title = element_text(size = 20),
+            plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "in")) +
+      labs(y = "Density", x = "Time (hr)") +
+      NULL)
+  dev.off()
+  
   temp <- ybig1[ybig1$uniq_run == 100 &
                   ybig1$Pop %in% c("S", "I", "P"),]
   temp$Density[temp$Density <= 0] <- 0
