@@ -1036,13 +1036,19 @@ if (glob_make_statplots) {
        res = 300, units = "in")
   print(ggplot(data = y_summarized1[y_summarized1$u_S == 0.011 &
                                       y_summarized1$k_S == 10**9, ],
-               aes(x = max_time/60, y = max_dens, color = as.factor(a))) +
+               aes(x = max_time/60, y = max_dens, color = as.factor(a),
+                   shape = as.factor(maxdens_k_ratio < 0.95))) +
           geom_point() +
           #facet_grid(k_S ~ u_S, scales = "free") +
           scale_y_continuous(trans = "log10") +
           scale_x_continuous(breaks = c(0, 12, 24)) +
+          scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
           #coord_cartesian(xlim = c(0, 36)) +
-          scale_color_viridis_d() +
+          scale_color_viridis_d(name = "Infection\nRate\n(/min)") +
+          labs(x = "Peak Bacterial Density Time (hrs)",
+               y = "Peak Bacterial Density (cfu/mL)") +
+          theme_bw() +
+          guides(shape = FALSE) +
           NULL)
   dev.off()
   
