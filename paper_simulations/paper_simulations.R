@@ -1048,6 +1048,8 @@ if (glob_make_statplots) {
           labs(x = "Peak Bacterial Density Time (hrs)",
                y = "Peak Bacterial Density (cfu/mL)") +
           theme_bw() +
+          theme(axis.title = element_text(size = 17),
+                legend.title = element_text(size = 12)) +
           guides(shape = FALSE) +
           NULL)
   dev.off()
@@ -1378,6 +1380,8 @@ if (glob_make_statplots) {
          y = "Area Under the Curve (hr cfu/mL)") +
     guides(shape = FALSE) +
     theme_bw() +
+    theme(axis.title = element_text(size = 17),
+          legend.title = element_text(size = 12)) +
     NULL
   dev.off()
   
