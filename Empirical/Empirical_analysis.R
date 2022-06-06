@@ -1,5 +1,5 @@
 #Import functions ----
-library(growth.curves.pkg)
+library(gcplyr)
 library(ggplot2)
 library(dplyr)
 
@@ -18,21 +18,19 @@ trav_resis <- read.csv("trav-phage_resis_data.csv")
 
 
 gcdata <-
-  import_widemeasures(
+  read_wides(
     files = c("2021-10-15_Emma_Growth_Curve.csv",
               "2021-10-25_Emma_Growth_Curve.csv",
               "2021-10-27_Emma_Growth_Curve.csv",
               "2021-11-03_Emma_Growth_Curve.csv"),
-    startrow = 30, startcol = 2,
-    endrow = 126, endcol = 99)
+    startrow = 29, startcol = "B")
 gcdata_211108 <- 
-  import_widemeasures(
+  read_wides(
     files = c("2021-11-08_Emma_Growth_Curve_1.csv",
               "2021-11-08_Emma_Growth_Curve_2.csv",
               "2021-11-08_Emma_Growth_Curve_3.csv",
               "2021-11-08_Emma_Growth_Curve_4.csv"),
-    startrow = 30, startcol = 2,
-    endrow = 126, endcol = 99,
+    startrow = 29, startcol = "B",
     metadata = list(startdate = c(6, 2), starttime = c(7, 2)),
     run_names = rep("2021-11-08_Emma_Growth_Curve", 4))
 for (i in 1:length(gcdata_211108)) {
@@ -42,7 +40,7 @@ for (i in 1:length(gcdata_211108)) {
     lubridate::hms(gcdata_211108[[1]]$starttime)
 }
               
-gcdata_lng <- pivot_wide_longer(gcdata,
+gcdata_lng <- trans_wide_to_tidy(gcdata,
                                 id_cols = c("file", "Time", "T° 600"),
                                 values_to = "OD600")
 #Create designs ----
@@ -163,27 +161,30 @@ gcdata_lng <- merge_dfs(gcdata_lng, collapse = TRUE)
 gcdata_lng$Time <- lubridate::hms(gcdata_lng$Time)
 
 #Smooth and summarize ----
-gcdata_lng <- smooth_data(OD600 ~ Time,
-                          data = gcdata_lng,
-                          algorithm = "moving-average",
+gcdata_lng$fitted <- smooth_data(x = gcdata_lng$Time,
+                          y = gcdata_lng$OD600,
+                          method = "moving-average",
                           subset_by = paste(gcdata_lng$file, gcdata_lng$Well),
                           window_width = 5)
 
 gcdata_lng <- group_by(gcdata_lng,
                              file, init_bact, init_phage, init_moi, Well, bacteria)
-gcdata_sum <- dplyr::summarize(gcdata_lng,
-                               peak_index = find_local_extrema(fitted,
-                                                               return_minima = FALSE,
-                                                               width_limit = 11,
-                                                               na.rm = TRUE,
-                                                               remove_endpoints = FALSE)[1],
-                               peak_time = Time[peak_index],
-                               peak_dens = fitted[peak_index])
+gcdata_sum <- dplyr::summarize(
+  gcdata_lng,
+  peak_index = find_local_extrema(y = fitted,
+                                  return_minima = FALSE,
+                                  width_limit_n = 11,
+                                  na.rm = TRUE,
+                                  return_endpoints = TRUE)[1],
+  peak_time = Time[peak_index],
+  peak_dens = fitted[peak_index],
+  auc = auc(x = as.numeric(Time), y = fitted))
 
 gcdata_sum_sum <- dplyr::summarise(
   group_by(gcdata_sum, file, init_bact, init_phage, init_moi, bacteria),
   peak_time_avg = mean(as.numeric(peak_time)),
-  peak_dens_avg = mean(peak_dens))
+  peak_dens_avg = mean(peak_dens),
+  auc_avg = mean(auc))
 
 #Join in EOP data
 trav_resis_sum <-
@@ -222,11 +223,11 @@ gcdata_sum_sum <- left_join(gcdata_sum_sum, trav_resis_sum)
 for (filenm in unique(gcdata_lng$file)) {
   temp <- gcdata_lng[gcdata_lng$file == filenm, ]
   print(ggplot(data = temp, 
-               aes(x = as.numeric(Time), y = fitted, 
+               aes(x = as.numeric(Time)/3600, y = OD600, 
                    color = bacteria, group = Well)) +
           geom_line() +
-          geom_point(data = gcdata_sum[gcdata_sum$file == filenm, ],
-                     aes(x = peak_time, y = peak_dens)) +
+          # geom_point(data = gcdata_sum[gcdata_sum$file == filenm, ],
+          #            aes(x = peak_time, y = peak_dens)) +
           NULL)
 }
 
@@ -304,6 +305,19 @@ ggplot(data = temp[temp$bacteria != "Blank", ],
   labs(x = "Time (h)", y = "OD600") +
   guides(lty = guide_legend(title = "Phage added?"))
 
+tiff("2021_11_03_curves.tiff", width = 5, height = 4,
+     units = "in", res = 300)
+ggplot(data = temp[temp$bacteria != "Blank" &
+                     temp$file == "2021-11-03_Emma_Growth_Curve", ],
+       aes(x = as.numeric(Time)/3600, y = fitted, lty = init_phage > 0,
+           group = Well)) +
+  geom_line() +
+  scale_x_continuous(breaks = c(0, 12)) +
+  facet_wrap(.~bacteria) +
+  labs(x = "Time (h)", y = "OD600") +
+  guides(lty = guide_legend(title = "Phage added?"))
+dev.off()
+
 ggplot(data = temp_sum[temp_sum$bacteria != "Blank", ],
        aes(x = file, y = peak_dens, 
            shape = as.factor(init_phage))) +
@@ -322,25 +336,65 @@ ggplot(data = temp_sum[temp_sum$bacteria != "Blank", ],
   labs(x = "Batch", y = "Peak time (h)") +
   guides(shape = guide_legend(title = "Initial Phage\n(pfu/mL)"))
 
+tiff("maxtime_EOP.tiff", width = 5, height = 3.5,
+     units = "in", res = 300)
 ggplot(data = temp_sum_sum[temp_sum_sum$bacteria != "Blank" &
                              temp_sum_sum$init_phage > 0 &
                              temp_sum_sum$peak_time_avg > 10000, ],
-       aes(x = log10(mean_eop), y = peak_time_avg/3600, color = bacteria)) +
-  geom_point(size = 2, alpha = 0.5) +
-  facet_grid(~file, 
-             labeller = as_labeller(c("2021-10-25_Emma_Growth_Curve" = "1", 
-                                      "2021-10-27_Emma_Growth_Curve" = "2",
-                                      "2021-11-03_Emma_Growth_Curve" = "3"))) +
-  labs(subtitle = "Batch", y = "Peak time (h)", x = "log10(EOP)")
+       aes(x = log10(mean_eop), y = peak_time_avg/3600, 
+           color = bacteria, shape = file)) +
+  geom_point(size = 3, alpha = 0.75) +
+  scale_color_discrete(name = "Bacterial\nStrain") +
+  scale_shape_manual(breaks = c("2021-10-25_Emma_Growth_Curve",
+                                "2021-10-27_Emma_Growth_Curve",
+                                "2021-11-03_Emma_Growth_Curve"),
+                     values = c(15, 16, 17),
+                     labels = c(1, 2, 3), name = "Batch") +
+  labs(y = "Peak time (h)", x = "log10(EOP)") +
+  theme_bw() +
+  theme(legend.text = element_text(size = 8),
+        legend.spacing = unit(0.05, "in")) +
+  guides(shape = FALSE)
+dev.off()
 
+tiff("maxdens_EOP.tiff", width = 5, height = 3.5,
+     units = "in", res = 300)
 ggplot(data = temp_sum_sum[temp_sum_sum$bacteria != "Blank" &
                              temp_sum_sum$init_phage > 0 &
                              temp_sum_sum$peak_time_avg > 10000, ],
-       aes(x = log10(mean_eop), y = peak_dens_avg, color = bacteria)) +
-  geom_point(size = 2, alpha = 0.5) +
-  facet_grid(~file, 
-             labeller = as_labeller(c("2021-10-25_Emma_Growth_Curve" = "1", 
-                                      "2021-10-27_Emma_Growth_Curve" = "2",
-                                      "2021-11-03_Emma_Growth_Curve" = "3"))) +
-  labs(subtitle = "Batch", y = "Peak density (OD600)", x = "log10(EOP)")
+       aes(x = log10(mean_eop), y = peak_dens_avg, 
+           color = bacteria, shape = file)) +
+  geom_point(size = 3, alpha = 0.75) +
+  scale_color_discrete(name = "Bacterial\nStrain") +
+  scale_shape_manual(breaks = c("2021-10-25_Emma_Growth_Curve",
+                                "2021-10-27_Emma_Growth_Curve",
+                                "2021-11-03_Emma_Growth_Curve"),
+                     values = c(15, 16, 17),
+                     labels = c(1, 2, 3), name = "Batch") +
+  labs(y = "Peak density (OD600)", x = "log10(EOP)") +
+  theme_bw() +
+  theme(legend.text = element_text(size = 8),
+        legend.spacing = unit(0.05, "in")) +
+  guides(shape = FALSE)
+dev.off()
 
+tiff("auc_EOP.tiff", width = 4, height = 3.5,
+     units = "in", res = 300)
+ggplot(data = temp_sum_sum[temp_sum_sum$bacteria != "Blank" &
+                             temp_sum_sum$init_phage > 0 &
+                             temp_sum_sum$peak_time_avg > 10000, ],
+       aes(x = log10(mean_eop), y = auc_avg/3600, color = bacteria,
+           shape = file)) +
+  geom_point(size = 3, alpha = 0.75) +
+  scale_color_discrete(name = "Bacterial\nStrain") +
+  scale_shape_manual(breaks = c("2021-10-25_Emma_Growth_Curve",
+                                "2021-10-27_Emma_Growth_Curve",
+                                "2021-11-03_Emma_Growth_Curve"),
+                     values = c(15, 16, 17),
+                     labels = c(1, 2, 3), name = "Batch") +
+  labs(y = "Area Under the Curve (hr OD600)", x = "log10(EOP)") +
+  theme_bw() +
+  theme(legend.text = element_text(size = 8),
+        legend.spacing = unit(0.05, "in")) +
+  guides(shape = FALSE, color = FALSE)
+dev.off()
