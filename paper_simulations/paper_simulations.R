@@ -1045,7 +1045,7 @@ if (glob_make_statplots) {
           scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
           #coord_cartesian(xlim = c(0, 36)) +
           scale_color_viridis_d(name = "Infection\nRate\n(/min)") +
-          labs(x = "Peak Bacterial Density Time (hrs)",
+          labs(x = "Peak Bacterial Density Time (hr)",
                y = "Peak Bacterial Density (cfu/mL)") +
           theme_bw() +
           theme(axis.title = element_text(size = 17),
@@ -1127,7 +1127,7 @@ if (glob_make_statplots) {
 
 #Code for 2D contours
 if(glob_make_statplots) {
-  tiff("./plots/run1_peaktime_contour_b100_u011_k1e9.tiff", width = 5, height = 4,
+  tiff("./plots/run1_peaktime_contour_b100_u011_k1e9.tiff", width = 5, height = 3.75,
        units = "in", res = 300)
   print(ggplot(data = y_summarized1[y_summarized1$b == 100 &
                                       y_summarized1$u_S == 0.011 &
@@ -1136,7 +1136,7 @@ if(glob_make_statplots) {
           geom_contour_filled(aes(z = max_time/60), alpha = 0.5) +
           geom_point(aes(color = max_time/60, shape = maxdens_k_ratio < 0.95),
                      size = 3) +
-          scale_color_viridis(name = "Peak time (hr)",
+          scale_color_viridis_c(name = "Peak time (hr)",
                               breaks = c(6, 12, 18, 24)) +
           scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
           scale_y_continuous(trans = "log10", breaks = c(16, 40, 100)) +
@@ -1220,11 +1220,14 @@ if (glob_make_statplots) {
     geom_point(size = 1.5, alpha = 0.6) +
     #facet_grid(u_S ~ k_S) +
     scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
-    scale_color_viridis(name = "Infection\nRate\n(/min)", discrete = TRUE) +
+    scale_color_viridis_d(name = "Infection\nRate\n(/min)") +
     coord_cartesian(ylim = c(0, 22), xlim = c(0, 16)) +
     geom_abline(slope = 1, intercept = 0, lty = 2) +
-    labs(x = "Peak Bacterial Density Time (hrs)",
-         y = "Bacterial Extinction Time (hrs)") +
+    labs(x = "Peak Bacterial Density Time (hr)",
+         y = "Bacterial Extinction Time (hr)") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 17),
+          legend.title = element_text(size = 12)) +
     guides(shape = FALSE)
   dev.off()
   
@@ -1240,8 +1243,8 @@ if (glob_make_statplots) {
     scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
     scale_color_viridis(name = "Infection\nRate\n(/min)", discrete = TRUE) +
     geom_abline(slope = 1, intercept = 0, lty = 2) +
-    labs(x = "Peak Bacterial Density Time (hrs)",
-         y = "Bacterial Extinction Time (hrs)") +
+    labs(x = "Peak Bacterial Density Time (hr)",
+         y = "Bacterial Extinction Time (hr)") +
     guides(shape = FALSE)
   dev.off()
   
@@ -1255,8 +1258,8 @@ if (glob_make_statplots) {
     scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
     scale_color_viridis(name = "Infection\nRate\n(/min)", discrete = TRUE) +
     geom_abline(slope = 1, intercept = 0, lty = 2) +
-    labs(x = "Peak Bacterial Density Time (hrs)",
-         y = "Bacterial Extinction Time (hrs)") +
+    labs(x = "Peak Bacterial Density Time (hr)",
+         y = "Bacterial Extinction Time (hr)") +
     guides(shape = FALSE)
   dev.off()
   
@@ -1272,7 +1275,7 @@ if (glob_make_statplots) {
     scale_color_viridis(name = "Infection\nRate\n(/min)", discrete = TRUE) +
     coord_cartesian(ylim = c(NA, 1.65), xlim = c(0, 16)) +
     guides(shape = FALSE) +
-    labs(x = "Peak Bacterial Density Time (hrs)",
+    labs(x = "Peak Bacterial Density Time (hr)",
          y = "Extinction Time to Peak Density Time Ratio") +
     NULL
   dev.off()
@@ -1288,7 +1291,7 @@ if (glob_make_statplots) {
     scale_color_viridis(name = "Infection\nRate\n(/min)", discrete = TRUE) +
     coord_cartesian(ylim = c(NA, 1.65), xlim = c(0, 16)) +
     guides(shape = FALSE) +
-    labs(x = "Peak Bacterial Density Time (hrs)",
+    labs(x = "Peak Bacterial Density Time (hr)",
          y = "Ratio of Extinction Time to Peak Density Time") +
     NULL
   
@@ -1317,7 +1320,7 @@ if (glob_make_statplots) {
     #facet_grid(u_S ~ k_S, scales = "free") +
     coord_cartesian(ylim = c(NA, 6), xlim = c(0, 16)) +
     guides(shape = FALSE) +
-    labs(x = "Peak Bacterial Density Time (hrs)",
+    labs(x = "Peak Bacterial Density Time (hr)",
          y = "Extinction Time - Peak Density Time") +
     NULL
   dev.off()
@@ -1344,7 +1347,7 @@ if (glob_make_statplots) {
     scale_shape_discrete(name = "Burst\nSize") +
     #facet_grid(u_S ~ k_S, scales = "free") +
     coord_cartesian(ylim = c(NA, 1.65)) +
-    labs(x = "Phage Density at Peak Bacterial Density Time (hrs)",
+    labs(x = "Phage Density at Peak Bacterial Density Time (hr)",
          y = "Ratio of Extinction Time to Peak Density Time") +
     NULL
   dev.off()
@@ -1376,7 +1379,7 @@ if (glob_make_statplots) {
     scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
     scale_color_viridis_d(name = "Infection\nRate\n(/min)") +
     coord_cartesian(xlim = c(0, 16), ylim = c(10**6, 10**10)) +
-    labs(x = "Peak Bacterial Density Time (hrs)",
+    labs(x = "Peak Bacterial Density Time (hr)",
          y = "Area Under the Curve (hr cfu/mL)") +
     guides(shape = FALSE) +
     theme_bw() +
@@ -1397,7 +1400,7 @@ if (glob_make_statplots) {
     scale_y_continuous(trans = "log10") +
     scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
     scale_color_viridis_d(name = "Infection\nRate\n(/min)") +
-    labs(x = "Peak Bacterial Density Time (hrs)",
+    labs(x = "Peak Bacterial Density Time (hr)",
          y = "Area Under the Curve (hr cfu/mL)") +
     guides(shape = FALSE) +
     theme_bw() +
@@ -1416,7 +1419,7 @@ if (glob_make_statplots) {
     scale_y_continuous(trans = "log10") +
     scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
     scale_color_viridis_d(name = "Infection\nRate\n(/min)") +
-    labs(x = "Peak Bacterial Density Time (hrs)",
+    labs(x = "Peak Bacterial Density Time (hr)",
          y = "Area Under the Curve (hr cfu/mL)") +
     guides(shape = FALSE) +
     theme_bw() +
@@ -1434,7 +1437,7 @@ if (glob_make_statplots) {
     scale_y_continuous(trans = "log10") +
     scale_shape_manual(breaks = c(TRUE, FALSE), values = c(16, 4)) +
     scale_color_viridis_d(name = "Infection\nRate\n(/min)") +
-    labs(x = "Bacterial Extinction Time (hrs)",
+    labs(x = "Bacterial Extinction Time (hr)",
          y = "Area Under the Curve (hr cfu/mL)") +
     guides(shape = FALSE) +
     theme_bw() +

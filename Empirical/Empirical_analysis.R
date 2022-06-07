@@ -378,7 +378,7 @@ ggplot(data = temp_sum_sum[temp_sum_sum$bacteria != "Blank" &
   guides(shape = FALSE)
 dev.off()
 
-tiff("auc_EOP.tiff", width = 4, height = 3.5,
+tiff("auc_EOP.tiff", width = 4, height = 3,
      units = "in", res = 300)
 ggplot(data = temp_sum_sum[temp_sum_sum$bacteria != "Blank" &
                              temp_sum_sum$init_phage > 0 &
