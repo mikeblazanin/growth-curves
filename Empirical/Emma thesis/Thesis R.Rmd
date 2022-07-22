@@ -1,0 +1,322 @@
+---
+title: "Thesis"
+author: "Emma Vasen"
+date: 'null'
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+Preliminary R setup and importing package
+```{r setup1, eval = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+install.packages("devtools")
+devtools::install_github("mikeblazanin/gcplyr")
+
+install.packages("lubridate")
+
+install.packages("tidyverse")
+```
+
+Importing data
+```{r}
+library(gcplyr)
+
+Oct15Wide <- read_wides("2021-10-15 Data.csv")
+#get rid of the temperature column
+Oct15Wide <- Oct15Wide[,-3]
+
+Oct25Wide <- read_wides("2021-10-25 Data.csv")
+#get rid of the temperature column
+Oct25Wide <- Oct25Wide[,-3]
+
+Oct27Wide <- read_wides("2021-10-27 Data.csv")
+#get rid of the temperature column
+Oct27Wide <- Oct27Wide[,-3]
+
+Nov3Wide <- read_wides("2021-11-03 Data.csv")
+#get rid of the temperature column
+Nov3Wide <- Nov3Wide[,-3]
+```
+
+Transforming from wide-shaped to tidy-shaped
+```{r}
+Oct15Tidy <- trans_wide_to_tidy(wides = Oct15Wide, id_cols = c("file", "Time"))
+
+Oct25Tidy <- trans_wide_to_tidy(wides = Oct25Wide, id_cols = c("file", "Time"))
+
+Oct27Tidy <- trans_wide_to_tidy(wides = Oct27Wide, id_cols = c("file", "Time"))
+
+Nov3Tidy <- trans_wide_to_tidy(wides = Nov3Wide, id_cols = c("file", "Time"))
+```
+
+Adding design elements
+```{r}
+Oct15Design <- read.csv("2021-10-15 Design.csv")
+
+Oct25Design <- read.csv("2021-10-25 Design.csv")
+
+Oct27Design <- read.csv("2021-10-27 Design.csv")
+
+#October 25 and November 3 run have the same layout
+Nov3Design <- Oct25Design
+```
+
+Merging design elements with data
+```{r}
+Oct15Merged <- merge_dfs(Oct15Tidy, Oct15Design)
+head(Oct15Merged, 24)
+
+Oct25Merged <- merge_dfs(Oct25Tidy, Oct25Design)
+head(Oct25Merged, 24)
+
+Oct27Merged <- merge_dfs(Oct27Tidy, Oct27Design)
+head(Oct27Merged, 24)
+
+Nov3Merged <- merge_dfs(Nov3Tidy, Nov3Design)
+head(Nov3Merged, 24)
+```
+
+Smoothing Data
+```{r}
+#need to convert time to seconds
+library(lubridate)
+library(tidyverse)
+
+#Oct15Data
+Oct15Merged$TimeSecs <- hms(Oct15Merged$Time)
+Oct15Merged$TimeSecs <- 3600*hour(Oct15Merged$TimeSecs) + 60*minute(Oct15Merged$TimeSecs) + second(Oct15Merged$TimeSecs)
+
+Oct15Merged$smoothed <- smooth_data(x = Oct15Merged$TimeSecs,
+                                    y = Oct15Merged$Measurements,
+                                    method = "moving-average",
+                                    subset_by = Oct15Merged$Well,
+                                    window_width_n = 5)
+
+Oct15Merged2 <- Oct15Merged[complete.cases(Oct15Merged[, c("Bacteria..cfu.mL.", "Phage..pfu.mL.", "Media")]), ]
+head(Oct15Merged2, 24)
+
+ggplot(data = Oct15Merged2, aes(x = TimeSecs, y = Measurements)) + geom_point(aes(color = Well)) +  ggtitle("Oct15 Original")
+ggplot(data = Oct15Merged2, aes(x = TimeSecs, y = smoothed)) + geom_point(aes(color = Well)) + ggtitle("Oct15 Smoothed")
+
+plot(Oct15Merged$TimeSecs[Oct15Merged$Well == "B5"], Oct15Merged$Measurements[Oct15Merged$Well == "B5"], xlab = "Time in seconds", ylab = "Absorbance", main = "Oct15 Cell B5 Original")
+plot(Oct15Merged$TimeSecs[Oct15Merged$Well == "B5"], Oct15Merged$smoothed[Oct15Merged$Well == "B5"], xlab = "Time in seconds", ylab = "Smoothed Absorbance", main = "Oct15 Cell B5 Smoothed")
+
+#Oct25Data
+Oct25Merged$TimeSecs <- hms(Oct25Merged$Time)
+Oct25Merged$TimeSecs <- 3600*hour(Oct25Merged$TimeSecs) + 60*minute(Oct25Merged$TimeSecs) + second(Oct25Merged$TimeSecs)
+
+Oct25Merged$smoothed <- smooth_data(x = Oct25Merged$TimeSecs,
+                                    y = Oct25Merged$Measurements,
+                                    method = "moving-average",
+                                    subset_by = Oct25Merged$Well,
+                                    window_width = 5)
+
+Oct25Merged2 <- Oct25Merged[complete.cases(Oct25Merged[, c("Bacteria", "Phage.Added.", "Media")]), ]
+head(Oct25Merged2, 24)
+
+ggplot(data = Oct25Merged2, aes(x = TimeSecs, y = Measurements)) + geom_point(aes(color = Well)) + ggtitle("Oct25 Original")
+ggplot(data = Oct25Merged2, aes(x = TimeSecs, y = smoothed)) + geom_point(aes(color = Well)) + ggtitle("Oct25 Smoothed")
+
+plot(Oct25Merged$TimeSecs[Oct25Merged$Well == "B5"], Oct25Merged$Measurements[Oct25Merged$Well == "B5"], xlab = "Time in seconds", ylab = "Absorbance", main = "Oct25 Cell B5 Original")
+plot(Oct25Merged$TimeSecs[Oct25Merged$Well == "B5"], Oct25Merged$smoothed[Oct25Merged$Well == "B5"], xlab = "Time in seconds", ylab = "Smoothed Absorbance", main = "Oct25 Cell B5 Smoothed")
+
+#Oct27Data
+Oct27Merged$TimeSecs <- hms(Oct27Merged$Time)
+Oct27Merged$TimeSecs <- 3600*hour(Oct27Merged$TimeSecs) + 60*minute(Oct27Merged$TimeSecs) + second(Oct27Merged$TimeSecs)
+
+Oct27Merged$smoothed <- smooth_data(x = Oct27Merged$TimeSecs,
+                                    y = Oct27Merged$Measurements,
+                                    method = "moving-average",
+                                    subset_by = Oct27Merged$Well,
+                                    window_width = 5)
+
+Oct27Merged2 <- Oct27Merged[complete.cases(Oct27Merged[, c("Bacteria", "Phage.Added.", "Media")]), ]
+head(Oct27Merged2, 24)
+
+ggplot(data = Oct27Merged2, aes(x = TimeSecs, y = Measurements)) + geom_point(aes(color = Well)) + ggtitle("Oct27 Original")
+ggplot(data = Oct27Merged2, aes(x = TimeSecs, y = smoothed)) + geom_point(aes(color = Well)) + ggtitle("Oct27 Smoothed")
+
+plot(Oct27Merged$TimeSecs[Oct27Merged$Well == "B5"], Oct27Merged$Measurements[Oct27Merged$Well == "B5"], xlab = "Time in seconds", ylab = "Absorbance", main = "Oct27 Cell B5 Original")
+plot(Oct27Merged$TimeSecs[Oct27Merged$Well == "B5"], Oct27Merged$smoothed[Oct27Merged$Well == "B5"], xlab = "Time in seconds", ylab = "Smoothed Absorbance", main = "Oct27 Cell B5 Smoothed")
+
+#Nov3Data
+Nov3Merged$TimeSecs <- hms(Nov3Merged$Time)
+Nov3Merged$TimeSecs <- 3600*hour(Nov3Merged$TimeSecs) + 60*minute(Nov3Merged$TimeSecs) + second(Nov3Merged$TimeSecs)
+
+Nov3Merged$smoothed <- smooth_data(x = Nov3Merged$TimeSecs,
+                                   y = Nov3Merged$Measurements,
+                                   method = "moving-average",
+                                   subset_by = Nov3Merged$Well,
+                                   window_width = 5)
+
+Nov3Merged2 <- Nov3Merged[complete.cases(Nov3Merged[, c("Bacteria", "Phage.Added.", "Media")]), ]
+head(Nov3Merged2, 24)
+
+ggplot(data = Nov3Merged2, aes(x = TimeSecs, y = Measurements)) + geom_point(aes(color = Well)) + ggtitle("Nov3 Original")
+ggplot(data = Nov3Merged2, aes(x = TimeSecs, y = smoothed)) + geom_point(aes(color = Well)) + ggtitle ("Nov3 Smoothed")
+
+plot(Nov3Merged$TimeSecs[Nov3Merged$Well == "B5"], Nov3Merged$Measurements[Nov3Merged$Well == "B5"], xlab = "Time in seconds", ylab = "Absorbance", main = "Nov3 Cell B5 Original")
+plot(Nov3Merged$TimeSecs[Nov3Merged$Well == "B5"], Nov3Merged$smoothed[Oct27Merged$Well == "B5"], xlab = "Time in seconds", ylab = "Smoothed Absorbance", main = "Nov3 Cell B5 Smoothed")
+
+```
+
+Simple Derivative
+```{r}
+#Oct15 Data
+Oct15Merged$deriv <- calc_deriv(x = Oct15Merged$TimeSecs, y = Oct15Merged$smoothed, subset_by = Oct15Merged$Well)
+
+Oct15Merged3 <- Oct15Merged[complete.cases(Oct15Merged[, c("Bacteria..cfu.mL.", "Phage..pfu.mL.", "Media")]), ]
+head(Oct15Merged3, 24)
+
+ggplot(data = Oct15Merged3, aes(x = TimeSecs, y = deriv)) + geom_point(aes(color = Well)) + ggtitle("Oct15 Abs Derivative")
+plot(Oct15Merged$TimeSecs[Oct15Merged$Well == "B5"], Oct15Merged$deriv[Oct15Merged$Well == "B5"], xlab = "Time in seconds", ylab = "Derivative(Absorbance)", main = "Oct15 Cell B5 Abs Derivative")
+
+#Oct25Data
+Oct25Merged$deriv <- calc_deriv(x = Oct25Merged$TimeSecs, y = Oct25Merged$smoothed, subset_by = Oct25Merged$Well)
+
+Oct25Merged3 <- Oct25Merged[complete.cases(Oct25Merged[, c("Bacteria", "Phage.Added.", "Media")]), ]
+head(Oct25Merged3, 24)
+
+ggplot(data = Oct25Merged3, aes(x = TimeSecs, y = deriv)) + geom_point(aes(color = Well)) + ggtitle("Oct25 Abs Derivative")
+plot(Oct25Merged$TimeSecs[Oct25Merged$Well == "B5"], Oct25Merged$deriv[Oct25Merged$Well == "B5"], xlab = "Time in seconds", ylab = "Derivative(Absorbance)", main = "Oct25 Cell B5 Abs Derivative")
+
+#Oct27 Data
+Oct27Merged$deriv <- calc_deriv(x = Oct27Merged$TimeSecs, y = Oct27Merged$smoothed, subset_by = Oct27Merged$Well)
+
+Oct27Merged3 <- Oct27Merged[complete.cases(Oct27Merged[, c("Bacteria", "Phage.Added.", "Media")]), ]
+head(Oct27Merged3, 24)
+
+ggplot(data = Oct27Merged3, aes(x = TimeSecs, y = deriv)) + geom_point(aes(color = Well)) + ggtitle("Oct27 Abs Derivative")
+plot(Oct27Merged$TimeSecs[Oct27Merged$Well == "B5"], Oct27Merged$deriv[Oct27Merged$Well == "B5"], xlab = "Time in seconds", ylab = "Derivative(Absorbance)", main = "Oct27 Cell B5 Abs Derivative")
+
+#Nov3 Data
+Nov3Merged$deriv <- calc_deriv(x = Nov3Merged$TimeSecs, y = Nov3Merged$smoothed, subset_by = Nov3Merged$Well)
+
+Nov3Merged3 <- Nov3Merged[complete.cases(Nov3Merged[, c("Bacteria", "Phage.Added.", "Media")]), ]
+head(Nov3Merged3, 24)
+
+ggplot(data = Nov3Merged3, aes(x = TimeSecs, y = deriv)) + geom_point(aes(color = Well)) + ggtitle("Nov3 Abs Derivative")
+plot(Nov3Merged$TimeSecs[Nov3Merged$Well == "B5"], Nov3Merged$deriv[Nov3Merged$Well == "B5"], xlab = "Time in seconds", ylab = "Derivative(Absorbance)", main = "Nov3 Cell B5 Abs Derivative")
+```
+
+Grouping Data and Making Calculations
+```{r}
+#Oct15 Data
+Oct15Grouped <- group_by(Oct15Merged, Bacteria..cfu.mL., Phage..pfu.mL., Well)
+
+head(Oct15Grouped,32)
+Oct15Sum <- summarize(Oct15Grouped, 
+                      FirstPeakX = first_peak(deriv, x = TimeSecs, return = "x", width_limit_n = 39),
+                      FirstPeakY = first_peak(deriv, return = "y", width_limit_n = 39),
+                      FirstPeakXSm = find_local_extrema(smoothed, x = TimeSecs, return = "x", width_limit_n = 39, return_minima = FALSE, return_endpoints = TRUE),
+                      FirstPeakYSm = find_local_extrema(smoothed, return = "y", width_limit_n = 39, return_minima = FALSE, return_endpoints = TRUE),
+                      Auc = auc(x = TimeSecs, y = smoothed))
+head(Oct15Sum, 50)
+
+Oct15Sum3 <- Oct15Sum[complete.cases(Oct15Sum[, c("Bacteria..cfu.mL.", "Phage..pfu.mL.")]), ]
+
+plot(Oct15Merged$TimeSecs[Oct15Merged$Well == "B5"], Oct15Merged$deriv[Oct15Merged$Well == "B5"], xlab = "Time in seconds", ylab = "Derivative(Absorbance)", main = "Oct15 Cell B5 Abs Derivative")
+points(x = Oct15Sum$FirstPeakX[Oct15Sum$Well =="B5"],
+       y = Oct15Sum$FirstPeakY[Oct15Sum$Well == "B5"],
+       pch = 16, cex = 2)
+
+#Oct25 Data
+Oct25Grouped <- group_by(Oct25Merged, Bacteria, Phage.Added., Well)
+
+head(Oct25Grouped,32)
+Oct25Sum <- summarize(Oct25Grouped, 
+                      FirstPeakX = first_peak(deriv, x = TimeSecs, return = "x", width_limit_n = 39),
+                      FirstPeakY = first_peak(deriv, return = "y", width_limit_n = 39),
+                      Auc = auc(x = TimeSecs, y = smoothed))
+head(Oct25Sum, 50)
+
+Oct25Sum3 <- Oct25Sum[complete.cases(Oct25Sum[, c("Bacteria", "Phage.Added.")]), ]
+
+plot(Oct25Merged$TimeSecs[Oct25Merged$Well == "B5"], Oct25Merged$deriv[Oct25Merged$Well == "B5"], xlab = "Time in seconds", ylab = "Derivative(Absorbance)", main = "Oct25 Cell B5 Abs Derivative")
+points(x = Oct25Sum$FirstPeakX[Oct25Sum$Well =="B5"],
+       y = Oct25Sum$FirstPeakY[Oct25Sum$Well == "B5"],
+       pch = 16, cex = 2)
+
+#Oct27 Data
+Oct27Grouped <- group_by(Oct27Merged,Bacteria, Phage.Added., Well)
+
+head(Oct27Grouped,32)
+Oct27Sum <- summarize(Oct27Grouped, 
+                      FirstPeakX = first_peak(deriv, x = TimeSecs, return = "x", width_limit_n = 39),
+                      FirstPeakY = first_peak(deriv, return = "y", width_limit_n = 39),
+                      Auc = auc(x = TimeSecs, y = smoothed))
+head(Oct27Sum, 50)
+
+Oct27Sum3 <- Oct27Sum[complete.cases(Oct27Sum[, c("Bacteria", "Phage.Added.")]), ]
+
+plot(Oct27Merged$TimeSecs[Oct27Merged$Well == "B5"], Oct27Merged$deriv[Oct27Merged$Well == "B5"], xlab = "Time in seconds", ylab = "Derivative(Absorbance)", main = "Oct27 Cell B5 Abs Derivative")
+points(x = Oct27Sum$FirstPeakX[Oct27Sum$Well =="B5"],
+       y = Oct27Sum$FirstPeakY[Oct27Sum$Well == "B5"],
+       pch = 16, cex = 2)
+
+#Nov3 Data
+Nov3Grouped <- group_by(Nov3Merged, Bacteria, Phage.Added., Well)
+
+head(Nov3Grouped,32)
+Nov3Sum <- summarize(Nov3Grouped, 
+                     FirstPeakX = first_peak(deriv, x = TimeSecs, return = "x", width_limit_n = 39),
+                     FirstPeakY = first_peak(deriv, return = "y", width_limit_n = 39),
+                     Auc = auc(x = TimeSecs, y = smoothed))
+
+head(Nov3Sum, 50)
+
+Nov3Sum3 <- Nov3Sum[complete.cases(Nov3Sum[, c("Bacteria", "Phage.Added.")]), ]
+
+plot(Nov3Merged$TimeSecs[Nov3Merged$Well == "B5"], Nov3Merged$deriv[Nov3Merged$Well == "B5"], xlab = "Time in seconds", ylab = "Derivative(Absorbance)", main = "Nov3 Cell B5 Abs Derivative")
+points(x = Nov3Sum$FirstPeakX[Nov3Sum$Well =="B5"],
+       y = Nov3Sum$FirstPeakY[Nov3Sum$Well == "B5"],
+       pch = 16, cex = 2)
+```
+
+Some Plots
+```{r}
+#Oct15 Data
+ggplot(data = Oct15Sum3, aes(x = FirstPeakX, y = Auc)) + geom_point(aes(color = Bacteria..cfu.mL., shape = Phage..pfu.mL.)) + ggtitle("Oct15 Data")
+ggplot(data = Oct15Sum3, aes(x = FirstPeakX, y = FirstPeakY)) + geom_point(aes(color = Well)) + ggtitle("Oct15 Data")
+ggplot(data = Oct15Sum3, aes(x = FirstPeakY, y = Auc)) + geom_point(aes(color = Well)) + ggtitle("Oct15 Data")
+
+ggplot(data = Oct15Sum3, aes(x = FirstPeakXSm, y = Auc)) + geom_point(aes(color = Bacteria..cfu.mL., shape = Phage..pfu.mL.)) + ggtitle("Oct15 Data")
+ggplot(data = Oct15Sum3, aes(x = FirstPeakXSm, y = FirstPeakYSm)) + geom_point(aes(color = Well)) + ggtitle("Oct15 Data")
+ggplot(data = Oct15Sum3, aes(x = FirstPeakYSm, y = Auc)) + geom_point(aes(color = Well)) + ggtitle("Oct15 Data")
+
+ggplot(data = Oct15Sum3, aes(x = Phage..pfu.mL., y = Auc)) + geom_point(aes(color = Bacteria..cfu.mL.)) + ggtitle("Oct15 Data")
+ggplot(data = Oct15Sum3, aes(x = Phage..pfu.mL., y = FirstPeakX)) + geom_point(aes(color = Bacteria..cfu.mL.)) + ggtitle("Oct15 Data")
+ggplot(data = Oct15Sum3, aes(x = Phage..pfu.mL., y = FirstPeakY)) + geom_point(aes(color = Bacteria..cfu.mL.)) + ggtitle("Oct15 Data")
+
+#Oct25 Data
+ggplot(data = Oct25Sum3, aes(x = Bacteria, y = FirstPeakX)) + geom_point(aes(color = Phage.Added.)) + ggtitle("Oct25 Data")
+ggplot(data = Oct25Sum3, aes(x = Bacteria, y = FirstPeakY)) + geom_point(aes(color = Phage.Added.)) + ggtitle("Oct25 Data")
+ggplot(data = Oct25Sum3, aes(x = Bacteria, y = Auc)) + geom_point(aes(color = Phage.Added.)) + ggtitle("Oct25 Data")
+
+ggplot(data = Oct25Sum3, aes(x = FirstPeakX, y = FirstPeakY)) + geom_point(aes(color = Bacteria, shape = Phage.Added.)) + ggtitle("Oct25 Data")
+ggplot(data = Oct25Sum3, aes(x = FirstPeakX, y = Auc)) + geom_point(aes(color = Bacteria, shape = Phage.Added.)) + ggtitle("Oct25 Data")
+ggplot(data = Oct25Sum3, aes(x = FirstPeakY, y = Auc)) + geom_point(aes(color = Bacteria, shape = Phage.Added.)) + ggtitle("Oct25 Data")
+
+#Oct27 Data
+ggplot(data = Oct27Sum3, aes(x = Bacteria, y = FirstPeakX)) + geom_point(aes(color = Phage.Added.)) + ggtitle("Oct27 Data")
+ggplot(data = Oct27Sum3, aes(x = Bacteria, y = FirstPeakY)) + geom_point(aes(color = Phage.Added.)) + ggtitle("Oct27 Data")
+ggplot(data = Oct27Sum3, aes(x = Bacteria, y = Auc)) + geom_point(aes(color = Phage.Added.)) + ggtitle("Oct27 Data")
+
+ggplot(data = Oct27Sum3, aes(x = FirstPeakX, y = FirstPeakY)) + geom_point(aes(color = Bacteria, shape = Phage.Added.)) + ggtitle("Oct27 Data")
+ggplot(data = Oct27Sum3, aes(x = FirstPeakX, y = Auc)) + geom_point(aes(color = Bacteria, shape = Phage.Added.)) + ggtitle("Oct27 Data")
+ggplot(data = Oct27Sum3, aes(x = FirstPeakY, y = Auc)) + geom_point(aes(color = Bacteria, shape = Phage.Added.)) + ggtitle("Oct27 Data")
+
+#Nov3 Data
+ggplot(data = Nov3Sum3, aes(x = Bacteria, y = FirstPeakX)) + geom_point(aes(color = Phage.Added.)) + ggtitle("Nov3 Data")
+ggplot(data = Nov3Sum3, aes(x = Bacteria, y = FirstPeakY)) + geom_point(aes(color = Phage.Added.)) + ggtitle("Nov3 Data")
+ggplot(data = Nov3Sum3, aes(x = Bacteria, y = Auc)) + geom_point(aes(color = Phage.Added.)) + ggtitle("Nov3 Data")
+
+ggplot(data = Nov3Sum3, aes(x = FirstPeakX, y = FirstPeakY)) + geom_point(aes(color = Bacteria, shape = Phage.Added.)) + ggtitle("Nov3 Data")
+ggplot(data = Nov3Sum3, aes(x = FirstPeakX, y = Auc)) + geom_point(aes(color = Bacteria, shape = Phage.Added.)) + ggtitle("Nov3 Data")
+ggplot(data = Nov3Sum3, aes(x = FirstPeakY, y = Auc)) + geom_point(aes(color = Bacteria, shape = Phage.Added.)) + ggtitle("Nov3 Data")
+```
+
+
