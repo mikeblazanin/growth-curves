@@ -142,31 +142,49 @@ derivs <- function(t, y, parms) {
   # added:  superinfection
   #         resistant population
   #dS/dt = u_S*S((k_S-S-c_SI*I-c_SR*R)/k_S) - aSP
+  #dI/dt = aSP - aS(t-tau)P(t-tau)
+  #dP/dt = baS(t-tau)P(t-tau) - aSP - azIP
+  #dR/dt = u_R*R((k_R-R-c_RS*S-c_RI*I)/k_R) + m*S
+  
+  #V5
+  # added: plasticity in susceptibility to phage infection
+  
+  #For all equations, let
+  # a_x = a * (1 - f*((k_S-S-c_SI*I-c_SR*R)/k_S)^v_a1)^v_a2
+  
+  a_x <- 
+    parms["a"] *
+    (1 - parms["f"] * 
+       ((parms["k_S"] - y["S"] - 
+           parms["c_SI"]*y["I"] - 
+           parms["c_SR"]*y["R"])/parms["k_S"])**parms["v_a1"])**parms["v_a2"]
+  
+  #dS/dt = u_S*S((k_S-S-c_SI*I-c_SR*R)/k_S) - a_x * SP
   dY["S"] <- parms["u_S"] * y["S"] * 
     ((parms["k_S"] - y["S"] - 
         parms["c_SI"]*y["I"] - 
         parms["c_SR"]*y["R"])/parms["k_S"]) - 
-    parms["a"] * y["S"] * y["P"]
+    a_x * y["S"] * y["P"]
   
   ##Calculate dI
-  #dI/dt = aSP - aS(t-tau)P(t-tau)
+  #dI/dt = a_x*SP - a_x*S(t-tau)P(t-tau)
   if (t < parms["tau"]) {
-    dY["I"] <- parms["a"] * y["S"] * y["P"]
+    dY["I"] <- a_x * y["S"] * y["P"]
   } else {
-    dY["I"] <- parms["a"] * y["S"]*y["P"] - 
-      parms["a"] * lagvalue(t - parms["tau"], 1)*lagvalue(t - parms["tau"], 3)
+    dY["I"] <- a_x * y["S"]*y["P"] - 
+      a_x * lagvalue(t - parms["tau"], 1)*lagvalue(t - parms["tau"], 3)
   }
   
   ##Calculate dP
-  #dP/dt = baS(t-tau)P(t-tau) - aSP - azIP
+  #dP/dt = b*a_x*S(t-tau)P(t-tau) - a_x*SP - a_x*zIP
   if (t < parms["tau"]) {
-    dY["P"] <- -parms["a"] * y["S"] * y["P"] -
-      parms["a"] * parms["z"] * y["I"] * y["P"]
+    dY["P"] <- -a_x * y["S"] * y["P"] -
+      a_x * parms["z"] * y["I"] * y["P"]
   } else {
-    dY["P"] <- parms["b"] * parms["a"] * 
-      lagvalue(t-parms["tau"], 1)*lagvalue(t-parms["tau"], 3) - 
-      parms["a"]*y["S"]*y["P"] -
-      parms["a"] * parms["z"] * y["I"] * y["P"]
+    dY["P"] <- 
+      parms["b"]*a_x*lagvalue(t-parms["tau"], 1)*lagvalue(t-parms["tau"], 3) - 
+      a_x*y["S"]*y["P"] -
+      a_x * parms["z"] * y["I"] * y["P"]
   }
   
   #Calculate dR
@@ -205,6 +223,9 @@ run_sims <- function(u_Svals,
                      c_SRvals = 1,
                      c_RSvals = 1,
                      c_RIvals = 1,
+                     fvals = 0,
+                     v_a1vals = 1,
+                     v_a2vals = 1,
                      init_S_dens_vals = 10**6,
                      init_R_dens_vals = 0,
                      init_moi_vals = 10**-2,
@@ -275,6 +296,8 @@ run_sims <- function(u_Svals,
                                "c_SIvals" = c_SIvals, "c_SRvals" = c_SRvals,
                                "c_RSvals" = c_RSvals, "c_RIvals" = c_RIvals,
                                "zvals" = zvals, "mvals" = mvals,
+                               "fvals" = fvals, "v_a1vals" = v_a1vals,
+                               "v_a2vals" = v_a2vals,
                                "init_S_dens_vals" = init_S_dens_vals, 
                                "init_R_dens_vals" = init_R_dens_vals,
                                "init_moi_vals" = init_moi_vals),
@@ -284,6 +307,7 @@ run_sims <- function(u_Svals,
                                     avals, tauvals, bvals, 
                                     c_SIvals, c_SRvals, c_RSvals, c_RIvals,
                                     zvals, mvals,
+                                    fvals, v_a1vals, v_a2vals,
                                     init_S_dens_vals, init_R_dens_vals,
                                     init_moi_vals), 
                            FUN = length))
@@ -294,6 +318,7 @@ run_sims <- function(u_Svals,
                                          avals, tauvals, bvals, 
                                          c_SIvals, c_SRvals, c_RSvals, c_RIvals,
                                          zvals, mvals,
+                                         fvals, v_a1vals, v_a2vals,
                                          init_S_dens_vals, init_R_dens_vals,
                                          init_moi_vals), 
                                 FUN = length) == 0)) {
@@ -315,6 +340,9 @@ run_sims <- function(u_Svals,
                                "c_RIvals" = rep_len(c_RIvals, num_sims), 
                                "zvals" = rep_len(zvals, num_sims), 
                                "mvals" = rep_len(mvals, num_sims),
+                               "fvals" = rep_len(fvals, num_sims),
+                               "v_a1vals" = rep_len(v_a1vals, num_sims),
+                               "v_a2vals" = rep_len(v_a2vals, num_sims),
                                "init_S_dens_vals" = rep_len(init_S_dens_vals, num_sims), 
                                "init_R_dens_vals" = rep_len(init_R_dens_vals, num_sims),
                                "init_moi_vals" = rep_len(init_moi_vals, num_sims),
@@ -341,6 +369,7 @@ run_sims <- function(u_Svals,
                      "c_SI" = NA, "c_SR" = NA,
                      "c_RS" = NA, "c_RI" = NA, 
                      "z" = NA, "m" = NA,
+                     "f" = NA, "v_a1" = NA, "v_a2" = NA,
                      "init_S_dens" = NA, "init_R_dens" = NA,
                      "init_moi" = NA,
                      "equil" = NA, "time" = NA, "Pop" = as.character(NA),
@@ -375,6 +404,9 @@ run_sims <- function(u_Svals,
                 c_SR = param_combos$c_SRvals[i],
                 c_RS = param_combos$c_RSvals[i],
                 c_RI = param_combos$c_RIvals[i],
+                f = param_combos$fvals[i],
+                v_a1 = param_combos$v_a1vals[i],
+                v_a2 = param_combos$v_a2vals[i],
                 z = param_combos$zvals[i],
                 m = param_combos$mvals[i],
                 warnings = 0, thresh_min_dens = 10**-100)
@@ -483,6 +515,7 @@ run_sims <- function(u_Svals,
                              "c_SI" = NA, "c_SR" = NA,
                              "c_RS" = NA, "c_RI" = NA, 
                              "z" = NA, "m" = NA,
+                             "f" = NA, "v_a1" = NA, "v_a2" = NA,
                              "init_S_dens" = NA, "init_R_dens" = NA,
                              "init_moi" = NA,
                              "equil" = NA, "time" = NA, "Pop" = as.character(NA),
@@ -509,6 +542,9 @@ run_sims <- function(u_Svals,
                          c_RI = param_combos$c_RIvals[i],
                          z = param_combos$zvals[i],
                          m = param_combos$mvals[i],
+                         f = param_combos$fvals[i],
+                         v_a1 = param_combos$v_a1vals[i], 
+                         v_a2 = param_combos$v_a2vals[i],
                          init_S_dens = param_combos$init_S_dens_vals[i], 
                          init_R_dens = param_combos$init_R_dens_vals[i], 
                          init_moi = param_combos$init_moi_vals[i],
@@ -534,6 +570,9 @@ run_sims <- function(u_Svals,
                          c_RI = param_combos$c_RIvals[i],
                          z = param_combos$zvals[i],
                          m = param_combos$mvals[i],
+                         f = param_combos$fvals[i],
+                         v_a1 = param_combos$v_a1vals[i], 
+                         v_a2 = param_combos$v_a2vals[i],
                          init_S_dens = param_combos$init_S_dens_vals[i], 
                          init_R_dens = param_combos$init_R_dens_vals[i], 
                          init_moi = param_combos$init_moi_vals[i],
@@ -559,9 +598,9 @@ run_sims <- function(u_Svals,
   y_noequil <- NULL
   for (run in unique(ybig$uniq_run[which(!ybig$equil)])) {
     if (is.null(y_noequil)) {
-      y_noequil <- ybig[min(which(ybig$uniq_run == run)), 1:18]
+      y_noequil <- ybig[min(which(ybig$uniq_run == run)), 1:21]
     } else {
-      y_noequil <- rbind(y_noequil, ybig[min(which(ybig$uniq_run == run)), 1:18])
+      y_noequil <- rbind(y_noequil, ybig[min(which(ybig$uniq_run == run)), 1:21])
     }
   }
   
