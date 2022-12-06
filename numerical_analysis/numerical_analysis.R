@@ -243,6 +243,7 @@ run_sims <- function(u_Svals,
                      init_stepsize = 1,
                      combinatorial = TRUE,
                      dynamic_stepsize = TRUE,
+                     fixed_time = FALSE,
                      print_info = TRUE) {
   
   #Inputs: vectors of parameters to be combined factorially to make
@@ -422,14 +423,13 @@ run_sims <- function(u_Svals,
     
     #Run simulation(s) with longer & longer times until equil reached
     #Also, if equil has non-zero I run with shorter steps
-    keep_running <- TRUE #placeholder for triggering end of sims
+
     #Placeholder for the number of times I has been detected above
     # min_dens while S has not been
     i_only_pos_times <- 0
     j <- 0 #length counter (larger is longer times)
     k <- 0 #step size counter (larger is smaller steps)
-    while(keep_running) {
-      print(paste("i_only_pos_times =", i_only_pos_times, ", j =", j, ", k =", k))
+    while(TRUE) {
       #Define times
       if (dynamic_stepsize) {
         #If dynamic_stepsize true, double lengths & steps for ea j count
@@ -455,8 +455,14 @@ run_sims <- function(u_Svals,
       
       #Infinite loop prevention check (j = 10 is 24 hrs)
       if (j >= 10 | k >= 15 | j+k >= 20) {
-        keep_running <- FALSE
         at_equil <- FALSE
+        break
+      }
+      
+      #If fixed time, don't check for equil
+      if(fixed_time) {
+        at_equil <- TRUE #more like we don't know
+        break
       }
       
       #If there was an error, increase k by 1 and re-run
@@ -471,15 +477,15 @@ run_sims <- function(u_Svals,
       } else if (is.null(yout_list$warning) & is.null(yout_list$error)) {
         #First drop all rows with nan
         yout_list$value <- yout_list$value[!(is.nan(yout_list$value$S) |
-                                             is.nan(yout_list$value$I) |
-                                             is.nan(yout_list$value$P) |
-                                             is.nan(yout_list$value$R)), ]
+                                               is.nan(yout_list$value$I) |
+                                               is.nan(yout_list$value$P) |
+                                               is.nan(yout_list$value$R)), ]
         
         #S and I both at equil, we're done
         if (yout_list$value$S[nrow(yout_list$value)] < min_dens & 
             yout_list$value$I[nrow(yout_list$value)] < min_dens) {
-          keep_running <- FALSE
           at_equil <- TRUE
+          break
         #S not at equil, need more time
         } else if (yout_list$value$S[nrow(yout_list$value)] >= min_dens) { 
           j <- j+1
