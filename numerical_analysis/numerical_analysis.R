@@ -150,41 +150,53 @@ derivs <- function(t, y, parms) {
   # added: plasticity in susceptibility to phage infection
   
   #For all equations, let
-  # a_x = a * (1 - f*((k_S-S-c_SI*I-c_SR*R)/k_S)^v_a1)^v_a2
+  # a_t = a * (1 - f*((k_S-S-c_SI*I-c_SR*R)/k_S)^v_a1)^v_a2
+  # a_tau = a * (1 - f*((k_S-S(t-tau)-c_SI*I(t-tau)-c_SR*R(t-tau))/k_S)^v_a1)^v_a2
   
-  a_x <- 
+  a_t <- 
     parms["a"] *
     (1 - parms["f"] * 
        ((parms["k_S"] - y["S"] - 
            parms["c_SI"]*y["I"] - 
            parms["c_SR"]*y["R"])/parms["k_S"])**parms["v_a1"])**parms["v_a2"]
+  if (t < parms["tau"]) {
+    a_tau <- 0
+  } else {
+    a_tau <- 
+      parms["a"] *
+      (1 - parms["f"] * 
+         ((parms["k_S"] - lagvalue(t - parms["tau"], 1) - 
+             parms["c_SI"]*lagvalue(t - parms["tau"], 2) - 
+             parms["c_SR"]*lagvalue(t - parms["tau"], 4)
+           )/parms["k_S"])**parms["v_a1"])**parms["v_a2"]
+  }
   
-  #dS/dt = u_S*S((k_S-S-c_SI*I-c_SR*R)/k_S) - a_x * SP
+  #dS/dt = u_S*S((k_S-S-c_SI*I-c_SR*R)/k_S) - a_t * SP
   dY["S"] <- parms["u_S"] * y["S"] * 
     ((parms["k_S"] - y["S"] - 
         parms["c_SI"]*y["I"] - 
         parms["c_SR"]*y["R"])/parms["k_S"]) - 
-    a_x * y["S"] * y["P"]
+    a_t * y["S"] * y["P"]
   
   ##Calculate dI
-  #dI/dt = a_x*SP - a_x*S(t-tau)P(t-tau)
+  #dI/dt = a_t*SP - a_tau*S(t-tau)P(t-tau)
   if (t < parms["tau"]) {
-    dY["I"] <- a_x * y["S"] * y["P"]
+    dY["I"] <- a_t * y["S"] * y["P"]
   } else {
-    dY["I"] <- a_x * y["S"]*y["P"] - 
-      a_x * lagvalue(t - parms["tau"], 1)*lagvalue(t - parms["tau"], 3)
+    dY["I"] <- a_t * y["S"]*y["P"] - 
+      a_tau * lagvalue(t - parms["tau"], 1)*lagvalue(t - parms["tau"], 3)
   }
   
   ##Calculate dP
-  #dP/dt = b*a_x*S(t-tau)P(t-tau) - a_x*SP - a_x*zIP
+  #dP/dt = b*a_tau*S(t-tau)P(t-tau) - a_t*SP - a_t*zIP
   if (t < parms["tau"]) {
-    dY["P"] <- -a_x * y["S"] * y["P"] -
-      a_x * parms["z"] * y["I"] * y["P"]
+    dY["P"] <- -a_t * y["S"] * y["P"] -
+      a_t * parms["z"] * y["I"] * y["P"]
   } else {
     dY["P"] <- 
-      parms["b"]*a_x*lagvalue(t-parms["tau"], 1)*lagvalue(t-parms["tau"], 3) - 
-      a_x*y["S"]*y["P"] -
-      a_x * parms["z"] * y["I"] * y["P"]
+      parms["b"]*a_tau*lagvalue(t-parms["tau"], 1)*lagvalue(t-parms["tau"], 3) - 
+      a_t*y["S"]*y["P"] -
+      a_t * parms["z"] * y["I"] * y["P"]
   }
   
   #Calculate dR
@@ -207,6 +219,39 @@ derivs <- function(t, y, parms) {
   #element is a vector containing the derivatives of y with respect to time
   return(list(dY))
 }
+
+yinit <- c("S" = 10**6, "I" = 0, "P" = 10**4, "R" = 0)
+params <- c(u_S = 0.023,
+            u_R = 0.023,
+            k_S = 10**9,
+            k_R = 10**9,
+            a = 10**-10,
+            tau = 31.6,
+            b = 50,
+            c_SI = 1,
+            c_SR = 1,
+            c_RS = 1,
+            c_RI = 1,
+            f = 0,
+            v_a1 = 1,
+            v_a2 = 1,
+            z = 0,
+            m = 0,
+            warnings = 1, thresh_min_dens = 10**-100)
+times <- seq(from = 0, to = 4000, by = 1)
+test <- as.data.frame(dede(y = yinit, times = times, func = derivs, 
+                           parms = params))
+test$f <- 0
+params[["f"]] <- 1
+test <- rbind(test,
+              cbind(as.data.frame(dede(y = yinit, times = times, func = derivs, 
+                                       parms = params)),
+                    data.frame("f" = 1)))
+test2 <- tidyr::pivot_longer(test, cols = -c(time, f), 
+                             names_to = "Pop", values_to = "Density")
+ggplot(data = test2, aes(x = time, y = Density, color = Pop)) +
+  geom_line() + scale_y_continuous(trans = "log10") +
+  facet_grid(f~.)
 
 
 ## Define function for running simulations across many parameter values ----
@@ -420,6 +465,7 @@ run_sims <- function(u_Svals,
     j <- 0 #length counter (larger is longer times)
     k <- 0 #step size counter (larger is smaller steps)
     while(keep_running) {
+      print(paste("i_only_pos_times =", i_only_pos_times, ", j =", j, ", k =", k))
       #Define times
       if (dynamic_stepsize) {
         #If dynamic_stepsize true, double lengths & steps for ea j count
@@ -4619,6 +4665,88 @@ if (glob_make_statplots) {
           axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
   print(p)
   dev.off()
+}
+
+## Run #13: a, b, tau across f  (phage traits) ----
+run13 <- run_sims_filewrapper(name = "run13",
+                              u_Svals = c(0.023), #(30 min doubling time)
+                              k_Svals = c(10**9),
+                              #avals = 10**seq(from = -12, to = -8, by = 1),
+                              avals = 10**-10,
+                              #tauvals = signif(10**seq(from = 1, to = 2, by = 0.25), 3),
+                              tauvals = 31.6,
+                              #bvals = signif(5*10**seq(from = 0, to = 2, by = 0.5), 3),
+                              bvals = 50,
+                              c_SIvals = 1,
+                              init_S_dens_vals = 10**6,
+                              init_moi_vals = 10**-2,
+                              zvals = 0,
+                              fvals = c(0, 0.5, 1),
+                              min_dens = 0.1,
+                              init_time = 100,
+                              init_stepsize = 1,
+                              dynamic_stepsize = TRUE,
+                              print_info = TRUE,
+                              read_file = glob_read_files)
+
+#Find peaks & extinction via summarize
+ybig13 <- group_by_at(run13[[1]], .vars = 1:17)
+y_summarized12 <- summarize(ybig12,
+                            max_dens = max(Density[Pop == "B"]),
+                            max_time = time[Pop == "B" & 
+                                              Density[Pop == "B"] == max_dens],
+                            extin_index = min(which(Pop == "B" &
+                                                      Density <= 10**4)),
+                            extin_dens = Density[extin_index],
+                            extin_time = time[extin_index],
+                            auc = sum(Density[Pop == "B" & time < extin_time])*
+                              extin_time,
+                            phage_final = max(Density[Pop == "P"]),
+                            phage_extin = Density[Pop == "P" & time == extin_time],
+                            phage_r = (log(phage_final)-
+                                         log(init_S_dens[1]*init_moi[1]))/
+                              extin_time,
+                            run_time = max(time),
+                            near_k = if(max_dens >= 0.95*k_S[1]) {1} else{0}
+)
+
+#Make plots of density against time ----
+dir.create("run13_dens_curves", showWarnings = FALSE)
+if (glob_make_curveplots) {
+  dens_offset <- 10
+  for (run in unique(ybig13$uniq_run)) {
+    tiff(paste("./run13_dens_curves/", run, ".tiff", sep = ""),
+         width = 5, height = 5, units = "in", res = 300)
+    print(
+      ggplot(data = ybig13[ybig13$uniq_run == run &
+                            ybig13$Pop %in% c("S", "I", "P"),], 
+             aes(x = time, y = Density+dens_offset, color = as.factor(Pop))) +
+        geom_line(lwd = 1.5, alpha = 1) + 
+        geom_line(data = ybig13[ybig13$uniq_run == run &
+                                 ybig13$Pop == "B",], 
+                  aes(x = time, y = Density+dens_offset),
+                  color = "black", alpha = 0.5, lwd = 1.1) +
+        geom_line(data = ybig13[ybig13$uniq_run == run &
+                                 ybig13$Pop == "PI",],
+                  aes(x = time, y = Density+dens_offset),
+                  color = "black", alpha = 0.5, lwd = 1, lty = 3) +
+        scale_y_continuous(trans = "log10") +
+        scale_x_continuous(breaks = seq(from = 0, to = max(ybig13$time), 
+                                        by = round(max(ybig13[ybig13$uniq_run == run &
+                                                               ybig13$Pop != "B", 
+                                                             "time"])/10))) +
+        scale_color_manual(limits = c("S", "I", "P"),
+                           values = my_cols[c(2, 3, 1)]) +
+        geom_hline(yintercept = dens_offset, lty = 2) +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1),
+              title = element_text(size = 9)) +
+        ggtitle(paste(ybig13[min(which(ybig13$uniq_run == run)), 6:8],
+                      collapse = ", ")) +
+        labs(y = paste("Density +", dens_offset)) +
+        NULL
+    )
+    dev.off()
+  }
 }
 
 
