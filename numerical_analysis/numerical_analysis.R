@@ -4701,6 +4701,23 @@ ggplot(data = test2, aes(x = time, y = Density, color = Pop)) +
 
 
 
+run_test <- run_sims(u_Svals = 0.023,
+                     k_Svals = 10**9,
+                     avals = 10**-10,
+                     tauvals = 31.6,
+                     bvals = 50,
+                     fvals = c(0, 1),
+                     v_a2vals = c(1, 16),
+                     fixed_time = TRUE,
+                     init_time = 500)
+
+run_test_big <- run_test[[1]]
+ggplot(run_test_big,
+       aes(x = time, y = Density, color = Pop)) +
+  geom_line() +
+  facet_grid(f ~ v_a2) +
+  scale_y_continuous(trans = "log10", limits = c(1, NA))
+
 
 ## Run #13: a, b, tau across f  (phage traits) ----
 run13 <- run_sims_filewrapper(name = "run13",
