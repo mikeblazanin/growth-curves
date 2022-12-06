@@ -110,8 +110,6 @@ derivs <- function(t, y, parms) {
   #Create output vector
   dY <- c(S = 0, I = 0, P = 0, R = 0)
   
-  ##Calculate dS
-  
   #V1 
   # note: exponential dS/dt
   #dS/dt = rS - aSP
@@ -171,6 +169,7 @@ derivs <- function(t, y, parms) {
            )/parms["k_S"])**parms["v_a1"])**parms["v_a2"]
   }
   
+  ##Calculate dS
   #dS/dt = u_S*S((k_S-S-c_SI*I-c_SR*R)/k_S) - a_t * SP
   dY["S"] <- parms["u_S"] * y["S"] * 
     ((parms["k_S"] - y["S"] - 
