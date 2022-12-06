@@ -148,14 +148,13 @@ derivs <- function(t, y, parms) {
   # added: plasticity in susceptibility to phage infection
   
   #For all equations, let
-  # a_t = a * (1 - f*((k_S-S-c_SI*I-c_SR*R)/k_S)^v_a1)^v_a2
-  # a_tau = a * (1 - f*((k_S-S(t-tau)-c_SI*I(t-tau)-c_SR*R(t-tau))/k_S)^v_a1)^v_a2
+  # a_t = a * (1 - f*((S+c_SI*I+c_SR*R)/k_S)^v_a1)^v_a2
+  # a_tau = a * (1 - f*((S(t-tau)+c_SI*I(t-tau)+c_SR*R(t-tau))/k_S)^v_a1)^v_a2
   
   a_t <- 
     parms["a"] *
     (1 - parms["f"] * 
-       ((parms["k_S"] - y["S"] - 
-           parms["c_SI"]*y["I"] - 
+       ((y["S"] + parms["c_SI"]*y["I"] + 
            parms["c_SR"]*y["R"])/parms["k_S"])**parms["v_a1"])**parms["v_a2"]
   if (t < parms["tau"]) {
     a_tau <- 0
@@ -163,9 +162,9 @@ derivs <- function(t, y, parms) {
     a_tau <- 
       parms["a"] *
       (1 - parms["f"] * 
-         ((parms["k_S"] - lagvalue(t - parms["tau"], 1) - 
-             parms["c_SI"]*lagvalue(t - parms["tau"], 2) - 
-             parms["c_SR"]*lagvalue(t - parms["tau"], 4)
+         ((lagvalue(t - parms["tau"], 1)
+           + parms["c_SI"]*lagvalue(t - parms["tau"], 2)
+           + parms["c_SR"]*lagvalue(t - parms["tau"], 4)
            )/parms["k_S"])**parms["v_a1"])**parms["v_a2"]
   }
   
