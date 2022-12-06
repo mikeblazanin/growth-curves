@@ -218,40 +218,6 @@ derivs <- function(t, y, parms) {
   return(list(dY))
 }
 
-yinit <- c("S" = 10**6, "I" = 0, "P" = 10**4, "R" = 0)
-params <- c(u_S = 0.023,
-            u_R = 0.023,
-            k_S = 10**9,
-            k_R = 10**9,
-            a = 10**-10,
-            tau = 31.6,
-            b = 50,
-            c_SI = 1,
-            c_SR = 1,
-            c_RS = 1,
-            c_RI = 1,
-            f = 0,
-            v_a1 = 1,
-            v_a2 = 1,
-            z = 0,
-            m = 0,
-            warnings = 1, thresh_min_dens = 10**-100)
-times <- seq(from = 0, to = 4000, by = 1)
-test <- as.data.frame(dede(y = yinit, times = times, func = derivs, 
-                           parms = params))
-test$f <- 0
-params[["f"]] <- 1
-test <- rbind(test,
-              cbind(as.data.frame(dede(y = yinit, times = times, func = derivs, 
-                                       parms = params)),
-                    data.frame("f" = 1)))
-test2 <- tidyr::pivot_longer(test, cols = -c(time, f), 
-                             names_to = "Pop", values_to = "Density")
-ggplot(data = test2, aes(x = time, y = Density, color = Pop)) +
-  geom_line() + scale_y_continuous(trans = "log10") +
-  facet_grid(f~.)
-
-
 ## Define function for running simulations across many parameter values ----
 run_sims <- function(u_Svals,
                      u_Rvals = 0,
@@ -4664,6 +4630,71 @@ if (glob_make_statplots) {
   print(p)
   dev.off()
 }
+
+##Testing of plasticity in a ----
+x <- 10**(seq(from = -3, to = 0, by = 0.01))
+testa_combos <- as.data.frame(expand.grid("f" = c(0, 0.5, 1),
+                                          "v1" = c(1/16, 1/4, 1, 4, 16),
+                                          "v2" = c(1/16, 1/4, 1, 4, 16)))
+testa <- data.frame(x = rep(x, times = nrow(testa_combos)),
+                    f = rep(testa_combos$f, each = length(x)),
+                    v1 = rep(testa_combos$v1, each = length(x)),
+                    v2 = rep(testa_combos$v2, each = length(x)),
+                    response = NA)
+for (i in 1:nrow(testa_combos)) {
+  f <- testa_combos$f[i]
+  v1 <- testa_combos$v1[i]
+  v2 <- testa_combos$v2[i]
+  testa$response[testa$f == f & testa$v1 == v1 & testa$v2 == v2] <- 
+    (1 - f*(x)**v1)**v2
+}
+
+ggplot(data = testa, 
+       aes(x = x, y = response, color = paste(f))) + 
+  geom_line() + 
+  scale_x_continuous(trans = "log10") +
+  #scale_y_continuous(trans = "log10", limits = c(10**-10, 1)) +
+  facet_grid(rows = vars(v1), cols = vars(v2)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "(S+I+R)/k", y = "a/a_max")
+
+
+yinit <- c("S" = 10**6, "I" = 0, "P" = 10**4, "R" = 0)
+params <- c(u_S = 0.023,
+            u_R = 0.023,
+            k_S = 10**9,
+            k_R = 10**9,
+            a = 10**-10,
+            tau = 31.6,
+            b = 50,
+            c_SI = 1,
+            c_SR = 1,
+            c_RS = 1,
+            c_RI = 1,
+            f = 0,
+            v_a1 = 1,
+            v_a2 = 1,
+            z = 0,
+            m = 0,
+            warnings = 1, thresh_min_dens = 10**-100)
+times <- seq(from = 0, to = 500, by = 1)
+test <- as.data.frame(dede(y = yinit, times = times, func = derivs, 
+                           parms = params))
+test$f <- 0
+params[["f"]] <- 1
+test <- rbind(test,
+              cbind(as.data.frame(dede(y = yinit, times = times, func = derivs, 
+                                       parms = params)),
+                    data.frame("f" = 1)))
+test2 <- tidyr::pivot_longer(test, cols = -c(time, f), 
+                             names_to = "Pop", values_to = "Density")
+ggplot(data = test2, aes(x = time, y = Density, color = Pop)) +
+  geom_line() + scale_y_continuous(trans = "log10") +
+  facet_grid(f~.)
+  
+
+
+
 
 ## Run #13: a, b, tau across f  (phage traits) ----
 run13 <- run_sims_filewrapper(name = "run13",
