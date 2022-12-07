@@ -293,6 +293,10 @@ run_sims <- function(u_Svals,
     list(value=value, warning=warn, error=err)
   }
   
+  if(any(fvals != 0) & fixed_time == FALSE) {
+    warning("equilibrium checking not implemented for f != 0, may be very slow")
+  }
+  
   num_pops <- 7 #placeholder for when derivs changes, currently SIPRN B PI
   
   if(init_time %% init_stepsize != 0) {
