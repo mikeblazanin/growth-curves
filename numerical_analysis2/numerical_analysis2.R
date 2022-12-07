@@ -170,23 +170,20 @@ ggplot(data = test2, aes(x = time, y = Density, color = Pop)) +
 ## Define function for running simulations across many parameter values ----
 run_sims <- function(u_Svals,
                      u_Rvals = 0,
-                     k_Svals,
-                     k_Rvals = 1,
+                     kvals,
                      avals,
                      tauvals,
                      bvals,
                      zvals = 0,
                      mvals = 0,
-                     c_SIvals = 1,
-                     c_SRvals = 1,
-                     c_RSvals = 1,
-                     c_RIvals = 1,
                      fvals = 0,
+                     dvals = 1,
                      v_a1vals = 1,
                      v_a2vals = 1,
                      init_S_dens_vals = 10**6,
                      init_R_dens_vals = 0,
                      init_moi_vals = 10**-2,
+                     init_N_dens_vals = NA,
                      min_dens = 0.1,
                      init_time = 100,
                      init_stepsize = 1,
@@ -233,84 +230,37 @@ run_sims <- function(u_Svals,
     list(value=value, warning=warn, error=err)
   }
   
-  if(any(fvals != 0)) {warning("equilibrium checking for non-zero f not implemented")}
-  
   if(init_time %% init_stepsize != 0) {
     warning("init_time is not divisible by init_stepsize, this has not been tested")
   }
   
-  #V3 to V4 argument changes
-  # rvals = u_Svals
-  # kvals = k_Svals
-  # cvals = c_SIvals
-  # init_bact_dens_vals = init_S_dens_vals
-  # added: zvals (superinfection [0,1]), u_Rvals, k_Rvals, mvals, 
-  # c_SRvals, c_RIvals, c_RSvals, init_R_dens_vals
-  
   #Save parameter values provided into dataframe
   # taking all different combinations
+  sim_vars <- list("u_Svals" = u_Svals, "u_Rvals" = u_Rvals, "kvals" = kvals,
+                   "avals" = avals, "tauvals" = tauvals, "bvals" = bvals,
+                   "zvals" = zvals, "mvals" = mvals,
+                   "fvals" = fvals, "v_a1vals" = v_a1vals, "v_a2vals" = v_a2vals,
+                   "init_S_dens_vals" = init_S_dens_vals, 
+                   "init_R_dens_vals" = init_R_dens_vals,
+                   "init_moi_vals" = init_moi_vals,
+                   "init_N_dens_vals" = init_N_dens_vals)
   if (combinatorial) {
-    param_combos <- expand.grid(list("u_Svals" = u_Svals, "u_Rvals" = u_Rvals,
-                                     "k_Svals" = k_Svals, "k_Rvals" = k_Rvals,
-                                     "avals" = avals, "tauvals" = tauvals, 
-                                     "bvals" = bvals, 
-                                     "c_SIvals" = c_SIvals, "c_SRvals" = c_SRvals,
-                                     "c_RSvals" = c_RSvals, "c_RIvals" = c_RIvals,
-                                     "zvals" = zvals, "mvals" = mvals,
-                                     "fvals" = fvals, "v_a1vals" = v_a1vals,
-                                     "v_a2vals" = v_a2vals,
-                                     "init_S_dens_vals" = init_S_dens_vals, 
-                                     "init_R_dens_vals" = init_R_dens_vals,
-                                     "init_moi_vals" = init_moi_vals),
-                                stringsAsFactors = FALSE)
+    param_combos <- expand.grid(sim_vars, stringsAsFactors = FALSE)
+    num_sims <- nrow(param_combos)
   } else { #not combinatorial
-    num_sims <- max(sapply(X = list(u_Svals, u_Rvals, k_Svals, k_Rvals,
-                                    avals, tauvals, bvals, 
-                                    c_SIvals, c_SRvals, c_RSvals, c_RIvals,
-                                    zvals, mvals,
-                                    fvals, v_a1vals, v_a2vals,
-                                    init_S_dens_vals, init_R_dens_vals,
-                                    init_moi_vals), 
-                           FUN = length))
+    num_sims <- max(sapply(X = sim_vars, FUN = length))
     
     #Check for parameter lengths being non-divisible with the
     # number of simulations inferred from the longest parameter length
-    if (!all(num_sims %% sapply(X = list(u_Svals, u_Rvals, k_Svals, k_Rvals,
-                                         avals, tauvals, bvals, 
-                                         c_SIvals, c_SRvals, c_RSvals, c_RIvals,
-                                         zvals, mvals,
-                                         fvals, v_a1vals, v_a2vals,
-                                         init_S_dens_vals, init_R_dens_vals,
-                                         init_moi_vals), 
-                                FUN = length) == 0)) {
+    if (!all(num_sims %% sapply(X = sim_vars, FUN = length) == 0)) {
       warning("Combinatorial=TRUE but longest param vals length is not a multiple of all other param vals lengths")
     }
     
     #Save parameters into dataframe, replicating shorter parameter
     # vectors as needed to reach # of simulations
-    param_combos <- data.frame("u_Svals" = rep_len(u_Svals, num_sims), 
-                               "u_Rvals" = rep_len(u_Rvals, num_sims),
-                               "k_Svals" = rep_len(k_Svals, num_sims), 
-                               "k_Rvals" = rep_len(k_Rvals, num_sims),
-                               "avals" = rep_len(avals, num_sims), 
-                               "tauvals" = rep_len(tauvals, num_sims), 
-                               "bvals" = rep_len(bvals, num_sims), 
-                               "c_SIvals" = rep_len(c_SIvals, num_sims), 
-                               "c_SRvals" = rep_len(c_SRvals, num_sims),
-                               "c_RSvals" = rep_len(c_RSvals, num_sims),
-                               "c_RIvals" = rep_len(c_RIvals, num_sims), 
-                               "zvals" = rep_len(zvals, num_sims), 
-                               "mvals" = rep_len(mvals, num_sims),
-                               "fvals" = rep_len(fvals, num_sims),
-                               "v_a1vals" = rep_len(v_a1vals, num_sims),
-                               "v_a2vals" = rep_len(v_a2vals, num_sims),
-                               "init_S_dens_vals" = rep_len(init_S_dens_vals, num_sims), 
-                               "init_R_dens_vals" = rep_len(init_R_dens_vals, num_sims),
-                               "init_moi_vals" = rep_len(init_moi_vals, num_sims),
-                               stringsAsFactors = FALSE)
+    param_combos <- sapply(X = sim_vars,
+                           FUN = function(x) {rep_len(x, num_sims)})
   }
-  
-  num_sims <- nrow(param_combos)
   
   #Print number of simulations that will be run
   if(print_info) {
@@ -325,10 +275,8 @@ run_sims <- function(u_Svals,
   #for runs that succeed, pre-allocate ybig now to save on memory/speed
   ybig <- data.frame("uniq_run" = rep(NA, 6*(1+init_time/init_stepsize)*num_sims),
                      "u_S" = NA, "u_R" = NA, 
-                     "k_S" = NA, "k_R" = NA,
+                     "k" = NA,
                      "a" = NA, "b" = NA, "tau" = NA,
-                     "c_SI" = NA, "c_SR" = NA,
-                     "c_RS" = NA, "c_RI" = NA, 
                      "z" = NA, "m" = NA,
                      "f" = NA, "v_a1" = NA, "v_a2" = NA,
                      "init_S_dens" = NA, "init_R_dens" = NA,
@@ -356,15 +304,10 @@ run_sims <- function(u_Svals,
                R = param_combos$init_R_dens_vals[i])
     params <- c(u_S = param_combos$u_Svals[i],
                 u_R = param_combos$u_Rvals[i],
-                k_S = param_combos$k_Svals[i],
-                k_R = param_combos$k_Rvals[i],
+                k = param_combos$kvals[i],
                 a = param_combos$avals[i],
                 tau = param_combos$tauvals[i],
                 b = param_combos$bvals[i],
-                c_SI = param_combos$c_SIvals[i],
-                c_SR = param_combos$c_SRvals[i],
-                c_RS = param_combos$c_RSvals[i],
-                c_RI = param_combos$c_RIvals[i],
                 f = param_combos$fvals[i],
                 v_a1 = param_combos$v_a1vals[i],
                 v_a2 = param_combos$v_a2vals[i],
@@ -477,10 +420,8 @@ run_sims <- function(u_Svals,
             rbind(ybig,
                   data.frame("uniq_run" = rep(NA, rows_tracking$still_needed_toadd),
                              "u_S" = NA, "u_R" = NA, 
-                             "k_S" = NA, "k_R" = NA,
+                             "k" = NA,
                              "a" = NA, "b" = NA, "tau" = NA,
-                             "c_SI" = NA, "c_SR" = NA,
-                             "c_RS" = NA, "c_RI" = NA, 
                              "z" = NA, "m" = NA,
                              "f" = NA, "v_a1" = NA, "v_a2" = NA,
                              "init_S_dens" = NA, "init_R_dens" = NA,
@@ -498,15 +439,10 @@ run_sims <- function(u_Svals,
         cbind(data.frame(uniq_run = i, 
                          u_S = param_combos$u_Svals[i], 
                          u_R = param_combos$u_Rvals[i], 
-                         k_S = param_combos$k_Svals[i], 
-                         k_R = param_combos$k_Rvals[i],
+                         k = param_combos$kvals[i], 
                          a = param_combos$avals[i], 
                          b = param_combos$bvals[i], 
                          tau = param_combos$tauvals[i],
-                         c_SI = param_combos$c_SIvals[i],
-                         c_SR = param_combos$c_SRvals[i],
-                         c_RS = param_combos$c_RSvals[i],
-                         c_RI = param_combos$c_RIvals[i],
                          z = param_combos$zvals[i],
                          m = param_combos$mvals[i],
                          f = param_combos$fvals[i],
@@ -526,15 +462,10 @@ run_sims <- function(u_Svals,
       temp <- data.frame(uniq_run = i, 
                          u_S = param_combos$u_Svals[i], 
                          u_R = param_combos$u_Rvals[i], 
-                         k_S = param_combos$k_Svals[i], 
-                         k_R = param_combos$k_Rvals[i],
+                         k = param_combos$kvals[i], 
                          a = param_combos$avals[i], 
                          b = param_combos$bvals[i], 
                          tau = param_combos$tauvals[i],
-                         c_SI = param_combos$c_SIvals[i],
-                         c_SR = param_combos$c_SRvals[i],
-                         c_RS = param_combos$c_RSvals[i],
-                         c_RI = param_combos$c_RIvals[i],
                          z = param_combos$zvals[i],
                          m = param_combos$mvals[i],
                          f = param_combos$fvals[i],
