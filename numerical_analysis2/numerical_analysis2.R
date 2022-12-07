@@ -168,6 +168,69 @@ ggplot(data = test2, aes(x = time, y = Density, color = Pop)) +
   geom_line() + scale_y_continuous(trans = "log10", limits = c(1, NA))
 
 ## Define function for running simulations across many parameter values ----
+
+#sub-function for checking for equilibrium
+check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens) {
+  #Returns: list(keep_running = TRUE/FALSE,
+  #              at_equil = TRUE/FALSE/NA (NA only when fixed_time = TRUE),
+  #              cntrs = list([other entries],
+  #                           i_only_pos_times = new i_only_pos_times value,
+  #                           j = new j value, 
+  #                           k = new k value)
+  #              )
+  
+  #Infinite loop prevention check (j = 10 is 24 hrs)
+  if (cntrs$j >= 10 | k >= 15 | cntrs$j+k >= 20) {
+    return(list(keep_running = FALSE, at_equil = FALSE, cntrs))
+  }
+  
+  #If fixed time, don't check for equil
+  if(fixed_time) {
+    return(list(keep_running = FALSE, at_equil = NA, cntrs))
+  }
+  
+  #If there was an error, increase k by 1 and re-run
+  if(!is.null(yout_list$error)) {
+    cntrs$k <- cntrs$k+1
+    return(list(keep_running = TRUE, at_equil = NA, cntrs))
+  #If there was a warning, could be several causes, so we
+  # generally just halve step size and increase length
+  } else if (!is.null(yout_list$warning)) {
+    cntrs$j <- cntrs$j+1
+    cntrs$k <- cntrs$k+2
+    return(list(keep_running = TRUE, at_equil = NA, cntrs))
+  #If it was successful, check for equilibrium
+  } else if (is.null(yout_list$warning) & is.null(yout_list$error)) {
+    #First drop all rows with nan
+    yout_list$value <- 
+      yout_list$value[apply(X = yout_list$value, MARGIN = 1,
+                            FUN = function(x) {all(!is.nan(x))}), ]
+
+    #S and I both at equil, we're done
+    if (yout_list$value$S[nrow(yout_list$value)] < equil_cutoff_dens & 
+        yout_list$value$I[nrow(yout_list$value)] < equil_cutoff_dens) {
+      return(list(keep_running = FALSE, at_equil = TRUE, cntrs))
+    #S not at equil, need more time
+    } else if (yout_list$value$S[nrow(yout_list$value)] >= equil_cutoff_dens) {
+      cntrs$j <- cntrs$j + 1
+      return(list(keep_running = TRUE, at_equil = FALSE, cntrs))
+    #I not at equil (but S is because above check failed),
+    #   first we'll lengthen the simulation
+    #    (to make sure it was long enough to catch the last burst)
+    #   then we'll start shrinking our step size
+    } else if (yout_list$value$I[nrow(yout_list$value)] >= equil_cutoff_dens) {
+      if (cntrs$i_only_pos_times < 1) {
+        cntrs$i_only_pos_times <- cntrs$i_only_pos_times+1
+        cntrs$j <- cntrs$j+1
+        return(list(keep_running = TRUE, at_equil = FALSE, cntrs))
+      } else {
+        cntrs$k <- cntrs$k+1
+        return(list(keep_running = TRUE, at_equil = FALSE, cntrs))
+      }
+    }
+  } else {stop("tryCatch failed, niether success, warning, nor error detected")}
+}
+
 run_sims <- function(u_Svals,
                      u_Rvals = 0,
                      kvals,
@@ -285,16 +348,11 @@ run_sims <- function(u_Svals,
   ybig$Pop <- as.character(ybig$Pop)
   
   #Define counters
-  rows_tracking <- list(
-    #row where data should start being entered for next simulation
-    "start_row" = 1,
-    #number of rows this simulation is 
-    # (default value provided for dynamic_stepsize = FALSE
-    #  but when dynamic_stepsize = TRUE this will be overwritten ea time)
+  cntrs <- list(
+    "start_row" = 1, #row where next sim should start being saved
+    #number of rows this sim is (constant when dynamic_stepsize = FALSE)
     "this_run_nrows" = num_pops*(1+init_time/init_stepsize),
-    #counter for additional rows to add, to minimize number of times
-    # ybig has to be re-defined
-    "still_needed_toadd" = 0)
+    "still_needed_toadd" = 0) #num rows needed to add. Minimized redefining ybig
   
   for (i in 1:nrow(param_combos)) { #i acts as the uniq_run counter
     #Define pops & parameters
@@ -311,31 +369,23 @@ run_sims <- function(u_Svals,
     params <- c(unlist(param_combos[i, ]),
                 warnings = 0, thresh_min_dens = 10**-100)
     
-    #Run simulation(s) with longer & longer times until equil reached
-    #Also, if equil has non-zero I run with shorter steps
+    #Counters
+    cntrs["i_only_pos_times"] <- 0 #num times I, but not S, > equil_cutoff_dens
+    cntrs["j"] <- 0 #length counter (larger is longer times)
+    cntrs["k"] <- 0 #step size counter (larger is smaller steps)
     
-    #Placeholder for the number of times I has been detected above
-    # min_dens while S has not been
-    i_only_pos_times <- 0
-    j <- 0 #length counter (larger is longer times)
-    k <- 0 #step size counter (larger is smaller steps)
+    #Keep running until meets some quit criteria
     while(TRUE) {
       #Define times
-      if (dynamic_stepsize) {
-        #If dynamic_stepsize true, double lengths & steps for ea j count
-        # (so that the number of timepoints returned is constant)
-        times <- seq(0, init_time*2**j, init_stepsize*2**j)
-      } else {
-        #If dynamic_stepsize false, keep stepsize at init_stepsize
-        times <- seq(0, init_time*2**j, init_stepsize)
+      if (dynamic_stepsize) { #double for ea j so length(times) is constant
+        times <- seq(0, init_time*2**cntrs$j, init_stepsize*2**cntrs$j)
+      } else { #keep stepsize at init_stepsize
+        times <- seq(0, init_time*2**cntrs$j, init_stepsize)
       }
       
       #Calculate hmax (max step size integrator uses)
-      if (dynamic_stepsize) {
-        #Note that the max step size for the integrator is the 
-        # same as our step size except halved for each k count
-        hmax_val <- init_stepsize*2**(j-k)
-      } else {hmax_val <- min(init_stepsize*2**(j-k), init_stepsize)}
+      if (dynamic_stepsize) {hmax_val <- init_stepsize*2**(cntrs$j-cntrs$k) #halved for ea k
+      } else {hmax_val <- min(init_stepsize*2**(cntrs$j-cntrs$k), init_stepsize)}
       
       #Run simulation
       yout_list <- myTryCatch(expr = {
@@ -343,54 +393,12 @@ run_sims <- function(u_Svals,
                            parms = params, hmax = hmax_val))
       })
       
-      #Infinite loop prevention check (j = 10 is 24 hrs)
-      if (j >= 10 | k >= 15 | j+k >= 20) {
-        at_equil <- FALSE
-        break
-      }
-      
-      #If fixed time, don't check for equil
-      if(fixed_time) {
-        at_equil <- TRUE #more like we don't know
-        break
-      }
-      
-      #If there was an error, increase k by 1 and re-run
-      if(!is.null(yout_list$error)) {
-        k <- k+1
-        #If there was a warning, could be several causes, so we
-        # generally just halve step size and increase length
-      } else if (!is.null(yout_list$warning)) {
-        j <- j+1
-        k <- k+2
-        #If it was successful, check for equilibrium
-      } else if (is.null(yout_list$warning) & is.null(yout_list$error)) {
-        #First drop all rows with nan
-        yout_list$value <- 
-          yout_list$value[apply(X = yout_list$value, MARGIN = 1,
-                                FUN = function(x) {all(!is.nan(x))}), ]
-        
-        #S and I both at equil, we're done
-        if (yout_list$value$S[nrow(yout_list$value)] < equil_cutoff_dens & 
-            yout_list$value$I[nrow(yout_list$value)] < equil_cutoff_dens) {
-          at_equil <- TRUE
-          break
-          #S not at equil, need more time
-        } else if (yout_list$value$S[nrow(yout_list$value)] >= equil_cutoff_dens) { 
-          j <- j+1
-          #I not at equil (but S is because above check failed),
-          #   first we'll lengthen the simulation
-          #    (to make sure it was long enough to catch the last burst)
-          #   then we'll start shrinking our step size
-        } else if (yout_list$value$I[nrow(yout_list$value)] >= equil_cutoff_dens) {
-          if (i_only_pos_times < 1) {
-            j <- j+1
-            i_only_pos_times <- i_only_pos_times+1
-          } else {
-            k <- k+1
-          }
-        }
-      } else {stop("tryCatch failed, niether success, warning, nor error detected")}
+      #Check for equil
+      checks <- check_equil(yout_list = yout_list, cntrs = cntrs, 
+                            fixed_time = fixed_time, 
+                            equil_cutoff_dens = equil_cutoff_dens)
+      if(checks$keep_running == FALSE) {break
+      } else {cntrs <- checks$cntrs}
     }
     
     #Once end conditions triggered, if run succeeded (or warning-d)
@@ -401,23 +409,22 @@ run_sims <- function(u_Svals,
       yout_list$value$PI <- yout_list$value$P + yout_list$value$I
       
       if (!dynamic_stepsize) {
-        rows_tracking$this_run_nrows <- num_pops*nrow(yout_list$value)
-        rows_tracking$still_needed_toadd <- 
-          rows_tracking$still_needed_toadd + 
-          (rows_tracking$this_run_nrows - num_pops*(1+init_time/init_stepsize))
+        cntrs$this_run_nrows <- num_pops*nrow(yout_list$value)
+        cntrs$still_needed_toadd <- 
+          cntrs$still_needed_toadd + 
+          (cntrs$this_run_nrows - num_pops*(1+init_time/init_stepsize))
         
         #Add rows if we don't have enough room to save this simulation
-        if((rows_tracking$start_row+rows_tracking$this_run_nrows-1)>nrow(ybig)) {
-          ybig[(nrow(ybig)+1):(nrow(ybig)+rows_tracking$still_needed_toadd), ] <-
-            rep(list(rep(NA, rows_tracking$still_needed_toadd)), ncol(ybig))
+        if((cntrs$start_row+cntrs$this_run_nrows-1)>nrow(ybig)) {
+          ybig[(nrow(ybig)+1):(nrow(ybig)+cntrs$still_needed_toadd), ] <-
+            rep(list(rep(NA, cntrs$still_needed_toadd)), ncol(ybig))
           
-          rows_tracking$still_needed_toadd <- 0
+          cntrs$still_needed_toadd <- 0
         }
       }
       
       #Reshape, add parameters, and fill into ybig in right rows
-      myrows <- rows_tracking$start_row: 
-        (rows_tracking$start_row + rows_tracking$this_run_nrows - 1)
+      myrows <- cntrs$start_row : (cntrs$start_row + cntrs$this_run_nrows - 1)
       ybig[myrows, ] <-
         cbind(uniq_run = i,
               param_combos[i, ],
@@ -431,15 +438,12 @@ run_sims <- function(u_Svals,
     #If the run failed
     } else if (!is.null(yout_list$error)) {
       temp <- cbind(uniq_run = i, param_combos[i, ], equil = at_equil)
-      if (is.null(yfail)) { #This is the first failed run
-        yfail <- temp
-      } else { #This is a non-first failed run
-        yfail <- rbind(yfail, temp)
-      }
+      if (is.null(yfail)) {yfail <- temp
+      } else {yfail <- rbind(yfail, temp)}
     } else {stop("tryCatch failed during saving, neither success nor warning nor error detected")}
     
     #Update cumulative offset (for non-dynamic stepsize runs)
-    rows_tracking$start_row <- rows_tracking$start_row + rows_tracking$this_run_nrows
+    cntrs$start_row <- cntrs$start_row + cntrs$this_run_nrows
     
     #Print progress update
     if (print_info & i %in% progress_seq) {
