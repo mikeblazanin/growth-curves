@@ -159,7 +159,7 @@ params <- c(u_S = 0.023,
             z = 0,
             m = 0,
             warnings = 1, thresh_min_dens = 10**-100)
-times <- seq(from = 0, to = 2000, by = 1)
+times <- seq(from = 0, to = 1000, by = 1)
 test <- as.data.frame(dede(y = yinit, times = times, func = derivs, 
                            parms = params))
 test2 <- tidyr::pivot_longer(test, cols = -c(time), 
@@ -184,7 +184,7 @@ run_sims <- function(u_Svals,
                      init_R_dens_vals = 0,
                      init_moi_vals = 10**-2,
                      init_N_dens_vals = NA,
-                     min_dens = 0.1,
+                     equil_cutoff_dens = 0.1,
                      init_time = 100,
                      init_stepsize = 1,
                      combinatorial = TRUE,
@@ -194,7 +194,7 @@ run_sims <- function(u_Svals,
   
   #Inputs: vectors of parameters to be combined factorially to make
   #         all possible combinations & run simulations with
-  #       min_dens is threshold density to consider a population at equilibrium
+  #       equil_cutoff_dens is threshold density to consider a population at equilibrium
   #       init_time is the length of simulation that will first be tried
   #         (and subsequently lengthened as necessary to find equilibrium)
   #       init_stepsize is the length of stepsize that will first be tried
@@ -230,34 +230,35 @@ run_sims <- function(u_Svals,
     list(value=value, warning=warn, error=err)
   }
   
+  num_pops <- 7 #placeholder for when derivs changes, currently SIPRN B PI
+  
   if(init_time %% init_stepsize != 0) {
     warning("init_time is not divisible by init_stepsize, this has not been tested")
   }
   
   #Save parameter values provided into dataframe
   # taking all different combinations
-  sim_vars <- list("u_Svals" = u_Svals, "u_Rvals" = u_Rvals, "kvals" = kvals,
-                   "avals" = avals, "tauvals" = tauvals, "bvals" = bvals,
-                   "zvals" = zvals, "mvals" = mvals,
-                   "fvals" = fvals, "v_a1vals" = v_a1vals, "v_a2vals" = v_a2vals,
-                   "init_S_dens_vals" = init_S_dens_vals, 
-                   "init_R_dens_vals" = init_R_dens_vals,
-                   "init_moi_vals" = init_moi_vals,
-                   "init_N_dens_vals" = init_N_dens_vals)
+  sim_vars <- list("u_S" = u_Svals, "u_R" = u_Rvals, "k" = kvals,
+                   "a" = avals, "tau" = tauvals, "b" = bvals,
+                   "z" = zvals, "m" = mvals,
+                   "f" = fvals, "d" = dvals,
+                   "v_a1" = v_a1vals, "v_a2" = v_a2vals,
+                   "init_S_dens" = init_S_dens_vals, 
+                   "init_R_dens" = init_R_dens_vals,
+                   "init_moi" = init_moi_vals,
+                   "init_N_dens" = init_N_dens_vals)
   if (combinatorial) {
     param_combos <- expand.grid(sim_vars, stringsAsFactors = FALSE)
     num_sims <- nrow(param_combos)
   } else { #not combinatorial
     num_sims <- max(sapply(X = sim_vars, FUN = length))
     
-    #Check for parameter lengths being non-divisible with the
-    # number of simulations inferred from the longest parameter length
+    #Check for parameter lengths being non-divisible with num_sims
     if (!all(num_sims %% sapply(X = sim_vars, FUN = length) == 0)) {
       warning("Combinatorial=TRUE but longest param vals length is not a multiple of all other param vals lengths")
     }
     
-    #Save parameters into dataframe, replicating shorter parameter
-    # vectors as needed to reach # of simulations
+    #Save parameters into dataframe, replicating as needed
     param_combos <- sapply(X = sim_vars,
                            FUN = function(x) {rep_len(x, num_sims)})
   }
@@ -273,16 +274,15 @@ run_sims <- function(u_Svals,
   #Make placeholders
   yfail <- NULL #for runs that fail
   #for runs that succeed, pre-allocate ybig now to save on memory/speed
-  ybig <- data.frame("uniq_run" = rep(NA, 6*(1+init_time/init_stepsize)*num_sims),
-                     "u_S" = NA, "u_R" = NA, 
-                     "k" = NA,
-                     "a" = NA, "b" = NA, "tau" = NA,
-                     "z" = NA, "m" = NA,
-                     "f" = NA, "v_a1" = NA, "v_a2" = NA,
-                     "init_S_dens" = NA, "init_R_dens" = NA,
-                     "init_moi" = NA,
-                     "equil" = NA, "time" = NA, "Pop" = as.character(NA),
-                     "Density" = NA, stringsAsFactors = FALSE)
+  ybig <- 
+    data.frame(matrix(as.numeric(NA),
+                      nrow = num_pops*(1+init_time/init_stepsize)*num_sims,
+                      #(adding cols for uniq_run, equil, time, Pop, Density)
+                      ncol = 1+length(sim_vars)+4),
+               stringsAsFactors = FALSE)
+  colnames(ybig) <- c("uniq_run", names(sim_vars),
+                      "equil", "time", "Pop", "Density")
+  ybig$Pop <- as.character(ybig$Pop)
   
   #Define counters
   rows_tracking <- list(
@@ -291,28 +291,24 @@ run_sims <- function(u_Svals,
     #number of rows this simulation is 
     # (default value provided for dynamic_stepsize = FALSE
     #  but when dynamic_stepsize = TRUE this will be overwritten ea time)
-    "this_run_nrows" = 6*(1+init_time/init_stepsize),
+    "this_run_nrows" = num_pops*(1+init_time/init_stepsize),
     #counter for additional rows to add, to minimize number of times
     # ybig has to be re-defined
     "still_needed_toadd" = 0)
   
   for (i in 1:nrow(param_combos)) { #i acts as the uniq_run counter
     #Define pops & parameters
-    yinit <- c(S = param_combos$init_S_dens_vals[i],
+    yinit <- c(S = param_combos$init_S_dens[i],
                I = 0,
-               P = param_combos$init_S_dens_vals[i]*param_combos$init_moi_vals[i],
-               R = param_combos$init_R_dens_vals[i])
-    params <- c(u_S = param_combos$u_Svals[i],
-                u_R = param_combos$u_Rvals[i],
-                k = param_combos$kvals[i],
-                a = param_combos$avals[i],
-                tau = param_combos$tauvals[i],
-                b = param_combos$bvals[i],
-                f = param_combos$fvals[i],
-                v_a1 = param_combos$v_a1vals[i],
-                v_a2 = param_combos$v_a2vals[i],
-                z = param_combos$zvals[i],
-                m = param_combos$mvals[i],
+               P = param_combos$init_S_dens[i]*param_combos$init_moi[i],
+               R = param_combos$init_R_dens[i],
+               #if N is NA, N = k-S-R
+               N = ifelse(is.na(param_combos$init_N_dens[i]),
+                          (param_combos$k[i]
+                            - param_combos$init_S_dens[i]
+                            - param_combos$init_R_dens[i]),
+                          param_combos$init_N_dens[i]))
+    params <- c(unlist(param_combos[i, ]),
                 warnings = 0, thresh_min_dens = 10**-100)
     
     #Run simulation(s) with longer & longer times until equil reached
@@ -370,24 +366,23 @@ run_sims <- function(u_Svals,
         #If it was successful, check for equilibrium
       } else if (is.null(yout_list$warning) & is.null(yout_list$error)) {
         #First drop all rows with nan
-        yout_list$value <- yout_list$value[!(is.nan(yout_list$value$S) |
-                                               is.nan(yout_list$value$I) |
-                                               is.nan(yout_list$value$P) |
-                                               is.nan(yout_list$value$R)), ]
+        yout_list$value <- 
+          yout_list$value[apply(X = yout_list$value, MARGIN = 1,
+                                FUN = function(x) {all(!is.nan(x))}), ]
         
         #S and I both at equil, we're done
-        if (yout_list$value$S[nrow(yout_list$value)] < min_dens & 
-            yout_list$value$I[nrow(yout_list$value)] < min_dens) {
+        if (yout_list$value$S[nrow(yout_list$value)] < equil_cutoff_dens & 
+            yout_list$value$I[nrow(yout_list$value)] < equil_cutoff_dens) {
           at_equil <- TRUE
           break
           #S not at equil, need more time
-        } else if (yout_list$value$S[nrow(yout_list$value)] >= min_dens) { 
+        } else if (yout_list$value$S[nrow(yout_list$value)] >= equil_cutoff_dens) { 
           j <- j+1
           #I not at equil (but S is because above check failed),
           #   first we'll lengthen the simulation
           #    (to make sure it was long enough to catch the last burst)
           #   then we'll start shrinking our step size
-        } else if (yout_list$value$I[nrow(yout_list$value)] >= min_dens) {
+        } else if (yout_list$value$I[nrow(yout_list$value)] >= equil_cutoff_dens) {
           if (i_only_pos_times < 1) {
             j <- j+1
             i_only_pos_times <- i_only_pos_times+1
@@ -406,75 +401,36 @@ run_sims <- function(u_Svals,
       yout_list$value$PI <- yout_list$value$P + yout_list$value$I
       
       if (!dynamic_stepsize) {
-        rows_tracking$this_run_nrows <- 6*nrow(yout_list$value)
+        rows_tracking$this_run_nrows <- num_pops*nrow(yout_list$value)
         rows_tracking$still_needed_toadd <- 
           rows_tracking$still_needed_toadd + 
-          (rows_tracking$this_run_nrows - 6*(1+init_time/init_stepsize))
+          (rows_tracking$this_run_nrows - num_pops*(1+init_time/init_stepsize))
         
-        #If the expected end row of this simulation
-        #is larger than the number of rows available, 
-        #we need to add more rows
-        if((rows_tracking$start_row + rows_tracking$this_run_nrows - 1) >
-           nrow(ybig)) {
-          ybig <- 
-            rbind(ybig,
-                  data.frame("uniq_run" = rep(NA, rows_tracking$still_needed_toadd),
-                             "u_S" = NA, "u_R" = NA, 
-                             "k" = NA,
-                             "a" = NA, "b" = NA, "tau" = NA,
-                             "z" = NA, "m" = NA,
-                             "f" = NA, "v_a1" = NA, "v_a2" = NA,
-                             "init_S_dens" = NA, "init_R_dens" = NA,
-                             "init_moi" = NA,
-                             "equil" = NA, "time" = NA, "Pop" = as.character(NA),
-                             "Density" = NA, stringsAsFactors = FALSE))
+        #Add rows if we don't have enough room to save this simulation
+        if((rows_tracking$start_row+rows_tracking$this_run_nrows-1)>nrow(ybig)) {
+          ybig[(nrow(ybig)+1):(nrow(ybig)+rows_tracking$still_needed_toadd), ] <-
+            rep(list(rep(NA, rows_tracking$still_needed_toadd)), ncol(ybig))
           
           rows_tracking$still_needed_toadd <- 0
         }
       }
       
       #Reshape, add parameters, and fill into ybig in right rows
-      ybig[rows_tracking$start_row : 
-             (rows_tracking$start_row + rows_tracking$this_run_nrows - 1), ] <-
-        cbind(data.frame(uniq_run = i, 
-                         u_S = param_combos$u_Svals[i], 
-                         u_R = param_combos$u_Rvals[i], 
-                         k = param_combos$kvals[i], 
-                         a = param_combos$avals[i], 
-                         b = param_combos$bvals[i], 
-                         tau = param_combos$tauvals[i],
-                         z = param_combos$zvals[i],
-                         m = param_combos$mvals[i],
-                         f = param_combos$fvals[i],
-                         v_a1 = param_combos$v_a1vals[i], 
-                         v_a2 = param_combos$v_a2vals[i],
-                         init_S_dens = param_combos$init_S_dens_vals[i], 
-                         init_R_dens = param_combos$init_R_dens_vals[i], 
-                         init_moi = param_combos$init_moi_vals[i],
-                         equil = at_equil),
+      myrows <- rows_tracking$start_row: 
+        (rows_tracking$start_row + rows_tracking$this_run_nrows - 1)
+      ybig[myrows, ] <-
+        cbind(uniq_run = i,
+              param_combos[i, ],
+              equil = at_equil,
               data.table::melt(data = data.table::as.data.table(yout_list$value), 
                                id.vars = c("time"),
                                value.name = "Density", 
                                variable.name = "Pop",
-                               variable.factor = FALSE))
-      #If the run failed
+                               variable.factor = FALSE),
+              row.names = myrows)
+    #If the run failed
     } else if (!is.null(yout_list$error)) {
-      temp <- data.frame(uniq_run = i, 
-                         u_S = param_combos$u_Svals[i], 
-                         u_R = param_combos$u_Rvals[i], 
-                         k = param_combos$kvals[i], 
-                         a = param_combos$avals[i], 
-                         b = param_combos$bvals[i], 
-                         tau = param_combos$tauvals[i],
-                         z = param_combos$zvals[i],
-                         m = param_combos$mvals[i],
-                         f = param_combos$fvals[i],
-                         v_a1 = param_combos$v_a1vals[i], 
-                         v_a2 = param_combos$v_a2vals[i],
-                         init_S_dens = param_combos$init_S_dens_vals[i], 
-                         init_R_dens = param_combos$init_R_dens_vals[i], 
-                         init_moi = param_combos$init_moi_vals[i],
-                         equil = at_equil)
+      temp <- cbind(uniq_run = i, param_combos[i, ], equil = at_equil)
       if (is.null(yfail)) { #This is the first failed run
         yfail <- temp
       } else { #This is a non-first failed run
