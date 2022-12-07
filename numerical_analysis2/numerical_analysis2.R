@@ -170,7 +170,8 @@ ggplot(data = test2, aes(x = time, y = Density, color = Pop)) +
 ## Define function for running simulations across many parameter values ----
 
 #sub-function for checking for equilibrium
-check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens) {
+check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens,
+                        max_j = 10) {
   #Returns: list(keep_running = TRUE/FALSE,
   #              at_equil = TRUE/FALSE/NA (NA only when fixed_time = TRUE),
   #              cntrs = list([other entries],
@@ -179,26 +180,26 @@ check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens) {
   #                           k = new k value)
   #              )
   
-  #Infinite loop prevention check (j = 10 is 24 hrs)
-  if (cntrs$j >= 10 | cntrs$k >= 15 | cntrs$j+cntrs$k >= 20) {
-    return(list(keep_running = FALSE, at_equil = FALSE, cntrs))
+  #Infinite loop prevention check (j = 10 is 24 hrs for init_time 100)
+  if (cntrs$j >= max_j | cntrs$k >= 15 | cntrs$j+cntrs$k >= 20) {
+    return(list(keep_running = FALSE, at_equil = FALSE, cntrs = cntrs))
   }
   
   #If fixed time, don't check for equil
   if(fixed_time) {
-    return(list(keep_running = FALSE, at_equil = NA, cntrs))
+    return(list(keep_running = FALSE, at_equil = NA, cntrs = cntrs))
   }
   
   #If there was an error, increase k by 1 and re-run
   if(!is.null(yout_list$error)) {
     cntrs$k <- cntrs$k+1
-    return(list(keep_running = TRUE, at_equil = NA, cntrs))
+    return(list(keep_running = TRUE, at_equil = NA, cntrs = cntrs))
   #If there was a warning, could be several causes, so we
   # generally just halve step size and increase length
   } else if (!is.null(yout_list$warning)) {
     cntrs$j <- cntrs$j+1
     cntrs$k <- cntrs$k+2
-    return(list(keep_running = TRUE, at_equil = NA, cntrs))
+    return(list(keep_running = TRUE, at_equil = NA, cntrs = cntrs))
   #If it was successful, check for equilibrium
   } else if (is.null(yout_list$warning) & is.null(yout_list$error)) {
     #First drop all rows with nan
@@ -210,12 +211,12 @@ check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens) {
     if (yout_list$value$I[nrow(yout_list$value)] < equil_cutoff_dens &
         (yout_list$value$S[nrow(yout_list$value)] < equil_cutoff_dens |
          yout_list$value$N[nrow(yout_list$value)] < equil_cutoff_dens)) {
-      return(list(keep_running = FALSE, at_equil = TRUE, cntrs))
+      return(list(keep_running = FALSE, at_equil = TRUE, cntrs = cntrs))
     #S nor N at equil, need more time
-    } else if (yout_list$value$S[nrow(yout_list$value)] < equil_cutoff_dens |
-               yout_list$value$N[nrow(yout_list$value)] < equil_cutoff_dens) {
+    } else if (yout_list$value$S[nrow(yout_list$value)] >= equil_cutoff_dens &
+               yout_list$value$N[nrow(yout_list$value)] >= equil_cutoff_dens) {
       cntrs$j <- cntrs$j + 1
-      return(list(keep_running = TRUE, at_equil = FALSE, cntrs))
+      return(list(keep_running = TRUE, at_equil = FALSE, cntrs = cntrs))
     #I not at equil (but S or N is because above check failed),
     #   first we'll lengthen the simulation
     #    (to make sure it was long enough to catch the last burst)
@@ -224,12 +225,12 @@ check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens) {
       if (cntrs$i_only_pos_times < 1) {
         cntrs$i_only_pos_times <- cntrs$i_only_pos_times+1
         cntrs$j <- cntrs$j+1
-        return(list(keep_running = TRUE, at_equil = FALSE, cntrs))
+        return(list(keep_running = TRUE, at_equil = FALSE, cntrs = cntrs))
       } else {
         cntrs$k <- cntrs$k+1
-        return(list(keep_running = TRUE, at_equil = FALSE, cntrs))
+        return(list(keep_running = TRUE, at_equil = FALSE, cntrs = cntrs))
       }
-    }
+    } else {stop("check_equil found an unexpected case")}
   } else {stop("tryCatch failed, niether success, warning, nor error detected")}
 }
 
@@ -250,6 +251,7 @@ run_sims <- function(u_Svals,
                      init_moi_vals = 10**-2,
                      init_N_dens_vals = NA,
                      equil_cutoff_dens = 0.1,
+                     max_time = 48*60,
                      init_time = 100,
                      init_stepsize = 1,
                      combinatorial = TRUE,
@@ -295,9 +297,6 @@ run_sims <- function(u_Svals,
     list(value=value, warning=warn, error=err)
   }
   
-  if(any(fvals != 0) & fixed_time == FALSE) {
-    warning("equilibrium checking not implemented for f != 0, may be very slow")
-  }
   if(fixed_time == TRUE & dynamic_stepsize == TRUE) {
     warning("fixed_time == TRUE overrides dynamic_stepsize == TRUE")
   }
@@ -405,7 +404,8 @@ run_sims <- function(u_Svals,
       #Check for equil
       checks <- check_equil(yout_list = yout_list, cntrs = cntrs, 
                             fixed_time = fixed_time, 
-                            equil_cutoff_dens = equil_cutoff_dens)
+                            equil_cutoff_dens = equil_cutoff_dens,
+                            max_j = ceiling(log2(max_time/init_time)))
       if(checks$keep_running == FALSE) {break
       } else {cntrs <- checks$cntrs}
     }
@@ -514,3 +514,37 @@ run_sims <- function(u_Svals,
   #   myc <- yfail$c[my_row]
   # }
 }
+
+#Run 1
+run1 <- run_sims(u_Svals = c(0.023), #(30 min doubling time)
+                 kvals = c(10**9),
+                 #avals = 10**seq(from = -12, to = -8, by = 2),
+                 avals = 10**-10,
+                 #tauvals = signif(10**seq(from = 1, to = 2, by = 0.5), 3),
+                 tauvals = 31.6,
+                 #bvals = signif(5*10**seq(from = 0, to = 2, by = 1), 3),
+                 bvals = 50,
+                 init_S_dens_vals = 10**6,
+                 init_moi_vals = 10**-2,
+                 zvals = 0,
+                 fvals = c(0, 1),
+                 dvals = c(0, 1),
+                 v_a1vals = c(1, 4, 16),
+                 equil_cutoff_dens = 0.1,
+                 init_time = 6*60,
+                 max_time = 48*60,
+                 init_stepsize = 5,
+                 print_info = TRUE)
+
+ybig1 <- run1[[1]]
+
+ggplot(data = filter(ybig1, Pop %in% c("S", "I", "P", "N")),
+       aes(x = time/60, y = Density, color = Pop)) +
+  geom_line() +
+  facet_grid(f*d~v_a1) +
+  scale_y_continuous(trans = "log10", limits = c(1, NA)) +
+  scale_color_manual(limits = c("S", "I", "P", "N"),
+                     values = my_cols[c(2, 3, 1, 7)])
+
+
+
