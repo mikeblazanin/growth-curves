@@ -180,7 +180,7 @@ check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens) {
   #              )
   
   #Infinite loop prevention check (j = 10 is 24 hrs)
-  if (cntrs$j >= 10 | k >= 15 | cntrs$j+k >= 20) {
+  if (cntrs$j >= 10 | cntrs$k >= 15 | cntrs$j+cntrs$k >= 20) {
     return(list(keep_running = FALSE, at_equil = FALSE, cntrs))
   }
   
@@ -205,16 +205,18 @@ check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens) {
     yout_list$value <- 
       yout_list$value[apply(X = yout_list$value, MARGIN = 1,
                             FUN = function(x) {all(!is.nan(x))}), ]
-
-    #S and I both at equil, we're done
-    if (yout_list$value$S[nrow(yout_list$value)] < equil_cutoff_dens & 
-        yout_list$value$I[nrow(yout_list$value)] < equil_cutoff_dens) {
+    
+    #I at equil, and either S or N are at equil, we're done
+    if (yout_list$value$I[nrow(yout_list$value)] < equil_cutoff_dens &
+        (yout_list$value$S[nrow(yout_list$value)] < equil_cutoff_dens |
+         yout_list$value$N[nrow(yout_list$value)] < equil_cutoff_dens)) {
       return(list(keep_running = FALSE, at_equil = TRUE, cntrs))
-    #S not at equil, need more time
-    } else if (yout_list$value$S[nrow(yout_list$value)] >= equil_cutoff_dens) {
+    #S nor N at equil, need more time
+    } else if (yout_list$value$S[nrow(yout_list$value)] < equil_cutoff_dens |
+               yout_list$value$N[nrow(yout_list$value)] < equil_cutoff_dens) {
       cntrs$j <- cntrs$j + 1
       return(list(keep_running = TRUE, at_equil = FALSE, cntrs))
-    #I not at equil (but S is because above check failed),
+    #I not at equil (but S or N is because above check failed),
     #   first we'll lengthen the simulation
     #    (to make sure it was long enough to catch the last burst)
     #   then we'll start shrinking our step size
@@ -295,6 +297,9 @@ run_sims <- function(u_Svals,
   
   if(any(fvals != 0) & fixed_time == FALSE) {
     warning("equilibrium checking not implemented for f != 0, may be very slow")
+  }
+  if(fixed_time == TRUE & dynamic_stepsize == TRUE) {
+    warning("fixed_time == TRUE overrides dynamic_stepsize == TRUE")
   }
   
   num_pops <- 7 #placeholder for when derivs changes, currently SIPRN B PI
@@ -432,7 +437,7 @@ run_sims <- function(u_Svals,
       ybig[myrows, ] <-
         cbind(uniq_run = i,
               param_combos[i, ],
-              equil = at_equil,
+              equil = checks$at_equil,
               data.table::melt(data = data.table::as.data.table(yout_list$value), 
                                id.vars = c("time"),
                                value.name = "Density", 
@@ -441,7 +446,7 @@ run_sims <- function(u_Svals,
               row.names = myrows)
     #If the run failed
     } else if (!is.null(yout_list$error)) {
-      temp <- cbind(uniq_run = i, param_combos[i, ], equil = at_equil)
+      temp <- cbind(uniq_run = i, param_combos[i, ], equil = checks$at_equil)
       if (is.null(yfail)) {yfail <- temp
       } else {yfail <- rbind(yfail, temp)}
     } else {stop("tryCatch failed during saving, neither success nor warning nor error detected")}
