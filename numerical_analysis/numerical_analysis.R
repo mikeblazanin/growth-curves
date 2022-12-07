@@ -284,6 +284,8 @@ run_sims <- function(u_Svals,
     list(value=value, warning=warn, error=err)
   }
   
+  if(any(fvals != 0)) {warning("equilibrium checking for non-zero f not implemented")}
+  
   if(init_time %% init_stepsize != 0) {
     warning("init_time is not divisible by init_stepsize, this has not been tested")
   }
