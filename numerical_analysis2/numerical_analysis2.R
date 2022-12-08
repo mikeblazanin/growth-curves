@@ -598,22 +598,40 @@ ggplot(data = test2, aes(x = time, y = Density, color = Pop)) +
 #Run 1 ----
 run1 <- run_sims_filewrapper(
   name = "run1",
-  u_Svals = c(0.023), #(30 min doubling time)
-  kvals = c(10**9),
-  avals = 10**seq(from = -12, to = -8, by = 2),
-  tauvals = signif(10**seq(from = 1, to = 2, by = 0.5), 3),
-  bvals = signif(5*10**seq(from = 0, to = 2, by = 1), 3),
-  init_S_dens_vals = 10**6,
-  init_moi_vals = 10**-2,
-  zvals = 0,
-  fvals = c(1),
-  dvals = c(0, 1),
-  v_a1vals = c(1, 4, 16),
-  equil_cutoff_dens = 0.1,
-  init_time = 12*60,
-  max_time = 48*60,
-  init_stepsize = 5,
-  print_info = TRUE)
+  parta = list(u_Svals = c(0.023), #(30 min doubling time)
+               kvals = c(10**9),
+               avals = 10**seq(from = -12, to = -8, by = 2),
+               tauvals = signif(10**seq(from = 1, to = 2, by = 0.5), 3),
+               bvals = signif(5*10**seq(from = 0, to = 2, by = 1), 3),
+               init_S_dens_vals = 10**6,
+               init_moi_vals = 10**-2,
+               zvals = 0,
+               fvals = c(1),
+               dvals = c(0, 1),
+               v_a1vals = c(1, 4, 16),
+               equil_cutoff_dens = 0.1,
+               init_time = 12*60,
+               max_time = 48*60,
+               init_stepsize = 5,
+               print_info = TRUE),
+  partb = list(u_Svals = c(0.023), #(30 min doubling time)
+               kvals = c(10**9),
+               avals = 10**seq(from = -12, to = -8, by = 2),
+               tauvals = signif(10**seq(from = 1, to = 2, by = 0.5), 3),
+               bvals = signif(5*10**seq(from = 0, to = 2, by = 1), 3),
+               init_S_dens_vals = 10**6,
+               init_moi_vals = 10**-2,
+               zvals = 0,
+               fvals = 0,
+               dvals = c(0, 1),
+               v_a1vals = 1,
+               equil_cutoff_dens = 0.1,
+               init_time = 12*60,
+               max_time = 48*60,
+               init_stepsize = 5,
+               print_info = TRUE)
+)
+  
 
 ybig1 <- run1[[1]]
 
@@ -666,23 +684,42 @@ if(glob_make_statplots) {
   ggplot(ysum1,
          aes(x = max_time/60, y = max_dens)) +
     geom_point() +
-    facet_grid(d ~ v_a1) +
+    facet_grid(d ~ f*v_a1) +
     scale_y_continuous(trans = "log10")
   
   ggplot(ysum1,
          aes(x = max_time/60, y = extin_time/60)) +
     geom_point() +
-    facet_grid(d ~ v_a1)
+    facet_grid(d ~ f*v_a1)
   
   ggplot(ysum1,
          aes(x = max_time/60, y = auc)) +
     geom_point() +
-    facet_grid(d ~ v_a1) +
+    facet_grid(d ~ f*v_a1) +
     scale_y_continuous(trans = "log10")
   
   ggplot(ysum1,
          aes(x = max_time, y = final_B+1)) +
     geom_point() +
-    facet_grid(d ~ v_a1) +
+    facet_grid(d ~ f*v_a1) +
     scale_y_continuous(trans = "log10")
+}
+
+abtau_vals <- expand.grid(a = unique(ysum1$a),
+                          b = unique(ysum1$b),
+                          tau = unique(ysum1$tau))
+dir.create("./run1_abtau_Bcurves", showWarnings = FALSE)
+for (i in 1:nrow(abtau_vals)) {
+  png(paste("./run1_abtau_Bcurves/", "a=", abtau_vals$a[i], 
+            " b=", abtau_vals$b[i], " tau=", abtau_vals$tau[i], ".png", 
+            sep = ""),
+      width = 6, height = 3, units = "in", res = 150)
+  print(ggplot(data = filter(ybig1, Pop == "B",
+                             a == abtau_vals$a[i], b == abtau_vals$b[i], 
+                             tau == abtau_vals$tau[i]),
+               aes(x = time, y = Density, color = paste(f, v_a1))) +
+          geom_line(alpha = 0.5, lwd = 1.5) +
+          facet_grid(~d) +
+          scale_y_continuous(trans = "log10"), limits = c(1, NA))
+  dev.off()
 }
