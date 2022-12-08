@@ -21,34 +21,6 @@ my_cols <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
              "#D55E00", "#CC79A7", "#000000")
 scales::show_col(my_cols)
 
-##Testing of plasticity in a ----
-x <- 10**(seq(from = -3, to = 0, by = 0.01))
-testa_combos <- as.data.frame(expand.grid("f" = c(0, 0.5, 1),
-                                         "v1" = c(1/16, 1/4, 1, 4, 16),
-                                         "v2" = c(1/16, 1/4, 1, 4, 16)))
-testa <- data.frame(x = rep(x, times = nrow(testa_combos)),
-                   f = rep(testa_combos$f, each = length(x)),
-                   v1 = rep(testa_combos$v1, each = length(x)),
-                   v2 = rep(testa_combos$v2, each = length(x)),
-                   response = NA)
-for (i in 1:nrow(testa_combos)) {
-  f <- testa_combos$f[i]
-  v1 <- testa_combos$v1[i]
-  v2 <- testa_combos$v2[i]
-  testa$response[testa$f == f & testa$v1 == v1 & testa$v2 == v2] <- 
-    (1 - f + f*(1-x)**v1)**v2
-}
-
-ggplot(data = testa, 
-       aes(x = x, y = response, color = paste(f))) + 
-  geom_line() + 
-  scale_x_continuous(trans = "log10") +
-  #scale_y_continuous(trans = "log10", limits = c(10**-10, 1)) +
-  facet_grid(rows = vars(v1), cols = vars(v2)) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(x = "1-N/k", y = "a/a_max")
-
-
 ## Define derivatives function ----
 derivs <- function(t, y, parms) {
   #The derivs function must return the derivative of all the variables at a
@@ -143,29 +115,6 @@ derivs <- function(t, y, parms) {
   #element is a vector containing the derivatives of y with respect to time
   return(list(dY))
 }
-
-##Some simple runs ----
-yinit <- c("S" = 10**6, "I" = 0, "P" = 10**4, "R" = 0, "N" = 10**9-10**6)
-params <- c(u_S = 0.023,
-            u_R = 0.023,
-            k = 10**9,
-            a = 10**-10,
-            tau = 31.6,
-            b = 50,
-            f = 1,
-            d = 0,
-            v_a1 = 8,
-            v_a2 = 1,
-            z = 0,
-            m = 0,
-            warnings = 1, thresh_min_dens = 10**-100)
-times <- seq(from = 0, to = 1000, by = 1)
-test <- as.data.frame(dede(y = yinit, times = times, func = derivs, 
-                           parms = params))
-test2 <- tidyr::pivot_longer(test, cols = -c(time), 
-                             names_to = "Pop", values_to = "Density")
-ggplot(data = test2, aes(x = time, y = Density, color = Pop)) +
-  geom_line() + scale_y_continuous(trans = "log10", limits = c(1, NA))
 
 ## Define function for running simulations across many parameter values ----
 
@@ -515,36 +464,196 @@ run_sims <- function(u_Svals,
   # }
 }
 
-#Run 1
-run1 <- run_sims(u_Svals = c(0.023), #(30 min doubling time)
-                 kvals = c(10**9),
-                 #avals = 10**seq(from = -12, to = -8, by = 2),
-                 avals = 10**-10,
-                 #tauvals = signif(10**seq(from = 1, to = 2, by = 0.5), 3),
-                 tauvals = 31.6,
-                 #bvals = signif(5*10**seq(from = 0, to = 2, by = 1), 3),
-                 bvals = 50,
-                 init_S_dens_vals = 10**6,
-                 init_moi_vals = 10**-2,
-                 zvals = 0,
-                 fvals = c(0, 1),
-                 dvals = c(0, 1),
-                 v_a1vals = c(1, 4, 16),
-                 equil_cutoff_dens = 0.1,
-                 init_time = 6*60,
-                 max_time = 48*60,
-                 init_stepsize = 5,
-                 print_info = TRUE)
+##Define file save/load wrapper for run_sims ----
+run_sims_filewrapper <- function(name, dir = ".",
+                                 read_file = TRUE, write_file = TRUE,
+                                 ...) {
+  
+  if (!read_file & !write_file) {
+    warning("simulation will be run and no files will be read or written")
+  }
+  
+  #Check to see if results have previously been simulated & saved
+  # if so, load them
+  if (read_file == TRUE &
+      paste(name, "_1.csv", sep = "") %in% list.files(dir)) {
+    warning("Does not check if current param inputs are same as existing data")
+    temp <- list(NULL, NULL, NULL)
+    temp[[1]] <- read.csv(paste(dir, "/", name, "_1.csv", sep = ""),
+                          stringsAsFactors = F)
+    if (paste(name, "_2.csv", sep = "") %in% list.files(dir)) {
+      temp[[2]] <- read.csv(paste(dir, "/", name, "_2.csv", sep = ""), 
+                            stringsAsFactors = F)
+    }
+    if (paste(name, "_3.csv", sep = "") %in% list.files(dir)) {
+      temp[[3]] <- read.csv(paste(dir, "/", name, "_3.csv", sep = ""), 
+                            stringsAsFactors = F)
+    }
+  } else {
+    #Run simulations (if files don't exist)
+    temp <- run_sims(...)
+    #Save results so they can be re-loaded in future
+    if (write_file) {
+      #Save results so they can be re-loaded in future
+      write.csv(temp[[1]], row.names = F,
+                paste(dir, "/", name, "_1.csv", sep = ""))
+      if (!is.null(temp[[2]])) {
+        write.csv(temp[[2]], row.names = F,
+                  paste(dir, "/", name, "_2.csv", sep = ""))
+      }
+      if (!is.null(temp[[3]])) {
+        write.csv(temp[[3]], row.names = F,
+                  paste(dir, "/", name, "_3.csv", sep = ""))
+      }
+    }
+  }
+  return(temp)
+}
+
+## Global Settings ----
+glob_read_files <- TRUE
+glob_make_curveplots <- FALSE
+glob_make_statplots <- FALSE
+
+##Testing of plasticity in a ----
+x <- 10**(seq(from = -3, to = 0, by = 0.01))
+testa_combos <- as.data.frame(expand.grid("f" = c(0, 0.5, 1),
+                                          "v1" = c(1/16, 1/4, 1, 4, 16),
+                                          "v2" = c(1/16, 1/4, 1, 4, 16)))
+testa <- data.frame(x = rep(x, times = nrow(testa_combos)),
+                    f = rep(testa_combos$f, each = length(x)),
+                    v1 = rep(testa_combos$v1, each = length(x)),
+                    v2 = rep(testa_combos$v2, each = length(x)),
+                    response = NA)
+for (i in 1:nrow(testa_combos)) {
+  f <- testa_combos$f[i]
+  v1 <- testa_combos$v1[i]
+  v2 <- testa_combos$v2[i]
+  testa$response[testa$f == f & testa$v1 == v1 & testa$v2 == v2] <- 
+    (1 - f + f*(1-x)**v1)**v2
+}
+
+ggplot(data = testa, 
+       aes(x = x, y = response, color = paste(f))) + 
+  geom_line() + 
+  scale_x_continuous(trans = "log10") +
+  #scale_y_continuous(trans = "log10", limits = c(10**-10, 1)) +
+  facet_grid(rows = vars(v1), cols = vars(v2)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "1-N/k", y = "a/a_max")
+
+##Some simple runs ----
+yinit <- c("S" = 10**6, "I" = 0, "P" = 10**4, "R" = 0, "N" = 10**9-10**6)
+params <- c(u_S = 0.023,
+            u_R = 0.023,
+            k = 10**9,
+            a = 10**-10,
+            tau = 31.6,
+            b = 50,
+            f = 1,
+            d = 0,
+            v_a1 = 8,
+            v_a2 = 1,
+            z = 0,
+            m = 0,
+            warnings = 1, thresh_min_dens = 10**-100)
+times <- seq(from = 0, to = 1000, by = 1)
+test <- as.data.frame(dede(y = yinit, times = times, func = derivs, 
+                           parms = params))
+test2 <- tidyr::pivot_longer(test, cols = -c(time), 
+                             names_to = "Pop", values_to = "Density")
+ggplot(data = test2, aes(x = time, y = Density, color = Pop)) +
+  geom_line() + scale_y_continuous(trans = "log10", limits = c(1, NA))
+
+#Run 1 ----
+run1 <- run_sims_filewrapper(
+  name = "run1",
+  u_Svals = c(0.023), #(30 min doubling time)
+  kvals = c(10**9),
+  avals = 10**seq(from = -12, to = -8, by = 2),
+  tauvals = signif(10**seq(from = 1, to = 2, by = 0.5), 3),
+  bvals = signif(5*10**seq(from = 0, to = 2, by = 1), 3),
+  init_S_dens_vals = 10**6,
+  init_moi_vals = 10**-2,
+  zvals = 0,
+  fvals = c(1),
+  dvals = c(0, 1),
+  v_a1vals = c(1, 4, 16),
+  equil_cutoff_dens = 0.1,
+  init_time = 12*60,
+  max_time = 48*60,
+  init_stepsize = 5,
+  print_info = TRUE)
 
 ybig1 <- run1[[1]]
 
-ggplot(data = filter(ybig1, Pop %in% c("S", "I", "P", "N")),
-       aes(x = time/60, y = Density, color = Pop)) +
-  geom_line() +
-  facet_grid(f*d~v_a1) +
-  scale_y_continuous(trans = "log10", limits = c(1, NA)) +
-  scale_color_manual(limits = c("S", "I", "P", "N"),
-                     values = my_cols[c(2, 3, 1, 7)])
+ysum1 <- summarize(group_by(ybig1, across(uniq_run:equil)),
+                   max_dens = max(Density[Pop == "B"]),
+                   max_time = time[Pop == "B"][which.max(Density[Pop == "B"])],
+                   extin_time = first_below(y = Density[Pop == "B"],
+                                            x = time[Pop == "B"],
+                                            threshold = 10**4,
+                                            return = "x"),
+                   auc = auc(x = time[Pop == "B"],
+                             y = Density[Pop == "B"]),
+                   final_B = max(0, Density[Pop == "B" & time == max(time)]))
 
+dir.create("./run1_dens_curves", showWarnings = FALSE)                   
+if(glob_make_curveplots) {
+  for (i in unique(ybig1$uniq_run)) {
+    png(paste("./run1_dens_curves/", i, ".png", sep = ""),
+        width = 4, height = 4, units = "in", res = 100)
+    print(
+      ggplot(data = filter(ybig1, 
+                           Pop %in% c("S", "I", "P", "N"), uniq_run == i),
+             aes(x = time/60, y = Density, color = Pop)) +
+        geom_line(lwd = 1.5) +
+        scale_y_continuous(trans = "log10", limits = c(1, NA)) +
+        scale_color_manual(limits = c("S", "I", "P", "N"),
+                           values = my_cols[c(2, 3, 1, 7)]) +
+        theme_bw()
+    )
+    dev.off()
+  }
+}
 
+dir.create("./run1_B_curves", showWarnings = FALSE)                   
+if(glob_make_curveplots) {
+  for (i in unique(ybig1$uniq_run)) {
+    png(paste("./run1_B_curves/", i, ".png", sep = ""),
+        width = 4, height = 4, units = "in", res = 100)
+    print(
+      ggplot(data = filter(ybig1, Pop == "B", uniq_run == i),
+             aes(x = time/60, y = Density)) +
+        geom_line(lwd = 1.5) +
+        theme_bw()
+    )
+    dev.off()
+  }
+}
+
+if(glob_make_statplots) {
+  ggplot(ysum1,
+         aes(x = max_time/60, y = max_dens)) +
+    geom_point() +
+    facet_grid(d ~ v_a1) +
+    scale_y_continuous(trans = "log10")
+  
+  ggplot(ysum1,
+         aes(x = max_time/60, y = extin_time/60)) +
+    geom_point() +
+    facet_grid(d ~ v_a1)
+  
+  ggplot(ysum1,
+         aes(x = max_time/60, y = auc)) +
+    geom_point() +
+    facet_grid(d ~ v_a1) +
+    scale_y_continuous(trans = "log10")
+  
+  ggplot(ysum1,
+         aes(x = max_time, y = final_B+1)) +
+    geom_point() +
+    facet_grid(d ~ v_a1) +
+    scale_y_continuous(trans = "log10")
+}
 
