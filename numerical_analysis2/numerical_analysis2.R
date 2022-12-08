@@ -468,7 +468,13 @@ run_sims <- function(u_Svals,
 run_sims_filewrapper <- function(name, dir = ".",
                                  read_file = TRUE, write_file = TRUE,
                                  ...) {
-  
+  #Note: ... can be all the arguments to pass to run sims
+  #          or it can be multiple lists, each containing the named arguments
+  #          to pass to run sims. In the latter case, each list will be
+  #          treated as a separate sub-call to run_sims, and the final results
+  #          will be all pasted together into one output
+  #          (this facilitates non-factorial combinations of parameters)
+
   if (!read_file & !write_file) {
     warning("simulation will be run and no files will be read or written")
   }
@@ -491,7 +497,31 @@ run_sims_filewrapper <- function(name, dir = ".",
     }
   } else {
     #Run simulations (if files don't exist)
-    temp <- run_sims(...)
+    if(all(lapply(list(...), class) == "list")) {
+      #Run multiple sub-simulations
+      temp_list <- vector(mode = "list", length(list(...))) 
+      for(i in 1:length(temp_list)) {
+        temp_list[[i]] <- do.call(run_sims, list(...)[[i]])
+        
+        #Modify uniq_run #'s as needed
+        if(i > 1) {
+        temp_list[[i]][[1]][, "uniq_run"] <-
+          temp_list[[i]][[1]][, "uniq_run"] +
+          suppressWarnings(max(temp_list[[i-1]][[1]][, "uniq_run"],
+                               temp_list[[i-1]][[2]][, "uniq_run"],
+                               temp_list[[i-1]][[3]][, "uniq_run"],
+                               na.rm = TRUE))
+        }
+      }
+      
+      #Paste them together
+      temp <- list(do.call(rbind, lapply(temp_list, function(x) x[[1]])),
+                   do.call(rbind, lapply(temp_list, function(x) x[[2]])),
+                   do.call(rbind, lapply(temp_list, function(x) x[[3]])))
+    } else {
+      temp <- run_sims(...)
+    }
+    
     #Save results so they can be re-loaded in future
     if (write_file) {
       #Save results so they can be re-loaded in future
@@ -656,4 +686,3 @@ if(glob_make_statplots) {
     facet_grid(d ~ v_a1) +
     scale_y_continuous(trans = "log10")
 }
-
