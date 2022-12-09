@@ -595,47 +595,88 @@ test2 <- tidyr::pivot_longer(test, cols = -c(time),
 ggplot(data = test2, aes(x = time, y = Density, color = Pop)) +
   geom_line() + scale_y_continuous(trans = "log10", limits = c(1, NA))
 
-#Run 1 ----
+#Run 1: phage traits ----
 run1 <- run_sims_filewrapper(
   name = "run1",
-  parta = list(u_Svals = c(0.023), #(30 min doubling time)
-               kvals = c(10**9),
-               avals = 10**seq(from = -12, to = -8, by = 2),
-               tauvals = signif(10**seq(from = 1, to = 2, by = 0.5), 3),
-               bvals = signif(5*10**seq(from = 0, to = 2, by = 1), 3),
-               init_S_dens_vals = 10**6,
-               init_moi_vals = 10**-2,
-               zvals = 0,
-               fvals = c(1),
-               dvals = c(0, 1),
-               v_a1vals = c(1, 4, 16),
-               equil_cutoff_dens = 0.1,
-               init_time = 12*60,
-               max_time = 48*60,
-               init_stepsize = 5,
-               print_info = TRUE),
-  partb = list(u_Svals = c(0.023), #(30 min doubling time)
-               kvals = c(10**9),
-               avals = 10**seq(from = -12, to = -8, by = 2),
-               tauvals = signif(10**seq(from = 1, to = 2, by = 0.5), 3),
-               bvals = signif(5*10**seq(from = 0, to = 2, by = 1), 3),
-               init_S_dens_vals = 10**6,
-               init_moi_vals = 10**-2,
-               zvals = 0,
-               fvals = 0,
-               dvals = c(0, 1),
-               v_a1vals = 1,
-               equil_cutoff_dens = 0.1,
-               init_time = 12*60,
-               max_time = 48*60,
-               init_stepsize = 5,
-               print_info = TRUE)
+  u_Svals = signif(0.04*10**c(-0.175, -0.525), 3),
+  kvals = c(10**8, 10**10),
+  avals = 10**seq(from = -12, to = -8, by = 1),
+  tauvals = signif(10**seq(from = 1, to = 2, by = 0.25), 3),
+  bvals = signif(5*10**seq(from = 0, to = 2, by = 0.5), 3),
+  init_S_dens_vals = 10**6,
+  init_moi_vals = 10**-2,
+  zvals = 1,
+  fvals = 0,
+  dvals = 0,
+  v_a1vals = 1,
+  equil_cutoff_dens = 0.1,
+  init_time = 12*60,
+  max_time = 48*60,
+  init_stepsize = 5,
+  print_info = TRUE)
+
+#Run 2: bact traits ----
+run2 <- run_sims_filewrapper(
+  name = "run2",
+  u_Svals = signif(0.04*10**seq(from = 0, to = -0.7, by = -0.175), 3),
+  kvals = signif(10**c(8, 8.5, 9, 9.5, 10), 3),
+  avals = 10**seq(from = -12, to = -8, by = 1),
+  tauvals = signif(10**c(1.25, 1.75), 3),
+  bvals = signif(5*10**c(0.5, 1.5), 3),
+  init_S_dens_vals = 10**6,
+  init_moi_vals = 10**-2,
+  zvals = 1,
+  fvals = 0,
+  dvals = 0,
+  v_a1vals = 1,
+  equil_cutoff_dens = 0.1,
+  init_time = 12*60,
+  max_time = 48*60,
+  init_stepsize = 5,
+  print_info = TRUE)
+
+
+#Run 3: f, v_a1, d with phage traits ----
+run3 <- run_sims_filewrapper(
+  name = "run3",
+  a = list(u_Svals = signif(0.04*10**-0.35, 3),
+           kvals = c(10**9),
+           avals = 10**seq(from = -12, to = -8, by = 2),
+           tauvals = signif(10**seq(from = 1, to = 2, by = 0.5), 3),
+           bvals = signif(5*10**seq(from = 0, to = 2, by = 1), 3),
+           init_S_dens_vals = 10**6,
+           init_moi_vals = 10**-2,
+           zvals = 1,
+           fvals = 1,
+           dvals = c(0, 1),
+           v_a1vals = c(1, 4, 8, 16),
+           equil_cutoff_dens = 0.1,
+           init_time = 12*60,
+           max_time = 48*60,
+           init_stepsize = 5,
+           print_info = TRUE),
+  b = list(u_Svals = signif(0.04*10**-0.35, 3),
+           kvals = c(10**9),
+           avals = 10**seq(from = -12, to = -8, by = 2),
+           tauvals = signif(10**seq(from = 1, to = 2, by = 0.5), 3),
+           bvals = signif(5*10**seq(from = 0, to = 2, by = 1), 3),
+           init_S_dens_vals = 10**6,
+           init_moi_vals = 10**-2,
+           zvals = 1,
+           fvals = 0,
+           dvals = c(0, 1),
+           v_a1vals = 1,
+           equil_cutoff_dens = 0.1,
+           init_time = 12*60,
+           max_time = 48*60,
+           init_stepsize = 5,
+           print_info = TRUE)
 )
   
 
-ybig1 <- run1[[1]]
+ybig3 <- run3[[1]]
 
-ysum1 <- summarize(group_by(ybig1, across(uniq_run:equil)),
+ysum3 <- summarize(group_by(ybig3, across(uniq_run:equil)),
                    max_dens = max(Density[Pop == "B"]),
                    max_time = time[Pop == "B"][which.max(Density[Pop == "B"])],
                    extin_time = first_below(y = Density[Pop == "B"],
@@ -646,13 +687,13 @@ ysum1 <- summarize(group_by(ybig1, across(uniq_run:equil)),
                              y = Density[Pop == "B"]),
                    final_B = max(0, Density[Pop == "B" & time == max(time)]))
 
-dir.create("./run1_dens_curves", showWarnings = FALSE)                   
+dir.create("./run3_dens_curves", showWarnings = FALSE)                   
 if(glob_make_curveplots) {
-  for (i in unique(ybig1$uniq_run)) {
-    png(paste("./run1_dens_curves/", i, ".png", sep = ""),
+  for (i in unique(ybig3$uniq_run)) {
+    png(paste("./run3_dens_curves/", i, ".png", sep = ""),
         width = 4, height = 4, units = "in", res = 100)
     print(
-      ggplot(data = filter(ybig1, 
+      ggplot(data = filter(ybig3, 
                            Pop %in% c("S", "I", "P", "N"), uniq_run == i),
              aes(x = time/60, y = Density, color = Pop)) +
         geom_line(lwd = 1.5) +
@@ -665,13 +706,13 @@ if(glob_make_curveplots) {
   }
 }
 
-dir.create("./run1_B_curves", showWarnings = FALSE)                   
+dir.create("./run3_B_curves", showWarnings = FALSE)                   
 if(glob_make_curveplots) {
-  for (i in unique(ybig1$uniq_run)) {
-    png(paste("./run1_B_curves/", i, ".png", sep = ""),
+  for (i in unique(ybig3$uniq_run)) {
+    png(paste("./run3_B_curves/", i, ".png", sep = ""),
         width = 4, height = 4, units = "in", res = 100)
     print(
-      ggplot(data = filter(ybig1, Pop == "B", uniq_run == i),
+      ggplot(data = filter(ybig3, Pop == "B", uniq_run == i),
              aes(x = time/60, y = Density)) +
         geom_line(lwd = 1.5) +
         theme_bw()
@@ -681,40 +722,40 @@ if(glob_make_curveplots) {
 }
 
 if(glob_make_statplots) {
-  ggplot(ysum1,
+  ggplot(ysum3,
          aes(x = max_time/60, y = max_dens)) +
     geom_point() +
     facet_grid(d ~ f*v_a1) +
     scale_y_continuous(trans = "log10")
   
-  ggplot(ysum1,
+  ggplot(ysum3,
          aes(x = max_time/60, y = extin_time/60)) +
     geom_point() +
     facet_grid(d ~ f*v_a1)
   
-  ggplot(ysum1,
+  ggplot(ysum3,
          aes(x = max_time/60, y = auc)) +
     geom_point() +
     facet_grid(d ~ f*v_a1) +
     scale_y_continuous(trans = "log10")
   
-  ggplot(ysum1,
+  ggplot(ysum3,
          aes(x = max_time, y = final_B+1)) +
     geom_point() +
     facet_grid(d ~ f*v_a1) +
     scale_y_continuous(trans = "log10")
 }
 
-abtau_vals <- expand.grid(a = unique(ysum1$a),
-                          b = unique(ysum1$b),
-                          tau = unique(ysum1$tau))
-dir.create("./run1_abtau_Bcurves", showWarnings = FALSE)
+abtau_vals <- expand.grid(a = unique(ysum3$a),
+                          b = unique(ysum3$b),
+                          tau = unique(ysum3$tau))
+dir.create("./run3_abtau_Bcurves", showWarnings = FALSE)
 for (i in 1:nrow(abtau_vals)) {
-  png(paste("./run1_abtau_Bcurves/", "a=", abtau_vals$a[i], 
+  png(paste("./run3_abtau_Bcurves/", "a=", abtau_vals$a[i], 
             " b=", abtau_vals$b[i], " tau=", abtau_vals$tau[i], ".png", 
             sep = ""),
       width = 6, height = 3, units = "in", res = 150)
-  print(ggplot(data = filter(ybig1, Pop == "B",
+  print(ggplot(data = filter(ybig3, Pop == "B",
                              a == abtau_vals$a[i], b == abtau_vals$b[i], 
                              tau == abtau_vals$tau[i]),
                aes(x = time, y = Density, color = paste(f, v_a1))) +
@@ -723,3 +764,61 @@ for (i in 1:nrow(abtau_vals)) {
           scale_y_continuous(trans = "log10"), limits = c(1, NA))
   dev.off()
 }
+
+#Run 4: z (coinfection rate)  ----
+run4 <- run_sims_filewrapper(
+  name = "run4",
+  u_Svals = signif(0.04*10**c(-0.175, -0.525), 3),
+  kvals = c(10**8, 10**10),
+  avals = 10**c(-11, -9),
+  tauvals = signif(10**c(1.25, 1.75), 3),
+  bvals = signif(5*10**c(0.5, 1.5), 3),
+  init_S_dens_vals = 10**6,
+  init_moi_vals = 10**-2,
+  zvals = c(0, 1),
+  fvals = c(0, 1),
+  dvals = c(0, 1),
+  v_a1vals = 1,
+  equil_cutoff_dens = 0.1,
+  init_time = 12*60,
+  max_time = 48*60,
+  init_stepsize = 5,
+  print_info = TRUE)
+
+
+#Run 5: init_dens, init_moi, a  ----
+run5 <- run_sims_filewrapper(
+  name = "run5",
+  a = list(u_Svals = signif(0.04*10**seq(from=-0.25, to=-0.45, length.out=4), 3),
+           kvals = c(10**9),
+           avals = 10**seq(from = -12, to = -8, length.out = 4),
+           tauvals = signif(10**1.5, 3),
+           bvals = 50,
+           init_S_dens_vals = 10**6,
+           init_moi_vals = 10**c(0, -1, -2, -3, -4),
+           zvals = c(1),
+           fvals = c(0, 1),
+           dvals = c(0, 1),
+           v_a1vals = 1,
+           equil_cutoff_dens = 0.1,
+           init_time = 12*60,
+           max_time = 48*60,
+           init_stepsize = 5,
+           print_info = TRUE),
+  b = list(u_Svals = signif(0.04*10**seq(from = -0.25, to = -0.45, length.out = 4), 3),
+           kvals = c(10**9),
+           avals = 10**-10,
+           tauvals = signif(10**1.5, 3),
+           bvals = 50,
+           init_S_dens_vals = 10**6,
+           init_moi_vals = 0,
+           zvals = c(1),
+           fvals = c(0),
+           dvals = c(0),
+           v_a1vals = 1,
+           equil_cutoff_dens = 0.1,
+           init_time = 12*60,
+           max_time = 48*60,
+           init_stepsize = 5,
+           print_info = TRUE)
+)
