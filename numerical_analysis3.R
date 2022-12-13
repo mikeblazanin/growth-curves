@@ -154,7 +154,7 @@ params <- c(u_S = 0.023,
             a = 5*10**-10,
             tau = 31.6,
             b = 50,
-            f = 0,
+            f = 1,
             d = 0,
             v_a1 = 0, v_a2 = 0,
             z = 0,
@@ -180,3 +180,118 @@ ggplot(data = filter(test2, Pop == "B"),
   geom_line(data = filter(test2, Pop == "pred"), lty = 2, color = "black")
 
 
+derivsz <- function(t, y, parms) {
+  #The derivs function must return the derivative of all the variables at a
+  # given time, in a list
+  
+  #Set small/negative y values to 0 so they don't affect the dN's
+  y[y < parms["thresh_min_dens"]] <- 0
+  
+  #Create output vector
+  dY <- c(S1 = 0, S2 = 0, I1 = 0, I2 = 0, P = 0, N = 0)
+  
+  #For all equations, let
+  # afrac_t = (1 - f + f*(N/k)^v_a1)^v_a2
+  # afrac_tau = (1 - f + f*(N(t-tau)/k)^v_a1)^v_a2
+  afrac_t <- 
+    (1 - parms["f"] +
+       parms["f"]*(y["N"]/parms["k"])**parms["v_a1"])**parms["v_a2"]
+  if (t < parms["tau"]) {
+    afrac_tau <- 0
+  } else {
+    afrac_tau <- 
+      (1 - parms["f"] +
+         parms["f"] * (lagvalue(t-parms["tau"], 6)/
+                         parms["k"])**parms["v_a1"])**parms["v_a2"]
+  }
+  
+  ##Calculate dS1
+  #dS1/dt = u_S1*S1 - 2*u_S1*S*(k-N)/k - afrac_t * a_S1 * S1*P
+  dY["S1"] <- (
+    parms["u_S1"] * y["S1"] 
+    - 2*parms["u_S1"] * y["S1"] * (parms["k"]-y["N"])/parms["k"] 
+    - afrac_t * parms["a_S1"] * y["S1"] * y["P"])
+  
+  #Calculate dS2
+  #dS2/dt = 2*u_S1*S1*(k-N)/k - afrac_t * a_S2 * S2*P
+  dY["S2"] <- 
+    (2*parms["u_S1"] * y["S1"] * (parms["k"]-y["N"])/parms["k"]
+     - afrac_t * parms["a_S2"] * y["S2"] * y["P"])
+    
+  ##Calculate dI1
+  #dI1/dt = afrac_t * a_S1 * S1*P 
+  #        - afrac_tau * a_S1 * S1(t-tau) * P(t-tau) 
+  if (t < parms["tau"]) {
+    dY["I1"] <- afrac_t * y["P"] * parms["a_S1"] * y["S1"]
+  } else {
+    dY["I1"] <- 
+      (afrac_t * parms["a_S1"] * y["S1"] * y["P"] 
+       - afrac_tau * parms["a_S1"] *
+         lagvalue(t-parms["tau"],1) * lagvalue(t-parms["tau"],5)
+      )
+  }
+  
+  ##Calculate dI2
+  #dI2/dt = afrac_t * a_S2 * S2*P
+  #        - afrac_tau * a_S2 * P(t-tau) * S2(t-tau)
+  if (t < parms["tau"]) {
+    dY["I2"] <- afrac_t * y["P"] * parms["a_S2"] * y["S2"]
+  } else {
+    dY["I"] <- 
+      (afrac_t * parms["a_S2"] * y["S2"] * y["P"] 
+       - afrac_tau * parms["a_S2"] *
+         lagvalue(t-parms["tau"],2) * lagvalue(t-parms["tau"],5)
+      )
+  }
+  
+  ##Calculate dP
+  #dP/dt = b * afrac_tau * a_S1 * P(t-tau) * S1(t-tau) 
+  #        b * afrac_tau * a_S2 * P(t-tau) * S2(t-tau)
+  #        - afrac_t * a_S1 * S1*P
+  #        - afrac_t * a_S2 * S2*P
+  #        - z * afrac_t * a_S1 * I1 * P
+  #        - z * afrac_t * a_S2 * I2 * P
+  #        (factored in the code for efficiency)
+  if (t < parms["tau"]) {
+    dY["P"] <- 
+      -afrac_t * y["P"] *
+      ((parms["a_S1"] * y["S1"] + parms["a_S2"] * y["S2"])
+       - parms["z"] * (parms["a_S1"] * y["I1"] + parms["a_S2"] * y["I2"]))
+  } else {
+    dY["P"] <- 
+      (parms["b"]*afrac_tau*lagvalue(t-parms["tau"], 5)*
+         (parms["a_S1"]*lagvalue(t-parms["tau"], 1) +
+          parms["a_S2"]*lagvalue(t-parms["tau"], 2))
+       -afrac_t * y["P"] *
+         ((parms["a_S1"] * y["S1"] + parms["a_S2"] * y["S2"])
+          - parms["z"] * (parms["a_S1"] * y["I1"] + parms["a_S2"] * y["I2"]))
+      )
+  }
+  
+  #Calculate dN
+  #dN/dt = - u_S1*S1
+  #        + d*afrac_tau * a_S1 * S1(t-tau) * P(t-tau)  
+  #        + d*afrac_tau * a_S2 * S2(t-tau) * P(t-tau) 
+  #        (factored in code for efficiency)
+  if (t < parms["tau"]) {
+    dY["N"] <- - parms["u_S1"] * y["S1"]
+  } else {
+    dY["N"] <- 
+      (- parms["u_S1"] * y["S1"] 
+       + parms["d"]*afrac_tau*lagvalue(t-parms["tau"],5)*
+         (parms["a_S1"]*lagvalue(t-parms["tau"],1) +
+          parms["a_S2"]*lagvalue(t-parms["tau"],2)))
+  }
+  
+  #Issue warning about too large pop (if warnings is TRUE)
+  if (parms["warnings"]==1 & any(y > 10**100)) {
+    warning(paste("pop(s)",
+                  paste(which(y > 10**100), collapse = ","),
+                  "exceed max limit, 10^100, returning dY = 0"))
+  }
+  dY[y > 10**100] <- 0
+  
+  #From documentation: The return value of func should be a list, whose first 
+  #element is a vector containing the derivatives of y with respect to time
+  return(list(dY))
+}
