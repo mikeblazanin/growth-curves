@@ -146,7 +146,6 @@ print(tail(test$R), digits = 10)
 
 
 times <- seq(from = 0, to = 700, by = 1)
-
 yinit <- c("S" = 10**6, "I" = 0, "P" = 1, "R" = 1000, 
            "N" = (10**9 - 10**6 - 1000))
 params <- c(u_S = 0.023,
@@ -183,7 +182,7 @@ ggplot(data = filter(test2, Pop == "B"),
 derivsz <- function(t, y, parms) {
   #The derivs function must return the derivative of all the variables at a
   # given time, in a list
-  
+
   #Set small/negative y values to 0 so they don't affect the dN's
   y[y < parms["thresh_min_dens"]] <- 0
   
@@ -205,14 +204,14 @@ derivsz <- function(t, y, parms) {
                          parms["k"])**parms["v_a1"])**parms["v_a2"]
   }
   
-  ##Calculate dS1
+  ##Calculate dS1 (growing subpopulation)
   #dS1/dt = u_S1*S1 - 2*u_S1*S*(k-N)/k - afrac_t * a_S1 * S1*P
   dY["S1"] <- (
     parms["u_S1"] * y["S1"] 
     - 2*parms["u_S1"] * y["S1"] * (parms["k"]-y["N"])/parms["k"] 
     - afrac_t * parms["a_S1"] * y["S1"] * y["P"])
   
-  #Calculate dS2
+  #Calculate dS2 (non-growing subpopulation)
   #dS2/dt = 2*u_S1*S1*(k-N)/k - afrac_t * a_S2 * S2*P
   dY["S2"] <- 
     (2*parms["u_S1"] * y["S1"] * (parms["k"]-y["N"])/parms["k"]
@@ -222,7 +221,7 @@ derivsz <- function(t, y, parms) {
   #dI1/dt = afrac_t * a_S1 * S1*P 
   #        - afrac_tau * a_S1 * S1(t-tau) * P(t-tau) 
   if (t < parms["tau"]) {
-    dY["I1"] <- afrac_t * y["P"] * parms["a_S1"] * y["S1"]
+    dY["I1"] <- afrac_t * parms["a_S1"] * y["S1"] * y["P"] 
   } else {
     dY["I1"] <- 
       (afrac_t * parms["a_S1"] * y["S1"] * y["P"] 
@@ -235,9 +234,9 @@ derivsz <- function(t, y, parms) {
   #dI2/dt = afrac_t * a_S2 * S2*P
   #        - afrac_tau * a_S2 * P(t-tau) * S2(t-tau)
   if (t < parms["tau"]) {
-    dY["I2"] <- afrac_t * y["P"] * parms["a_S2"] * y["S2"]
+    dY["I2"] <- afrac_t * parms["a_S2"] * y["S2"] * y["P"] 
   } else {
-    dY["I"] <- 
+    dY["I2"] <- 
       (afrac_t * parms["a_S2"] * y["S2"] * y["P"] 
        - afrac_tau * parms["a_S2"] *
          lagvalue(t-parms["tau"],2) * lagvalue(t-parms["tau"],5)
@@ -295,3 +294,38 @@ derivsz <- function(t, y, parms) {
   #element is a vector containing the derivatives of y with respect to time
   return(list(dY))
 }
+
+
+times <- seq(from = 0, to = 700, by = 1)
+yinit <- c("S1" = 10**6, "S2" = 1000, "I1" = 0, "I2" = 0, 
+           "P" = 1, "N" = (10**9 - 10**6 - 1000))
+params <- c(u_S1 = 0.023,
+            k = 10**9,
+            a_S1 = 5*10**-10,
+            a_S2 = 5*10**-10,
+            tau = 31.6,
+            b = 50,
+            f = 0,
+            d = 1,
+            v_a1 = 0, v_a2 = 0,
+            z = 0,
+            warnings = 1, thresh_min_dens = 10**-100)
+
+test <- as.data.frame(dede(y = yinit, times = times, func = derivsz, 
+                           parms = params))
+test$S <- test$S1 + test$S2
+test$I <- test$I1 + test$I2
+test$B <- test$S + test$I
+test$pred <- params[["k"]]/
+  (1+((params[["k"]] - yinit[["S1"]])/yinit[["S1"]])*
+     exp(-params[["u_S1"]]*test$time))
+test2 <- tidyr::pivot_longer(test, cols = -c(time), 
+                             names_to = "Pop", values_to = "Density")
+ggplot(data = filter(test2, Pop %in% c("S", "I", "P", "B")), 
+       aes(x = time, y = Density, color = Pop)) +
+  geom_line() + scale_y_continuous(trans = "log10", limits = c(1, NA)) +
+  geom_line(data = filter(test2, Pop == "pred"), lty = 2, color = "black")
+
+#I've confirmed that the dynamics produced by this are basically identical
+# to the original logistic growth one with no plasticity in a
+
