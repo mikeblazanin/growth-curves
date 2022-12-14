@@ -420,6 +420,12 @@ run_sims <- function(u_Svals,
     }
   }
   
+  print(paste(nrow(param_combos), " sims run, ",
+              length(unique(ybig$uniq_run)), " succeeded (",
+              length(unique(y_noequil$uniq_run)), " did not equil), ",
+              length(unique(yfail$uniq_run)), " failed",
+              sep = ""))
+  
   return(list(ybig, y_noequil, yfail))
   
   #Code for visualizing while debugging
