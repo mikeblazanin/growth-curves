@@ -44,16 +44,16 @@ derivs <- function(t, y, parms) {
   }
   
   ##Calculate dS1 (growing subpopulation)
-  #dS1/dt = u_S1*S1 - 2*u_S1*S*(k-N)/k - afrac_t * a_S1 * S1*P
+  #dS1/dt = u_S*S1 - 2*u_S*S*(k-N)/k - afrac_t * a_S1 * S1*P
   dY["S1"] <- (
-    parms["u_S1"] * y["S1"] 
-    - 2*parms["u_S1"] * y["S1"] * (parms["k"]-y["N"])/parms["k"] 
+    parms["u_S"] * y["S1"] 
+    - 2*parms["u_S"] * y["S1"] * (parms["k"]-y["N"])/parms["k"] 
     - afrac_t * parms["a_S1"] * y["S1"] * y["P"])
   
   #Calculate dS2 (non-growing subpopulation)
-  #dS2/dt = 2*u_S1*S1*(k-N)/k - afrac_t * a_S2 * S2*P
+  #dS2/dt = 2*u_S*S1*(k-N)/k - afrac_t * a_S2 * S2*P
   dY["S2"] <- 
-    (2*parms["u_S1"] * y["S1"] * (parms["k"]-y["N"])/parms["k"]
+    (2*parms["u_S"] * y["S1"] * (parms["k"]-y["N"])/parms["k"]
      - afrac_t * parms["a_S2"] * y["S2"] * y["P"])
     
   ##Calculate dI1
@@ -107,15 +107,15 @@ derivs <- function(t, y, parms) {
   }
   
   #Calculate dN
-  #dN/dt = - u_S1*S1
+  #dN/dt = - u_S*S1
   #        + d*afrac_tau * a_S1 * S1(t-tau) * P(t-tau)  
   #        + d*afrac_tau * a_S2 * S2(t-tau) * P(t-tau) 
   #        (factored in code for efficiency)
   if (t < parms["tau"]) {
-    dY["N"] <- - parms["u_S1"] * y["S1"]
+    dY["N"] <- - parms["u_S"] * y["S1"]
   } else {
     dY["N"] <- 
-      (- parms["u_S1"] * y["S1"] 
+      (- parms["u_S"] * y["S1"] 
        + parms["d"]*afrac_tau*lagvalue(t-parms["tau"],5)*
          (parms["a_S1"]*lagvalue(t-parms["tau"],1) +
           parms["a_S2"]*lagvalue(t-parms["tau"],2)))
@@ -139,7 +139,7 @@ if(F) {
   times <- seq(from = 0, to = 1500, by = 1)
   yinit <- c("S1" = 10**6, "S2" = 1000, "I1" = 0, "I2" = 0, 
              "P" = 1, "N" = (10**9 - 10**6 - 1000))
-  params <- c(u_S1 = 0.023,
+  params <- c(u_S = 0.023,
               k = 10**9,
               a_S1 = 5*10**-10,
               a_S2 = 0,
@@ -158,7 +158,7 @@ if(F) {
   test$B <- test$S + test$I
   test$pred <- params[["k"]]/
     (1+((params[["k"]] - yinit[["S1"]])/yinit[["S1"]])*
-       exp(-params[["u_S1"]]*test$time))
+       exp(-params[["u_S"]]*test$time))
   test2 <- tidyr::pivot_longer(test, cols = -c(time), 
                                names_to = "Pop", values_to = "Density")
   ggplot(data = filter(test2, Pop %in% c("S1", "S2", "I1", "I2", "P", "B", "N")), 
@@ -239,7 +239,7 @@ check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens,
   } else {stop("tryCatch failed, niether success, warning, nor error detected")}
 }
 
-run_sims <- function(u_S1vals,
+run_sims <- function(u_Svals,
                      kvals,
                      a_S1vals,
                      a_S2vals,
@@ -314,7 +314,7 @@ run_sims <- function(u_S1vals,
   
   #Save parameter values provided into dataframe
   # taking all different combinations
-  sim_vars <- list("u_S1" = u_S1vals, "k" = kvals,
+  sim_vars <- list("u_S" = u_Svals, "k" = kvals,
                    "a_S1" = a_S1vals, "a_S2" = a_S2vals,
                    "tau" = tauvals, "b" = bvals,
                    "z" = zvals,
