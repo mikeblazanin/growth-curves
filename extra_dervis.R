@@ -21,11 +21,11 @@ derivsx <- function(t, y, parms) {
   #dS/dt = u_S*S - 2*u_S*S*(S+R)/k
   dY["S"] <- (
     parms["u_S"] * y["S"] 
-    - parms["u_S"] * y["S"] * (y["S"] + y["R"])/parms["k"])
+    - 2*parms["u_S"] * y["S"] * (y["S"] + y["R"])/parms["k"])
   
   #Calculate dR
   #dR/dt = 2*u_S*S*(S+R)/k
-  dY["R"] <- parms["u_S"] * y["S"] * (y["S"] + y["R"])/parms["k"] 
+  dY["R"] <- 2*parms["u_S"] * y["S"] * (y["S"] + y["R"])/parms["k"] 
   
   #Issue warning about too large pop (if warnings is TRUE)
   if (parms["warnings"]==1 & any(y > 10**100)) {
@@ -127,9 +127,9 @@ derivsy <- function(t, y, parms) {
 
 times <- seq(from = 0, to = 4000, by = 1)
 
-yinit <- c("S" = 5*10**5, "R" = 250)
+yinit <- c("S" = 10**6, "R" = 100)
 params <- c(u_S = 0.023,
-            k = 10**9,
+            k = 10**10,
             warnings = 1, thresh_min_dens = 10**-100)
 
 test <- as.data.frame(dede(y = yinit, times = times, func = derivsx, 
