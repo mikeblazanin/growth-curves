@@ -8,7 +8,7 @@ mywd_split <- strsplit(getwd(), split = "/")
 if (mywd_split[[1]][length(mywd_split[[1]])] == "growth-curves") {
   dir.create("numerical_analysis3", showWarnings = FALSE)
   setwd("./numerical_analysis3/")
-} else {
+} else if (mywd_split[[1]][length(mywd_split[[1]])] != "numerical_analysis3") {
   stop("Not in correct root directory")
 }
 
@@ -16,6 +16,13 @@ if (mywd_split[[1]][length(mywd_split[[1]])] == "growth-curves") {
 my_cols <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
              "#D55E00", "#CC79A7", "#000000")
 scales::show_col(my_cols)
+
+##New version should be:
+#dS1/dt = u*S1(k-S1-S2)/k - h*S1(S1+S2)/k
+#dS2/dt = h*S1(S1+S2)/k
+#
+#but with N instead of S1+S2
+
 
 ## Define derivatives function ----
 derivs <- function(t, y, parms) {
@@ -221,7 +228,10 @@ check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens,
                yout_list$value$N[nrow(yout_list$value)] >= equil_cutoff_dens) {
       cntrs$j <- cntrs$j + 1
       return(list(keep_running = TRUE, at_equil = FALSE, cntrs = cntrs))
-    #I1 or I2 not at equil (but S or N is because above check failed),
+    
+      #TODO: change this, since can get cases where need more than one
+      #      more doubling if it's I2 not at equil
+      #I1 or I2 not at equil (but S or N is because above check failed),
     #   first we'll lengthen the simulation
     #    (to make sure it was long enough to catch the last burst)
     #   then we'll start shrinking our step size
@@ -242,7 +252,7 @@ check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens,
 run_sims <- function(u_Svals,
                      kvals,
                      a_S1vals,
-                     a_S2vals,
+                     a_S2vals = NA,
                      tauvals,
                      bvals,
                      zvals = 0,
@@ -262,7 +272,7 @@ run_sims <- function(u_Svals,
                      dynamic_stepsize = TRUE,
                      fixed_time = FALSE,
                      print_info = TRUE) {
-  
+  browser()
   #Inputs: vectors of parameters to be combined factorially to make
   #         all possible combinations & run simulations with
   #       equil_cutoff_dens is threshold density to consider a population at equilibrium
@@ -374,19 +384,20 @@ run_sims <- function(u_Svals,
     #if S2 is NA, S2 = S1^2/k
     if(is.na(param_combos$init_S2_dens[i])) {
       param_combos$init_S2_dens[i] <- 
-        (param_combos$init_S2_dens[i])**2/param_combos$k[i]
+        (param_combos$init_S1_dens[i])**2/param_combos$k[i]
     }
     yinit <- c(S1 = param_combos$init_S1_dens[i],
                S2 = param_combos$init_S2_dens[i],
                I1 = 0,
                I2 = 0,
-               P = param_combos$init_S_dens[i]*param_combos$init_moi[i],
+               P = param_combos$init_S1_dens[i]*param_combos$init_moi[i],
                #if N is NA, N = k-S-R
                N = ifelse(is.na(param_combos$init_N_dens[i]),
                           (param_combos$k[i]
                            - param_combos$init_S1_dens[i]
                            - param_combos$init_S2_dens[i]),
                           param_combos$init_N_dens[i]))
+    if(is.na(param_combos$a_S2[i])){param_combos$a_S2[i] <- param_combos$a_S1[i]}
     params <- c(unlist(param_combos[i, ]),
                 warnings = 0, thresh_min_dens = 10**-100)
     
@@ -577,3 +588,23 @@ run_sims_filewrapper <- function(name, dir = ".",
 glob_read_files <- TRUE
 glob_make_curveplots <- FALSE
 glob_make_statplots <- FALSE
+
+#Run 1: phage traits ----
+run1 <- run_sims_filewrapper(
+  name = "run1",
+  u_Svals = signif(0.04*10**c(-0.175, -0.525), 3),
+  kvals = c(10**8, 10**10),
+  a_S1vals = 10**seq(from = -12, to = -8, by = 1),
+  tauvals = signif(10**seq(from = 1, to = 2, by = 0.25), 3),
+  bvals = signif(5*10**seq(from = 0, to = 2, by = 0.5), 3),
+  zvals = 1,
+  fvals = 0,
+  dvals = 0,
+  v_a1vals = 1,
+  init_S1_dens_vals = 10**6,
+  init_moi_vals = 10**-2,
+  equil_cutoff_dens = 0.1,
+  init_time = 12*60,
+  max_time = 48*60,
+  init_stepsize = 5,
+  print_info = TRUE)
