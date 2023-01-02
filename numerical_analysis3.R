@@ -1,3 +1,5 @@
+##TODO: parallelize (with Furrr and future r packages?)
+
 ## Import libraries ----
 library(deSolve)
 library(ggplot2)
