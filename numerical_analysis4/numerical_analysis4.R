@@ -183,6 +183,9 @@ if(F) {
 #sub-function for checking for equilibrium
 check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens,
                         max_j = 10) {
+  ##TODO: fix so runs that hit max time in same loop that they reach equil
+  ##      are flagged as at equil                        
+  
   #Returns: list(keep_running = TRUE/FALSE,
   #              at_equil = TRUE/FALSE/NA (NA only when fixed_time = TRUE),
   #              cntrs = list([other entries],
@@ -636,19 +639,29 @@ run2 <- run_sims_filewrapper(
   init_stepsize = 5,
   print_info = TRUE, read_file = FALSE)
 
+ybig2 <- run2[[1]]
+
+ggplot(data = filter(ybig2, uniq_run %in% run2[[2]]$uniq_run,
+                     Pop %in% c("S", "I", "P", "N")),
+       aes(x = time/60, y = Density, color = Pop)) +
+  geom_line() + scale_y_continuous(trans = "log10", limits = c(1, NA)) +
+  facet_wrap(~uniq_run)
+
 ## Run 3: stationary phase behavior ----
 run3 <- run_sims_filewrapper(
   name = "run3",
-  u_S1vals = signif(0.04*10**seq(from = 0, to = -0.7, length.out = 5), 3),
-  kvals = signif(10**c(8, 8.5, 9, 9.5, 10), 3),
+  u_S1vals = signif(0.04*10**-0.35, 3),
+  kvals = 10**9,
   a_S1vals = 10**seq(from = -12, to = -8, length.out = 5),
   tauvals = signif(10**1.5, 3),
   bvals = 50,
   zvals = 1,
-  fvals = 0,
+  fvals = c(0, 1, 2),
   dvals = 0,
   v_a1vals = 1,
   v_a2vals = 1,
+  g = c(0, 1),
+  h = c(0, 1),
   init_S1_dens_vals = 10**6,
   init_moi_vals = 10**-2,
   equil_cutoff_dens = 0.1,
@@ -657,5 +670,14 @@ run3 <- run_sims_filewrapper(
   init_stepsize = 5,
   print_info = TRUE)
 
-##one run to test the stationary stuff across various a values (incl g, h, f)
+ybig3 <- run3[[1]]
+
+ggplot(data = filter(ybig3, uniq_run %in% run3[[2]]$uniq_run,
+                     Pop %in% c("S1", "S2", "I", "P", "N")),
+       aes(x = time/60, y = Density, color = Pop)) +
+  geom_line() + scale_y_continuous(trans = "log10", limits = c(1, NA)) +
+  facet_wrap(~uniq_run)
+
+
+
 ##one run to test the various metrics various a vals across a couple dift bacts
