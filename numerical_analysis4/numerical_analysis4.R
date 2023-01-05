@@ -349,6 +349,15 @@ run_sims <- function(u_S1vals,
                            FUN = function(x) {rep_len(x, num_sims)})
   }
   
+  #if N is NA, N = k-S-R
+  param_combos$init_N_dens[is.na(param_combos$init_N_dens)] <-
+    (param_combos$k[is.na(param_combos$init_N_dens)] -
+    param_combos$init_S1_dens[is.na(param_combos$init_N_dens)] -
+    param_combos$init_S2_dens[is.na(param_combos$init_N_dens)])
+  #if a_S2 is na, a_S2 = a_S1
+  param_combos$a_S2[is.na(param_combos$a_S2)] <-
+    param_combos$a_S1[is.na(param_combos$a_S2)]
+  
   #Print number of simulations that will be run
   if(print_info) {
     print(paste(num_sims, "simulations will be run"))
@@ -384,13 +393,7 @@ run_sims <- function(u_S1vals,
                I1 = 0,
                I2 = 0,
                P = param_combos$init_S1_dens[i]*param_combos$init_moi[i],
-               #if N is NA, N = k-S-R
-               N = ifelse(is.na(param_combos$init_N_dens[i]),
-                          (param_combos$k[i]
-                           - param_combos$init_S1_dens[i]
-                           - param_combos$init_S2_dens[i]),
-                          param_combos$init_N_dens[i]))
-    if(is.na(param_combos$a_S2[i])){param_combos$a_S2[i] <- param_combos$a_S1[i]}
+               N = param_combos$init_N_dens[i])
     params <- c(unlist(param_combos[i, ]),
                 warnings = 0, thresh_min_dens = 10**-100)
     
