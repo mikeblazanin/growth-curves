@@ -26,6 +26,16 @@ derivs <- function(t, y, parms) {
   
   #Set small/negative y values to 0 so they don't affect the dN's
   y[y < parms["thresh_min_dens"]] <- 0
+  if (t >= parms["tau"]) {
+    lagY <- c("S1" = lagvalue(t-parms["tau"], 1),
+              "S2" = lagvalue(t-parms["tau"], 2),
+              "I1" = NA,
+              "I2" = NA,
+              "P" = lagvalue(t-parms["tau"], 5),
+              "N" = lagvalue(t-parms["tau"], 6))
+    
+    lagY[lagY < parms["thresh_min_dens"]] <- 0
+  }
   
   #Create output vector
   dY <- c(S1 = 0, S2 = 0, I1 = 0, I2 = 0, P = 0, N = 0)
@@ -44,8 +54,8 @@ derivs <- function(t, y, parms) {
     afrac_tau <- 
       max(0,
           (1 - parms["f"] +
-             parms["f"] * (lagvalue(t-parms["tau"], 6)/
-                             parms["k"])**parms["v_a1"])**parms["v_a2"])
+             parms["f"] * 
+             (lagY[6]/parms["k"])**parms["v_a1"])**parms["v_a2"])
   }
   
   ##Calculate dS1 (growing subpopulation)
@@ -69,8 +79,7 @@ derivs <- function(t, y, parms) {
   } else {
     dY["I1"] <- 
       (afrac_t * parms["a_S1"] * y["S1"] * y["P"] 
-       - afrac_tau * parms["a_S1"] *
-         lagvalue(t-parms["tau"],1) * lagvalue(t-parms["tau"],5)
+       - afrac_tau * parms["a_S1"] * lagY[1] * lagY[5]
       )
   }
   
@@ -82,9 +91,7 @@ derivs <- function(t, y, parms) {
   } else {
     dY["I2"] <- 
       (afrac_t * parms["a_S2"] * y["S2"] * y["P"] 
-       - afrac_tau * parms["a_S2"] *
-         lagvalue(t-parms["tau"],2) * lagvalue(t-parms["tau"],5)
-      )
+       - afrac_tau * parms["a_S2"] * lagY[2] * lagY[5])
   }
   
   ##Calculate dP
@@ -102,9 +109,8 @@ derivs <- function(t, y, parms) {
        - parms["z"] * (parms["a_S1"] * y["I1"] + parms["a_S2"] * y["I2"]))
   } else {
     dY["P"] <- 
-      (parms["b"]*afrac_tau*lagvalue(t-parms["tau"], 5)*
-         (parms["a_S1"]*lagvalue(t-parms["tau"], 1) +
-            parms["a_S2"]*lagvalue(t-parms["tau"], 2))
+      (parms["b"]*afrac_tau*lagY[5]*
+         (parms["a_S1"]*lagY[1] + parms["a_S2"]*lagY[2])
        -afrac_t * y["P"] *
          ((parms["a_S1"] * y["S1"] + parms["a_S2"] * y["S2"])
           - parms["z"] * (parms["a_S1"] * y["I1"] + parms["a_S2"] * y["I2"]))
@@ -121,9 +127,8 @@ derivs <- function(t, y, parms) {
   } else {
     dY["N"] <- 
       (- parms["u_S1"] * y["S1"] * y["N"]/parms["k"]
-       + parms["d"]*afrac_tau*lagvalue(t-parms["tau"],5)*
-         (parms["a_S1"]*lagvalue(t-parms["tau"],1) +
-            parms["a_S2"]*lagvalue(t-parms["tau"],2)))
+       + parms["d"]*afrac_tau*lagY[5]*
+         (parms["a_S1"]*lagY[1] + parms["a_S2"]*lagY[2]))
   }
   
   #Issue warning about too large pop (if warnings is TRUE)
@@ -181,7 +186,7 @@ check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens,
   #Returns: list(keep_running = TRUE/FALSE,
   #              at_equil = TRUE/FALSE/NA (NA only when fixed_time = TRUE),
   #              cntrs = list([other entries],
-  #                           I_only_pos_times = new I_only_pos_times value,
+  #                           I_only_cntr = new I_only_cntr value,
   #                           j = new j value, 
   #                           k = new k value)
   #              )
@@ -195,19 +200,20 @@ check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens,
   if(fixed_time) {
     return(list(keep_running = FALSE, at_equil = NA, cntrs = cntrs))
   }
-  
   #If there was an error, increase k by 1 and re-run
   if(!is.null(yout_list$error)) {
     cntrs$k <- cntrs$k+1
     return(list(keep_running = TRUE, at_equil = NA, cntrs = cntrs))
-    #If there was a warning, could be several causes, so we
-    # generally just halve step size and increase length
-  } else if (!is.null(yout_list$warning)) {
+  }
+  #If there was a warning, could be several causes, so we
+  # generally just halve step size and increase length
+  if (!is.null(yout_list$warning)) {
     cntrs$j <- cntrs$j+1
     cntrs$k <- cntrs$k+2
     return(list(keep_running = TRUE, at_equil = NA, cntrs = cntrs))
-    #If it was successful, check for equilibrium
-  } else if (is.null(yout_list$warning) & is.null(yout_list$error)) {
+  }
+  #If it was successful, check for equilibrium
+  if (is.null(yout_list$warning) & is.null(yout_list$error)) {
     #First drop all rows with nan
     yout_list$value <- 
       yout_list$value[apply(X = yout_list$value, MARGIN = 1,
@@ -219,29 +225,32 @@ check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens,
         (yout_list$value$S1[nrow(yout_list$value)] < equil_cutoff_dens |
          yout_list$value$N[nrow(yout_list$value)] < equil_cutoff_dens)) {
       return(list(keep_running = FALSE, at_equil = TRUE, cntrs = cntrs))
-      #S nor N at equil, need more time
-    } else if (yout_list$value$S1[nrow(yout_list$value)] >= equil_cutoff_dens &
+    }
+    #S nor N at equil, need more time
+    if (yout_list$value$S1[nrow(yout_list$value)] >= equil_cutoff_dens &
                yout_list$value$N[nrow(yout_list$value)] >= equil_cutoff_dens) {
       cntrs$j <- cntrs$j + 1
       return(list(keep_running = TRUE, at_equil = FALSE, cntrs = cntrs))
+    }
       
-      #TODO: change this, since can get cases where need more than one
-      #      more doubling if it's I2 not at equil
-      #I1 or I2 not at equil (but S or N is because above check failed),
-      #   first we'll lengthen the simulation
-      #    (to make sure it was long enough to catch the last burst)
-      #   then we'll start shrinking our step size
-    } else if (yout_list$value$I1[nrow(yout_list$value)] >= equil_cutoff_dens |
+    #I1 or I2 not at equil (but S or N is because above check failed)
+    if (yout_list$value$I1[nrow(yout_list$value)] >= equil_cutoff_dens |
                yout_list$value$I2[nrow(yout_list$value)] >= equil_cutoff_dens) {
-      if (cntrs$I_only_pos_times < 1) {
-        cntrs$I_only_pos_times <- cntrs$I_only_pos_times+1
+      #If I1 or I2 are still changing, lengthen
+      if(abs(yout_list$value$I1[nrow(yout_list$value)] - 
+             yout_list$value$I1[nrow(yout_list$value)-1]) > 0 |
+         abs(yout_list$value$I2[nrow(yout_list$value)] - 
+             yout_list$value$I2[nrow(yout_list$value)-1]) > 0) {
         cntrs$j <- cntrs$j+1
         return(list(keep_running = TRUE, at_equil = FALSE, cntrs = cntrs))
+      #If neither are changing, shorten step size
       } else {
+        cntrs$I_only_cntr <- cntrs$I_only_cntr+1
         cntrs$k <- cntrs$k+1
         return(list(keep_running = TRUE, at_equil = FALSE, cntrs = cntrs))
       }
-    } else {stop("check_equil found an unexpected case")}
+    }
+    stop("check_equil found an unexpected case")
   } else {stop("tryCatch failed, niether success, warning, nor error detected")}
 }
 
@@ -307,7 +316,7 @@ run_sims <- function(u_S1vals,
       })
     list(value=value, warning=warn, error=err)
   }
-  
+
   if(fixed_time == TRUE & dynamic_stepsize == TRUE) {
     warning("fixed_time == TRUE overrides dynamic_stepsize == TRUE")
   }
@@ -398,7 +407,7 @@ run_sims <- function(u_S1vals,
                 warnings = 0, thresh_min_dens = 10**-100)
     
     #Counters
-    cntrs["I_only_pos_times"] <- 0 #num times I, but not S, > equil_cutoff_dens
+    cntrs["I_only_cntr"] <- 0 #num times S or N at equil but I is not
     cntrs["j"] <- 0 #length counter (larger is longer times)
     cntrs["k"] <- 0 #step size counter (larger is smaller steps)
     
@@ -585,6 +594,7 @@ glob_read_files <- TRUE
 glob_make_curveplots <- FALSE
 glob_make_statplots <- FALSE
 
+## Run 1: phage traits ----
 run1 <- run_sims_filewrapper(
   name = "run1",
   u_S1vals = signif(0.04*10**-0.35, 3),
@@ -605,7 +615,47 @@ run1 <- run_sims_filewrapper(
   init_stepsize = 5,
   print_info = TRUE)
 
-##one phage run
-##one bacterial traits run
+## Run 2: bact traits ----
+run2 <- run_sims_filewrapper(
+  name = "run2",
+  u_S1vals = signif(0.04*10**seq(from = 0, to = -0.7, length.out = 5), 3),
+  kvals = signif(10**c(8, 8.5, 9, 9.5, 10), 3),
+  a_S1vals = 10**seq(from = -12, to = -8, length.out = 5),
+  tauvals = signif(10**1.5, 3),
+  bvals = 50,
+  zvals = 1,
+  fvals = 0,
+  dvals = 0,
+  v_a1vals = 1,
+  v_a2vals = 1,
+  init_S1_dens_vals = 10**6,
+  init_moi_vals = 10**-2,
+  equil_cutoff_dens = 0.1,
+  init_time = 12*60,
+  max_time = 48*60,
+  init_stepsize = 5,
+  print_info = TRUE, read_file = FALSE)
+
+## Run 3: stationary phase behavior ----
+run3 <- run_sims_filewrapper(
+  name = "run3",
+  u_S1vals = signif(0.04*10**seq(from = 0, to = -0.7, length.out = 5), 3),
+  kvals = signif(10**c(8, 8.5, 9, 9.5, 10), 3),
+  a_S1vals = 10**seq(from = -12, to = -8, length.out = 5),
+  tauvals = signif(10**1.5, 3),
+  bvals = 50,
+  zvals = 1,
+  fvals = 0,
+  dvals = 0,
+  v_a1vals = 1,
+  v_a2vals = 1,
+  init_S1_dens_vals = 10**6,
+  init_moi_vals = 10**-2,
+  equil_cutoff_dens = 0.1,
+  init_time = 12*60,
+  max_time = 48*60,
+  init_stepsize = 5,
+  print_info = TRUE)
+
 ##one run to test the stationary stuff across various a values (incl g, h, f)
 ##one run to test the various metrics various a vals across a couple dift bacts
