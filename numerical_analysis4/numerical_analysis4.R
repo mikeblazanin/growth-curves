@@ -4,6 +4,7 @@
 library(deSolve)
 library(ggplot2)
 library(dplyr)
+library(gcplyr)
 
 #Setwd
 mywd_split <- strsplit(getwd(), split = "/")
@@ -595,7 +596,21 @@ run_sims_filewrapper <- function(name, dir = ".",
 ## Global Settings ----
 glob_read_files <- TRUE
 glob_make_curveplots <- FALSE
-glob_make_statplots <- FALSE
+glob_make_statplots <- TRUE
+
+## Useful funcs ----
+logis_func <- function(S_0, u_S, k, times) {
+  return(k/(1+(((k-S_0)/S_0)*exp(-u_S*times))))
+}
+
+logis_integral <- function(S_0, u_S, k, times) {
+  return(k/u_S *log(k - S_0 + S_0 * exp(u_S * times)))
+}
+
+logis_def_integral <- function(S_0, u_S, k, times) {
+  return(logis_integral(S_0 = S_0, u_S = u_S, k = k, times = times)-
+           logis_integral(S_0 = S_0, u_S = u_S, k = k, times = min(times)))
+}
 
 ## Run 1: phage traits ----
 run1 <- run_sims_filewrapper(
@@ -617,6 +632,154 @@ run1 <- run_sims_filewrapper(
   max_time = 48*60,
   init_stepsize = 5,
   print_info = TRUE)
+
+ybig1 <- run1[[1]]
+
+ysum1 <- full_join(
+  summarize(group_by(filter(ybig1, Pop == "B"),
+                     uniq_run, u_S1, k, a_S1, a_S2,
+                     tau, b, z, f, d, v_a1, v_a2, g, h,
+                     init_S1_dens, init_S2_dens,
+                     init_moi, init_N_dens),
+            peak_dens = max(Density),
+            peak_time = time[which.max(Density)],
+            auc = auc(x = time, y = Density),
+            extin_time_4 = 
+              first_below(y = Density, x = time,
+                          threshold = 10**4, return = "x"),
+            max_time = max(time)),
+  summarize(group_by(filter(ybig1, Pop == "P"),
+                     uniq_run, u_S1, k, a_S1, a_S2,
+                     tau, b, z, f, d, v_a1, v_a2, g, h,
+                     init_S1_dens, init_S2_dens,
+                     init_moi, init_N_dens),
+            phage_final = Density[which.max(time)]))
+ysum1 <- mutate(ysum1,
+                extin_flag = ifelse(is.na(extin_time_4), "noextin",
+                                    ifelse(peak_dens >= 0.9*k, "neark", "none")),
+                extin_time_4 = ifelse(is.na(extin_time_4), max_time, extin_time_4))
+
+
+# Plots for peak dens-peak time fig ----
+dir.create("./statplots", showWarnings = FALSE)
+if(glob_make_statplots) {
+  png("./statplots/run1_peakdens_peaktime.png",
+      width = 5, height = 5, units = "in", res = 150)
+  print(
+    ggplot(data = ysum1,
+           aes(x = peak_time/60, y = peak_dens)) +
+      geom_point(aes(shape = extin_flag)) +
+      scale_shape_manual(breaks = c("none", "neark", "noextin"),
+                         values = c(16, 4, 3)) +
+      guides(shape = "none") +    theme_bw() +
+      labs(x = "Peak Time (hr)", y = "Peak Density (cfu/mL)") +
+      geom_line(data = data.frame(x = 0:1440,
+                                  y = logis_func(S_0 = 10**6, u_S = 0.0179,
+                                                 k = 10**9, times = 0:1440)),
+                aes(x = x/60, y = y), lty = 2)
+  )
+  dev.off()
+  
+  png("./statplots/run1_peakdens_peaktime_subset.png",
+      width = 5, height = 5, units = "in", res = 150)
+  print(
+    ggplot(data = filter(ysum1, extin_flag == "none"),
+           aes(x = peak_time/60, y = peak_dens)) +
+      geom_point() +
+      theme_bw() +
+      labs(x = "Peak Time (hr)", y = "Peak Density (cfu/mL)") +
+      geom_line(data = data.frame(x = 0:900,
+                                  y = logis_func(S_0 = 10**6, u_S = 0.0179,
+                                                 k = 10**9, times = 0:900)),
+                aes(x = x/60, y = y), lty = 2)
+    + NULL)
+  dev.off()
+  
+  png("./statplots/run1_Bcurves.png",
+      width = 5, height = 5, units = "in", res = 150)
+  print(
+    ggplot(data = filter(ybig1, Pop == "B", b == 50, tau == 31.6),
+           aes(x = time/60, y = Density)) +
+      geom_line(aes(color = as.factor(a_S1), group = interaction(a_S1, b, tau)),
+                lwd = 1.5) +
+      theme_bw() +
+      labs(x = "Time (hr)", y = "Density (cfu/mL)") +
+      scale_x_continuous(limits = c(NA, 24)) +
+      geom_line(data = data.frame(x = 0:1440,
+                                  y = logis_func(S_0 = 10**6, u_S = 0.0179,
+                                                 k = 10**9, times = 0:1440)),
+                aes(x = x/60, y = y), lty = 2) +
+      scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
+                         name = "Infection rate\n(/cfu/pfu/min)")
+    + NULL)
+  dev.off()
+  
+  png("./statplots/run1_extintime_peaktime.png",
+      width = 5, height = 5, units = "in", res = 150)
+  print(
+    ggplot(data = ysum1,
+           aes(x = peak_time/60, y = extin_time_4/60)) +
+      geom_point(aes(shape = extin_flag)) +
+      scale_shape_manual(breaks = c("none", "neark", "noextin"),
+                         values = c(16, 4, 3)) +
+      guides(shape = "none") +
+      theme_bw() +
+      geom_abline(slope = 1, intercept = 0, alpha = 0.5) +
+      labs(x = "Peak Time (hr)", y = "Extinction Time (hr)")
+    + NULL)
+  dev.off()
+  
+  png("./statplots/run1_extintime_peaktime_subset.png",
+      width = 5, height = 5, units = "in", res = 150)
+  print(
+    ggplot(data = filter(ysum1, extin_flag == "none"),
+           aes(x = peak_time/60, y = extin_time_4/60)) +
+      geom_point() +
+      theme_bw() +
+      geom_abline(slope = 1, intercept = 0, alpha = 0.5) +
+      labs(x = "Peak Time (hr)", y = "Extinction Time (hr)")
+    + NULL)
+  dev.off()
+  
+  png("./statplots/run1_auc_peaktime.png",
+      width = 5, height = 5, units = "in", res = 150)
+  print(
+    ggplot(data = ysum1,
+           aes(x = peak_time/60, y = auc/60)) +
+      geom_point(aes(shape = extin_flag)) +
+      scale_shape_manual(breaks = c("none", "neark", "noextin"),
+                         values = c(16, 4, 3)) +
+      guides(shape = "none") +
+      theme_bw() +
+      geom_line(data = data.frame(
+        x = 0:1080,
+        y = logis_def_integral(S_0 = 10**6, u_S = 0.0179,
+                               k = 10**9, times = 0:1080)),
+        aes(x = x/60, y = y/60), lty = 2) +
+      scale_y_log10() +
+      labs(x = "Peak Time (hr)", y = "Area Under the Curve (hr cfu/mL)")
+    + NULL)
+  dev.off()
+  
+  png("./statplots/run1_auc_peaktime_subset.png",
+      width = 5, height = 5, units = "in", res = 150)
+  print(
+    ggplot(data = filter(ysum1, extin_flag == "none"),
+           aes(x = peak_time/60, y = auc/60)) +
+      geom_point() +
+      theme_bw() +
+      geom_line(data = data.frame(
+        x = 0:540,
+        y = logis_def_integral(S_0 = 10**6, u_S = 0.0179,
+                               k = 10**9, times = 0:540)),
+        aes(x = x/60, y = y/60), lty = 2) +
+      scale_y_log10() +
+      labs(x = "Peak Time (hr)", y = "Area Under the Curve (hr cfu/mL)")
+    + NULL)
+  dev.off()
+  
+}
+
 
 ## Run 2: bact traits ----
 run2 <- run_sims_filewrapper(
@@ -649,26 +812,50 @@ ggplot(data = filter(ybig2, uniq_run %in% run2[[2]]$uniq_run,
 
 ## Run 3: stationary phase behavior ----
 run3 <- run_sims_filewrapper(
-  name = "run3",
-  u_S1vals = signif(0.04*10**-0.35, 3),
-  kvals = 10**9,
-  a_S1vals = 10**seq(from = -12, to = -8, length.out = 5),
-  tauvals = signif(10**1.5, 3),
-  bvals = 50,
-  zvals = 1,
-  fvals = c(0, 1, 2),
-  dvals = 0,
-  v_a1vals = 1,
-  v_a2vals = 1,
-  g = c(0, 1),
-  h = c(0, 1),
-  init_S1_dens_vals = 10**6,
-  init_moi_vals = 10**-2,
-  equil_cutoff_dens = 0.1,
-  init_time = 12*60,
-  max_time = 48*60,
-  init_stepsize = 5,
-  print_info = TRUE)
+  name = "run3", read_file = FALSE,
+  a = list(
+    u_S1vals = signif(0.04*10**-0.35, 3),
+    kvals = 10**9,
+    a_S1vals = signif(10**seq(from = -12, to = -8, length.out = 9), 3),
+    a_S2vals = 0,
+    tauvals = signif(10**1.5, 3),
+    bvals = 50,
+    zvals = 1,
+    fvals = c(0, 1, 2),
+    dvals = 0,
+    v_a1vals = 1,
+    v_a2vals = 1,
+    g = 0,
+    h = c(0, 0.001, 0.01, 0.1),
+    init_S1_dens_vals = 10**6,
+    init_moi_vals = 10**-2,
+    equil_cutoff_dens = 0.1,
+    init_time = 12*60,
+    max_time = 48*60,
+    init_stepsize = 5,
+    print_info = TRUE),
+  b = list(
+    u_S1vals = signif(0.04*10**-0.35, 3),
+    kvals = 10**9,
+    a_S1vals = signif(10**seq(from = -12, to = -8, length.out = 9), 3),
+    a_S2vals = 0,
+    tauvals = signif(10**1.5, 3),
+    bvals = 50,
+    zvals = 1,
+    fvals = c(0, 1, 2),
+    dvals = 0,
+    v_a1vals = 1,
+    v_a2vals = 1,
+    g = 1,
+    h = c(0.01, 0.1, 1),
+    init_S1_dens_vals = 10**6,
+    init_moi_vals = 10**-2,
+    equil_cutoff_dens = 0.1,
+    init_time = 12*60,
+    max_time = 48*60,
+    init_stepsize = 5,
+    print_info = TRUE)
+)
 
 ybig3 <- run3[[1]]
 
@@ -678,6 +865,89 @@ ggplot(data = filter(ybig3, uniq_run %in% run3[[2]]$uniq_run,
   geom_line() + scale_y_continuous(trans = "log10", limits = c(1, NA)) +
   facet_wrap(~uniq_run)
 
+ysum3 <- full_join(
+  summarize(group_by(filter(ybig3, Pop == "B"),
+                            uniq_run, u_S1, k, a_S1, a_S2,
+                            tau, b, z, f, d, v_a1, v_a2, g, h,
+                            init_S1_dens, init_S2_dens,
+                            init_moi, init_N_dens),
+                   peak_dens = max(Density),
+                   peak_time = time[which.max(Density)],
+                   auc = auc(x = time, y = Density),
+                   extin_time_4 = 
+                     first_below(y = Density, x = time,
+                                 threshold = 10**4, return = "x")),
+  summarize(group_by(filter(ybig3, Pop == "P"),
+                     uniq_run, u_S1, k, a_S1, a_S2,
+                     tau, b, z, f, d, v_a1, v_a2, g, h,
+                     init_S1_dens, init_S2_dens,
+                     init_moi, init_N_dens),
+            phage_final = Density[which.max(time)]))
 
+ggplot(data = ysum3,
+       aes(x = peak_time, y = peak_dens)) +
+  geom_point(aes(color = as.factor(a_S1))) +
+  facet_grid(g*h ~ f) +
+  geom_line(data = data.frame(x = seq(from = 0, to = 3000),
+                              y = logis_func(S_0 = 10**6,
+                                             u_S = signif(0.04*10**-0.35, 3),
+                                             k = 10**9,
+                                             times = seq(from = 0, to = 3000))),
+            aes(x = x, y = y), lty = 2)
+
+dir.create("run3_dens_curves", showWarnings = FALSE)
+if (glob_make_curveplots) {
+  for (run in unique(ybig3$uniq_run)) {
+    png(paste("./run3_dens_curves/", run, ".png", sep = ""),
+         width = 5, height = 5, units = "in", res = 150)
+    print(
+      ggplot(data = filter(ybig3, uniq_run == run,
+                           Pop %in% c("S1", "S2", "I1", "I2", "P", "N")),
+             aes(x = time/60, y = Density, color = as.factor(Pop))) + 
+        geom_line(lwd = 1.5, alpha = 1) + 
+        geom_line(data = filter(ybig3, uniq_run == run, Pop == "B"),
+                  color = "black", lwd = 0.6, alpha = 1) +
+        scale_y_continuous(trans = "log10", limits = c(1, NA)) +
+        scale_color_manual(limits = c("S1", "S2", "I1", "I2", "P", "N"),
+                           values = my_cols[c(2, 5, 1, 6, 3, 4)]) +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1),
+              title = element_text(size = 9)) +
+        NULL
+    )
+    dev.off()
+  }
+}
+
+ggplot(data = filter(ybig3, Pop == "B"),
+       aes(x = time, y = Density, color = as.factor(a_S1))) +
+  geom_line() +
+  facet_grid(g*h ~ f, scales = "free_y") +
+  scale_y_continuous(trans = "log10") +
+  scale_color_brewer(palette = "Greys")
+
+ggplot(data = filter(ybig3, Pop == "B"),
+       aes(x = time, y = Density, color = as.factor(h))) +
+  geom_line() +
+  facet_grid(a_S1 ~ g*f, scales = "free_y") +
+  scale_y_continuous(trans = "log10") +
+  scale_color_manual(values = colorRampPalette(c("gray70", "black"))(5)) +
+  theme_bw()
+
+#Findings:
+#     rate of transition determines how low the pop is after S1 extin
+#     a_t modulation must have only a very narrow window where it
+#      produces a partial drop-off. Instead mostly what we see is
+#      either extinction or lack of drop entirely
+#     production of resistant cells does produce the partial drop-off
+#      rate and model (logistic vs linear) both appear to control how
+#      low the drop off is. Can't see any other differences between
+#      the two modes
+#     drop off from peak is at the same time regardless of g or h,
+#      suggesting that peak time, peak density, and extin time (assuming 
+#      the pop drops below that extin threshold) should be unaltered
+#      TODO: why doesn't this hold on the peak dens vs peak time plot
+
+
+##Run 4 ----
 
 ##one run to test the various metrics various a vals across a couple dift bacts
