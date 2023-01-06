@@ -647,7 +647,7 @@ ysum1 <- full_join(
             extin_time_4 = 
               first_below(y = Density, x = time,
                           threshold = 10**4, return = "x"),
-            max_time = max(time)),
+            run_time = max(time)),
   summarize(group_by(filter(ybig1, Pop == "P"),
                      uniq_run, u_S1, k, a_S1, a_S2,
                      tau, b, z, f, d, v_a1, v_a2, g, h,
@@ -657,10 +657,10 @@ ysum1 <- full_join(
 ysum1 <- mutate(ysum1,
                 extin_flag = ifelse(is.na(extin_time_4), "noextin",
                                     ifelse(peak_dens >= 0.9*k, "neark", "none")),
-                extin_time_4 = ifelse(is.na(extin_time_4), max_time, extin_time_4))
+                extin_time_4 = ifelse(is.na(extin_time_4), run_time, extin_time_4))
 
 
-# Plots for peak dens-peak time fig ----
+# Run 1: B curves & stat v stat plots ----
 dir.create("./statplots", showWarnings = FALSE)
 if(glob_make_statplots) {
   png("./statplots/run1_peakdens_peaktime.png",
@@ -777,9 +777,90 @@ if(glob_make_statplots) {
       labs(x = "Peak Time (hr)", y = "Area Under the Curve (hr cfu/mL)")
     + NULL)
   dev.off()
-  
 }
 
+#Run 1: contour plots ----
+if (glob_make_statplots) {
+  png("./statplots/run1_maxtime_a_b_contour.png", width = 5, height = 4,
+      units = "in", res = 300)
+  print(
+    ggplot(data = filter(ysum1, b == 50),
+           aes(x = a_S1, y = tau)) +
+      geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
+      geom_point(aes(color = peak_time/60, shape = extin_flag),
+                 size = 3) +
+      scale_color_viridis_c(name = "Peak time (hr)",
+                            breaks = c(4, 8, 12)) +
+      scale_shape_manual(breaks = c("neark", "noextin", "none"), 
+                         values = c(4, 4, 16)) +
+      scale_y_continuous(trans = "log10", breaks = c(16, 40, 100)) +
+      scale_x_continuous(trans = "log10") +
+      xlab("Infection rate (/min)") +
+      ylab("Lysis time (min)") +
+      guides(fill = "none", shape = "none") +
+      NULL)
+  dev.off()
+  
+  ##TODO: update these w/ colors from prev plot
+  
+  png("./statplots/run1_maxtime_contour1.png", width = 8, height = 4,
+       units = "in", res = 300)
+  p1 <- ggplot(data = ysum1, aes(x = a_S1, y = b)) +
+    geom_contour_filled(aes(z = peak_time)) +
+    facet_grid(~tau) +
+    scale_fill_viridis_d(direction = -1) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ylab("Burst Size") +
+    xlab("Infection Rate") +
+    labs(fill = "Peak Time", subtitle = "Lysis Time") +
+    NULL
+  print(p1)
+  dev.off()
+  
+  png("./statplots/run1_maxtime_contour2.png", width = 8, height = 4,
+       units = "in", res = 300)
+  p2 <- ggplot(data = ysum1, aes(x = tau, y = b)) +
+    geom_contour_filled(aes(z = peak_time)) +
+    facet_grid(~a_S1) +
+    scale_fill_viridis_d(direction = -1) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ylab("Burst Size") +
+    xlab("Lysis Time") +
+    labs(fill = "Peak Time", subtitle = "Infection Rate") +
+    NULL
+  print(p2)
+  dev.off()
+  
+  png("./statplots/run1_maxtime_contour3.png", width = 8, height = 4,
+       units = "in", res = 300)
+  p3 <- ggplot(data = ysum1, aes(x = a_S1, y = tau)) +
+    geom_contour_filled(aes(z = peak_time)) +
+    facet_grid(~b) +
+    scale_fill_viridis_d(direction = -1) +
+    scale_x_continuous(trans = "log10") +
+    scale_y_continuous(trans = "log10") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    ylab("Lysis Time") +
+    xlab("Infection Rate") +
+    labs(fill = "Peak Time", subtitle = "Burst Size") +
+    NULL
+  print(p3)
+  dev.off()
+  
+  png("./statplots/run1_maxtime_contour_all.png", width = 8, height = 6,
+       units = "in", res = 300)
+  print(cowplot::plot_grid(p1 + theme(legend.position = "none"), 
+                           p2 + theme(legend.position = "none"), 
+                           p3 + theme(legend.position = "none"),
+                           cowplot::get_legend(p1),
+                           #rel_widths = c(1, 1, 1, .4),
+                           nrow = 2))
+  dev.off()
+}
 
 ## Run 2: bact traits ----
 run2 <- run_sims_filewrapper(
