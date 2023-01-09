@@ -24,7 +24,7 @@ scales::show_col(my_cols)
 derivs <- function(t, y, parms) {
   #The derivs function must return the derivative of all the variables at a
   # given time, in a list
-  
+
   #Set small/negative y values to 0 so they don't affect the dN's
   y[y < parms["thresh_min_dens"]] <- 0
   if (t >= parms["tau"]) {
@@ -37,7 +37,7 @@ derivs <- function(t, y, parms) {
     
     lagY[lagY < parms["thresh_min_dens"]] <- 0
   }
-  
+
   #Create output vector
   dY <- c(S1 = 0, S2 = 0, I1 = 0, I2 = 0, P = 0, N = 0)
   
@@ -147,24 +147,24 @@ derivs <- function(t, y, parms) {
 
 ## Simple test run ----
 if(F) {
-  times <- seq(from = 0, to = 1500, by = 1)
+  times <- seq(from = 0, to = 1000, by = 1)
   yinit <- c("S1" = 10**6, "S2" = 0, "I1" = 0, "I2" = 0, 
-             "P" = 1, "N" = (10**9 - 10**6))
-  params <- c(u_S1 = 0.023,
+             "P" = 10**4, "N" = (10**9 - 10**6))
+  params <- c(u_S1 = 0.0179,
               k = 10**9,
-              a_S1 = 5*10**-10,
+              a_S1 = 10**-8,
               a_S2 = 0,
-              tau = 31.6,
+              tau = 100,
               b = 50,
+              z = 1,
               f = 0,
               d = 0,
-              v_a1 = 0, v_a2 = 0,
-              z = 0,
+              v_a1 = 1, v_a2 = 1,
               g = 0, h = 0,
               warnings = 1, thresh_min_dens = 10**-100)
   
-  test <- as.data.frame(dede(y = yinit, times = times, func = derivs, 
-                             parms = params, hmax = 0.1))
+  test <- myTryCatch(as.data.frame(dede(y = yinit, times = times, func = derivs, 
+                             parms = params, hmax = 0.01)))
   test$S <- test$S1 + test$S2
   test$I <- test$I1 + test$I2
   test$B <- test$S + test$I
@@ -173,10 +173,11 @@ if(F) {
        exp(-params[["u_S1"]]*test$time))
   test2 <- tidyr::pivot_longer(test, cols = -c(time), 
                                names_to = "Pop", values_to = "Density")
-  ggplot(data = filter(test2, Pop %in% c("S1", "S2", "I1", "I2", "P", "B", "N")), 
+  ggplot(data = filter(test2, Pop %in% c("S1", "S2", "I1", "I2", "P", "N")), 
          aes(x = time, y = Density, color = Pop)) +
     geom_line() + scale_y_continuous(trans = "log10", limits = c(1, NA)) +
-    geom_line(data = filter(test2, Pop == "pred"), lty = 2, color = "black")
+    #geom_line(data = filter(test2, Pop == "pred"), lty = 2, color = "black") +
+    NULL
 }
 
 ## Define function for running simulations across many parameter values ----
@@ -597,7 +598,7 @@ run_sims_filewrapper <- function(name, dir = ".",
 }
 
 ## Global Settings ----
-glob_read_files <- TRUE
+glob_read_files <- FALSE
 glob_make_curveplots <- FALSE
 glob_make_statplots <- TRUE
 
@@ -634,7 +635,7 @@ run1 <- run_sims_filewrapper(
   init_time = 12*60,
   max_time = 48*60,
   init_stepsize = 5,
-  print_info = TRUE)
+  print_info = TRUE, read_file = glob_read_files)
 
 ybig1 <- run1[[1]]
 
@@ -657,10 +658,13 @@ ysum1 <- full_join(
                      init_S1_dens, init_S2_dens,
                      init_moi, init_N_dens),
             phage_final = Density[which.max(time)]))
-ysum1 <- mutate(ysum1,
-                extin_flag = ifelse(is.na(extin_time_4), "noextin",
-                                    ifelse(peak_dens >= 0.9*k, "neark", "none")),
-                extin_time_4 = ifelse(is.na(extin_time_4), run_time, extin_time_4))
+ysum1 <- mutate(
+  ysum1,
+  extin_flag = ifelse(is.na(extin_time_4), "noextin",
+                      ifelse(peak_dens >= 0.9*k, "neark", "none")),
+  extin_time_4 = ifelse(is.na(extin_time_4), run_time, extin_time_4),
+  phage_r = (log(phage_final)-log(init_moi*(init_S1_dens+init_S2_dens)))/
+    extin_time_4)
 
 
 # Run 1: B curves & stat v stat plots ----
@@ -804,66 +808,144 @@ if (glob_make_statplots) {
       NULL)
   dev.off()
   
-  ##TODO: update these w/ colors from prev plot
-  
-  png("./statplots/run1_maxtime_contour1.png", width = 8, height = 4,
-       units = "in", res = 300)
-  p1 <- ggplot(data = ysum1, aes(x = a_S1, y = b)) +
-    geom_contour_filled(aes(z = peak_time)) +
-    facet_grid(~tau) +
-    scale_fill_viridis_d(direction = -1) +
-    scale_x_continuous(trans = "log10") +
-    scale_y_continuous(trans = "log10") +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-    ylab("Burst Size") +
-    xlab("Infection Rate") +
-    labs(fill = "Peak Time", subtitle = "Lysis Time") +
-    NULL
-  print(p1)
-  dev.off()
-  
-  png("./statplots/run1_maxtime_contour2.png", width = 8, height = 4,
-       units = "in", res = 300)
-  p2 <- ggplot(data = ysum1, aes(x = tau, y = b)) +
-    geom_contour_filled(aes(z = peak_time)) +
-    facet_grid(~a_S1) +
-    scale_fill_viridis_d(direction = -1) +
-    scale_x_continuous(trans = "log10") +
-    scale_y_continuous(trans = "log10") +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-    ylab("Burst Size") +
-    xlab("Lysis Time") +
-    labs(fill = "Peak Time", subtitle = "Infection Rate") +
-    NULL
-  print(p2)
-  dev.off()
-  
-  png("./statplots/run1_maxtime_contour3.png", width = 8, height = 4,
-       units = "in", res = 300)
-  p3 <- ggplot(data = ysum1, aes(x = a_S1, y = tau)) +
-    geom_contour_filled(aes(z = peak_time)) +
+  p1 <- ggplot(data = filter(ysum1), aes(x = a_S1, y = tau)) +
+    geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
+    geom_point(aes(color = peak_time/60, shape = extin_flag),
+               size = 1) +
     facet_grid(~b) +
-    scale_fill_viridis_d(direction = -1) +
-    scale_x_continuous(trans = "log10") +
+    scale_color_viridis_c(name = "Peak time (hr)",
+                          breaks = c(4, 8, 12, 16)) +
+    scale_shape_manual(breaks = c("neark", "noextin", "none"), 
+                       values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10") +
+    scale_x_continuous(trans = "log10") +
+    labs(x = "Infection rate (/min)",
+         y = "Lysis time (min)",
+         subtitle = "Burst Size") +
+    guides(fill = "none", shape = "none") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-    ylab("Lysis Time") +
-    xlab("Infection Rate") +
-    labs(fill = "Peak Time", subtitle = "Burst Size") +
     NULL
-  print(p3)
-  dev.off()
   
-  png("./statplots/run1_maxtime_contour_all.png", width = 8, height = 6,
+  p2 <- ggplot(data = filter(ysum1), aes(x = a_S1, y = b)) +
+    geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
+    geom_point(aes(color = peak_time/60, shape = extin_flag),
+               size = 1) +
+    facet_grid(~tau) +
+    scale_color_viridis_c(name = "Peak time (hr)",
+                          breaks = c(4, 8, 12, 16)) +
+    scale_shape_manual(breaks = c("neark", "noextin", "none"), 
+                       values = c(4, 4, 16)) +
+    scale_y_continuous(trans = "log10", breaks = c(5, 50, 500)) +
+    scale_x_continuous(trans = "log10") +
+    labs(x = "Infection rate (/min)",
+         y = "Burst Size",
+         subtitle = "Lysis time (min)") +
+    guides(fill = "none", shape = "none") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    NULL
+  
+  p3 <- ggplot(data = filter(ysum1), aes(x = tau, y = b)) +
+    geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
+    geom_point(aes(color = peak_time/60, shape = extin_flag),
+               size = 1) +
+    facet_grid(~a_S1) +
+    scale_color_viridis_c(name = "Peak time (hr)",
+                          breaks = c(4, 8, 12, 16)) +
+    scale_shape_manual(breaks = c("neark", "noextin", "none"), 
+                       values = c(4, 4, 16)) +
+    scale_y_continuous(trans = "log10", breaks = c(5, 50, 500)) +
+    scale_x_continuous(trans = "log10") +
+    labs(x = "Lysis time (min)",
+         y = "Burst Size",
+         subtitle = "Infection rate (/min)") +
+    guides(fill = "none", shape = "none") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    NULL
+  
+  png("./statplots/run1_maxtime_contour_all.png", width = 6, height = 6,
        units = "in", res = 300)
-  print(cowplot::plot_grid(p1 + theme(legend.position = "none"), 
-                           p2 + theme(legend.position = "none"), 
-                           p3 + theme(legend.position = "none"),
-                           cowplot::get_legend(p1),
-                           #rel_widths = c(1, 1, 1, .4),
-                           nrow = 2))
+  print(cowplot::plot_grid(
+    cowplot::plot_grid(p1 + theme(legend.position = "none"), 
+                       p2 + theme(legend.position = "none"), 
+                       p3 + theme(legend.position = "none"),
+                       ncol = 1),
+    cowplot::get_legend(p1),
+    rel_widths = c(1, .2),
+    ncol = 2))
   dev.off()
 }
+
+# Run 1: phage growth plots ----
+if (glob_make_statplots) {
+  png("./statplots/phager_extintime_subset.png", width = 5, height = 4,
+      units = "in", res = 300)
+  print(
+    ggplot(data = filter(ysum1, extin_flag == "none"),
+           aes(x = extin_time_4/60, y = phage_r*60, color = as.factor(b))) +
+      geom_point() +
+      scale_color_viridis_d(end = 0.95, name = "Burst Size") +
+      scale_x_log10() + 
+      scale_y_log10() +
+      labs(x = "Extinction time (hr)", 
+           y = "Phage Aggregate Growth Rate (e-fold/hour)") +
+      theme_bw() +
+      NULL)
+  dev.off()
+  
+  png("./statplots/phager_extintime.png", width = 5, height = 4,
+      units = "in", res = 300)
+  print(
+    ggplot(data = ysum1,
+           aes(x = extin_time_4/60, y = phage_r*60, color = as.factor(b),
+               shape = extin_flag)) +
+      geom_point() +
+      scale_color_viridis_d(end = 0.95, name = "Burst Size") +
+      scale_shape_manual(breaks = c("none", "neark", "noextin"),
+                         values = c(16, 4, 3)) +
+      scale_x_log10() + 
+      scale_y_log10() +
+      labs(x = "Extinction time (hr)", 
+           y = "Phage Aggregate Growth Rate (e-fold/hour)") +
+      theme_bw() +
+      guides(shape = "none") +
+      NULL)
+  dev.off()
+  
+  png("./statplots/phagefinal_peakdens.png", width = 5, height = 4,
+      units = "in", res = 300)
+  print(
+    ggplot(data = ysum1,
+           aes(x = peak_dens, y = phage_final, shape = extin_flag,
+               color = as.factor(b))) +
+      geom_point(size = 2) +
+      scale_y_log10() + scale_x_log10() +
+      scale_color_viridis_d(end = 0.95, name = "Burst Size") +
+      scale_shape_manual(breaks = c("none", "neark", "noextin"),
+                         values = c(16, 4, 3)) +
+      labs(x = "Peak Bacterial Density (cfu/mL)", 
+           y = "Final Phage Density (pfu/mL)") +
+      guides(shape = "none") +
+      geom_line(aes(y = peak_dens*b)) +
+      theme_bw() +
+      NULL)
+  dev.off()
+  
+  png("./statplots/phagefinal_peakdens_subset.png", width = 5, height = 4,
+      units = "in", res = 300)
+  print(
+    ggplot(data = filter(ysum1, extin_flag == "none"),
+           aes(x = peak_dens, y = phage_final, color = as.factor(b))) +
+      geom_point(size = 2) +
+      scale_y_log10() + scale_x_log10() +
+      scale_color_viridis_d(end = 0.95, name = "Burst Size") +
+      labs(x = "Peak Bacterial Density (cfu/mL)", 
+           y = "Final Phage Density (pfu/mL)") +
+      geom_line(aes(y = peak_dens*b)) +
+      theme_bw() +
+      NULL)
+  dev.off()
+}
+
 
 ## Run 2: bact traits ----
 run2 <- run_sims_filewrapper(
