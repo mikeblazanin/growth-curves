@@ -204,9 +204,10 @@ check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens,
   if(fixed_time) {
     return(list(keep_running = FALSE, at_equil = NA, cntrs = cntrs))
   }
-  #If there was an error, increase k by 1 and re-run
+  #If there was an error, increase k by 1, increase history array size and re-run
   if(!is.null(yout_list$error)) {
     cntrs$k <- cntrs$k+1
+    cntrs$cntrl_mxhist <- 10**5
     return(list(keep_running = TRUE, at_equil = NA, cntrs = cntrs))
   }
   #If there was a warning, could be several causes, so we
@@ -414,6 +415,7 @@ run_sims <- function(u_S1vals,
     cntrs["I_only_cntr"] <- 0 #num times S or N at equil but I is not
     cntrs["j"] <- 0 #length counter (larger is longer times)
     cntrs["k"] <- 0 #step size counter (larger is smaller steps)
+    cntrs["cntrl_mxhist"] <- 10**4
     
     #Keep running until meets some quit criteria
     while(TRUE) {
@@ -431,7 +433,8 @@ run_sims <- function(u_S1vals,
       #Run simulation
       yout_list <- myTryCatch(expr = {
         as.data.frame(dede(y = yinit, times = times, func = derivs, 
-                           parms = params, hmax = hmax_val))
+                           parms = params, hmax = hmax_val,
+                           control = list(mxhist = cntrs["cntrl_mxhist"])))
       })
       
       #Check for equil
