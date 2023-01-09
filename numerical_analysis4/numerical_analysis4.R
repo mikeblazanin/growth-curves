@@ -107,14 +107,14 @@ derivs <- function(t, y, parms) {
     dY["P"] <- 
       -afrac_t * y["P"] *
       ((parms["a_S1"] * y["S1"] + parms["a_S2"] * y["S2"])
-       - parms["z"] * (parms["a_S1"] * y["I1"] + parms["a_S2"] * y["I2"]))
+       + parms["z"] * (parms["a_S1"] * y["I1"] + parms["a_S2"] * y["I2"]))
   } else {
     dY["P"] <- 
       (parms["b"]*afrac_tau*lagY[5]*
          (parms["a_S1"]*lagY[1] + parms["a_S2"]*lagY[2])
        -afrac_t * y["P"] *
          ((parms["a_S1"] * y["S1"] + parms["a_S2"] * y["S2"])
-          - parms["z"] * (parms["a_S1"] * y["I1"] + parms["a_S2"] * y["I2"]))
+          + parms["z"] * (parms["a_S1"] * y["I1"] + parms["a_S2"] * y["I2"]))
       )
   }
   
