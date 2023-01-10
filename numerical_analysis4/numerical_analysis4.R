@@ -1186,6 +1186,61 @@ ggplot(data = filter(ysum3, f == 0, g == 0),
   #  on peak time
 
 
-##Run 4 ----
+##Run 4: test of metrics across dift bact ----
+run4 <- run_sims_filewrapper(
+  name = "run4", read_file = glob_read_files,
+  a = list(
+    u_S1vals = signif(0.04*10**seq(from=-0.175, to=-0.525, length.out = 3), 3),
+    kvals = signif(10**seq(from = 8.75, to = 9.25, length.out = 3), 3),
+    a_S1vals = signif(10**seq(from = -12, to = -8, length.out = 5), 3),
+    a_S2vals = 0,
+    tauvals = 31.6,
+    bvals = 50,
+    zvals = 1,
+    fvals = 0,
+    dvals = 0,
+    v_a1vals = 1,
+    v_a2vals = 1,
+    g = 0,
+    h = c(0, 0.1),
+    init_S1_dens_vals = 10**6,
+    init_moi_vals = c(1e-1, 1e-2, 1e-3, 1e-4, 1e-5),
+    equil_cutoff_dens = 0.1,
+    init_time = 12*60,
+    max_time = 48*60,
+    init_stepsize = 5,
+    print_info = TRUE),
+  b = list(
+    u_S1vals = signif(0.04*10**seq(from=-0.175, to=-0.525, length.out = 4), 3),
+    kvals = signif(10**seq(from = 8.75, to = 9.25, length.out = 4), 3),
+    a_S1vals = 0,
+    a_S2vals = 0,
+    tauvals = 31.6,
+    bvals = 50,
+    zvals = 1,
+    fvals = 0,
+    dvals = 0,
+    v_a1vals = 1,
+    v_a2vals = 1,
+    g = 0,
+    h = c(0, 0.1),
+    init_S1_dens_vals = 10**6,
+    init_moi_vals = 0,
+    equil_cutoff_dens = 0.1,
+    init_time = 48*60,
+    max_time = 48*60,
+    init_stepsize = 5,
+    print_info = TRUE))
 
-##one run to test the various metrics various a vals across a couple dift bacts
+ybig4 <- run4[[1]]
+
+ggplot(filter(ybig4, Pop == "B"),
+       aes(x = time, y = Density, color = as.factor(a_S1))) +
+  geom_line(aes(lty = as.factor(h))) +
+  scale_y_log10() +
+  facet_grid(u_S1 ~ k)
+
+#Relative AUC
+#Relative AUC over dift MOIs
+#All OD into PCA
+#OD of control minus phage_added into PCA
