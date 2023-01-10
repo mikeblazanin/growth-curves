@@ -185,9 +185,6 @@ if(F) {
 #sub-function for checking for equilibrium
 check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens,
                         max_j = 10) {
-  ##TODO: fix so runs that hit max time in same loop that they reach equil
-  ##      are flagged as at equil                        
-  
   #Returns: list(keep_running = TRUE/FALSE,
   #              at_equil = TRUE/FALSE/NA (NA only when fixed_time = TRUE),
   #              cntrs = list([other entries],
@@ -196,30 +193,31 @@ check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens,
   #                           k = new k value)
   #              )
   
-  #Infinite loop prevention check (j = 10 is 24 hrs for init_time 100)
-  if (cntrs$j >= max_j | cntrs$k >= 15 | cntrs$j+cntrs$k >= 20) {
-    return(list(keep_running = FALSE, at_equil = FALSE, cntrs = cntrs))
-  }
-  
-  #If fixed time, don't check for equil
+  #If fixed time, just return to never keep running
   if(fixed_time) {
     return(list(keep_running = FALSE, at_equil = NA, cntrs = cntrs))
   }
+  
+  #Set placeholders
+  keep_running <- TRUE
+  at_equil <- FALSE
+  
+  #Infinite loop prevention check (j = 10 is 24 hrs for init_time 100)
+  if (cntrs$j >= max_j | cntrs$k >= 15 | cntrs$j+cntrs$k >= 20) {
+    keep_running <- FALSE
+  }
+  
   #If there was an error, increase k by 1, increase history array size and re-run
   if(!is.null(yout_list$error)) {
     cntrs$k <- cntrs$k+1
     cntrs$cntrl_mxhist <- 10**5
-    return(list(keep_running = TRUE, at_equil = NA, cntrs = cntrs))
-  }
   #If there was a warning, could be several causes, so we
   # generally just halve step size and increase length
-  if (!is.null(yout_list$warning)) {
+  } else if (!is.null(yout_list$warning)) {
     cntrs$j <- cntrs$j+1
     cntrs$k <- cntrs$k+2
-    return(list(keep_running = TRUE, at_equil = NA, cntrs = cntrs))
-  }
   #If it was successful, check for equilibrium
-  if (is.null(yout_list$warning) & is.null(yout_list$error)) {
+  } else if (is.null(yout_list$warning) & is.null(yout_list$error)) {
     #First drop all rows with nan
     yout_list$value <- 
       yout_list$value[apply(X = yout_list$value, MARGIN = 1,
@@ -230,17 +228,14 @@ check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens,
         yout_list$value$I2[nrow(yout_list$value)] < equil_cutoff_dens &
         (yout_list$value$S1[nrow(yout_list$value)] < equil_cutoff_dens |
          yout_list$value$N[nrow(yout_list$value)] < equil_cutoff_dens)) {
-      return(list(keep_running = FALSE, at_equil = TRUE, cntrs = cntrs))
-    }
-    #S nor N at equil, need more time
-    if (yout_list$value$S1[nrow(yout_list$value)] >= equil_cutoff_dens &
+      keep_running <- FALSE
+      at_equil <- TRUE
+    #S and N not at equil, need more time
+    } else if (yout_list$value$S1[nrow(yout_list$value)] >= equil_cutoff_dens &
                yout_list$value$N[nrow(yout_list$value)] >= equil_cutoff_dens) {
       cntrs$j <- cntrs$j + 1
-      return(list(keep_running = TRUE, at_equil = FALSE, cntrs = cntrs))
-    }
-      
     #I1 or I2 not at equil (but S or N is because above check failed)
-    if (yout_list$value$I1[nrow(yout_list$value)] >= equil_cutoff_dens |
+    } else if (yout_list$value$I1[nrow(yout_list$value)] >= equil_cutoff_dens |
                yout_list$value$I2[nrow(yout_list$value)] >= equil_cutoff_dens) {
       #If I1 or I2 are still changing, lengthen
       if(abs(yout_list$value$I1[nrow(yout_list$value)] - 
@@ -248,16 +243,15 @@ check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens,
          abs(yout_list$value$I2[nrow(yout_list$value)] - 
              yout_list$value$I2[nrow(yout_list$value)-1]) > 0) {
         cntrs$j <- cntrs$j+1
-        return(list(keep_running = TRUE, at_equil = FALSE, cntrs = cntrs))
       #If neither are changing, shorten step size
       } else {
         cntrs$I_only_cntr <- cntrs$I_only_cntr+1
         cntrs$k <- cntrs$k+1
-        return(list(keep_running = TRUE, at_equil = FALSE, cntrs = cntrs))
       }
-    }
-    stop("check_equil found an unexpected case")
+    } else {stop("check_equil found an unexpected case")}
   } else {stop("tryCatch failed, niether success, warning, nor error detected")}
+  
+  return(list(keep_running = keep_running, at_equil = at_equil, cntrs = cntrs))
 }
 
 run_sims <- function(u_S1vals,
