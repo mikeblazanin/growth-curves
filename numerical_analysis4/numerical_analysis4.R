@@ -978,7 +978,7 @@ ggplot(data = filter(ybig2, uniq_run %in% run2[[2]]$uniq_run,
 
 ## Run 3: stationary phase behavior ----
 run3 <- run_sims_filewrapper(
-  name = "run3", read_file = FALSE,
+  name = "run3", read_file = glob_read_files,
   a = list(
     u_S1vals = signif(0.04*10**-0.35, 3),
     kvals = 10**9,
@@ -1033,22 +1033,25 @@ ggplot(data = filter(ybig3, uniq_run %in% run3[[2]]$uniq_run,
 
 ysum3 <- full_join(
   summarize(group_by(filter(ybig3, Pop == "B"),
-                            uniq_run, u_S1, k, a_S1, a_S2,
-                            tau, b, z, f, d, v_a1, v_a2, g, h,
-                            init_S1_dens, init_S2_dens,
-                            init_moi, init_N_dens),
-                   peak_dens = max(Density),
-                   peak_time = time[which.max(Density)],
-                   auc = auc(x = time, y = Density),
-                   extin_time_4 = 
-                     first_below(y = Density, x = time,
-                                 threshold = 10**4, return = "x")),
+                     uniq_run, u_S1, k, a_S1, a_S2,
+                     tau, b, z, f, d, v_a1, v_a2, g, h,
+                     init_S1_dens, init_S2_dens,
+                     init_moi, init_N_dens),
+            peak_dens = max(Density),
+            peak_time = time[which.max(Density)],
+            auc = auc(x = time, y = Density),
+            extin_time_4 = 
+              first_below(y = Density, x = time,
+                          threshold = 10**4, return = "x"),
+            final_dens = Density[which.max(time)]),
   summarize(group_by(filter(ybig3, Pop == "P"),
                      uniq_run, u_S1, k, a_S1, a_S2,
                      tau, b, z, f, d, v_a1, v_a2, g, h,
                      init_S1_dens, init_S2_dens,
                      init_moi, init_N_dens),
             phage_final = Density[which.max(time)]))
+ysum3 <- mutate(ysum3,
+                final_dens = ifelse(final_dens <= 1, 0, final_dens))
 
 ggplot(data = ysum3,
        aes(x = peak_time, y = peak_dens)) +
@@ -1112,6 +1115,19 @@ ggplot(data = filter(ybig3, Pop == "B"),
 #      suggesting that peak time, peak density, and extin time (assuming 
 #      the pop drops below that extin threshold) should be unaltered
 #      TODO: why doesn't this hold on the peak dens vs peak time plot
+#     logistic transition to resistance leads to phage infectivity
+#      having a larger effect on final bact density bc the resis pop
+#      mostly accumulates right at the end. W/ constant transition rate
+#      phage infectivity has smaller effect on final density
+#     f really is just a binary effect - either the population doesn't
+#      drop at all, or the population drops entirely. Which occurs
+#      depends on how high the pop gets before phage would start
+#      killing (and therefore is basically determined by phage
+#      infectivity and bact growth). It can have some small small effect
+#      on the rate of extinction but really tiny effects overall
+#     h has only a very weak effect (really basically no effect,
+#      in comparison to even small changes in a) on peak density or
+#      on peak time
 
 
 ##Run 4 ----
