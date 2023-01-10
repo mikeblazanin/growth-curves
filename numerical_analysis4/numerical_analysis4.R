@@ -1025,12 +1025,6 @@ run3 <- run_sims_filewrapper(
 
 ybig3 <- run3[[1]]
 
-ggplot(data = filter(ybig3, uniq_run %in% run3[[2]]$uniq_run,
-                     Pop %in% c("S1", "S2", "I", "P", "N")),
-       aes(x = time/60, y = Density, color = Pop)) +
-  geom_line() + scale_y_continuous(trans = "log10", limits = c(1, NA)) +
-  facet_wrap(~uniq_run)
-
 ysum3 <- full_join(
   summarize(group_by(filter(ybig3, Pop == "B"),
                      uniq_run, u_S1, k, a_S1, a_S2,
@@ -1053,16 +1047,11 @@ ysum3 <- full_join(
 ysum3 <- mutate(ysum3,
                 final_dens = ifelse(final_dens <= 1, 0, final_dens))
 
-ggplot(data = ysum3,
-       aes(x = peak_time, y = peak_dens)) +
-  geom_point(aes(color = as.factor(a_S1))) +
-  facet_grid(g*h ~ f) +
-  geom_line(data = data.frame(x = seq(from = 0, to = 3000),
-                              y = logis_func(S_0 = 10**6,
-                                             u_S = signif(0.04*10**-0.35, 3),
-                                             k = 10**9,
-                                             times = seq(from = 0, to = 3000))),
-            aes(x = x, y = y), lty = 2)
+#For the purposes of plotting, extend all runs to same endtime
+# and set all densities below 0 to 0
+ybig3 <- mutate(group_by(ybig3, uniq_run),
+                time = ifelse(time == max(time), max(ybig3$time), time),
+                Density = ifelse(Density < 1, 0, Density))
 
 dir.create("run3_dens_curves", showWarnings = FALSE)
 if (glob_make_curveplots) {
@@ -1087,47 +1076,120 @@ if (glob_make_curveplots) {
   }
 }
 
-ggplot(data = filter(ybig3, Pop == "B"),
-       aes(x = time, y = Density, color = as.factor(a_S1))) +
-  geom_line() +
-  facet_grid(g*h ~ f, scales = "free_y") +
-  scale_y_continuous(trans = "log10") +
-  scale_color_brewer(palette = "Greys")
+if(glob_make_statplots) {
+  png("./statplots/h_Bcurves.png", width = 6, height = 4,
+      units = "in", res = 300)
+  print(ggplot(data = filter(ybig3, Pop == "B", f == 0, g == 0),
+         aes(x = time/60, y = Density, color = log10(a_S1), group = uniq_run)) +
+    geom_line() +
+    facet_grid(~ h) +
+    scale_y_continuous(trans = "log10", limits = c(1, NA)) +
+    coord_cartesian(xlim = c(NA, 30)) +
+    theme_bw() +
+    scale_color_viridis_c(end = 0.95, name = "log10(infection rate)") +
+    labs(x = "Time (hr)", y = "Density (cfu/mL)",
+         subtitle = "Resistance Transition Rate") +
+    NULL)
+  dev.off()
+  
+  png("./statplots/h_Bcurves_g1.png", width = 6, height = 4,
+      units = "in", res = 300)
+  print(ggplot(data = filter(ybig3, Pop == "B", f == 0, h == 0 | g == 1),
+               aes(x = time/60, y = Density, color = log10(a_S1), group = uniq_run)) +
+          geom_line() +
+          facet_grid(~ h) +
+          scale_y_continuous(trans = "log10", limits = c(1, NA)) +
+          coord_cartesian(xlim = c(NA, 30)) +
+          theme_bw() +
+          scale_color_viridis_c(end = 0.95, name = "log10(infection rate)") +
+          labs(x = "Time (hr)", y = "Density (cfu/mL)",
+               subtitle = "Resistance Transition Rate") +
+          NULL)
+  dev.off()
+  
+  png("./statplots/f_Bcurves.png", width = 4, height = 7,
+      units = "in", res = 300)
+  print(ggplot(data = filter(ybig3, Pop == "B", h == 0, g == 0),
+               aes(x = time/60, y = Density, group = uniq_run)) +
+          geom_line() +
+          facet_grid(a_S1 ~ f) +
+          scale_y_continuous(trans = "log10", limits = c(1, NA)) +
+          coord_cartesian(xlim = c(NA, 24)) +
+          theme_bw() +
+          labs(x = "Time (hr)", y = "Density (cfu/mL)",
+               subtitle = "Reduction in infection rate at N=0") +
+          NULL)
+  dev.off()
+  
+  png("./statplots/gh_peakdens_finaldens.png", width = 6, height = 4,
+      units = "in", res = 300)
+  print(ggplot(data = filter(ysum3, f == 0),
+               aes(x = peak_dens, y = final_dens, color = log10(a_S1))) +
+          facet_grid(g ~ h,
+                     labeller = labeller(g = c("1" = "Inverse logistic\ntransitions",
+                                               "0" = "Linear transitions"))) +
+          geom_point(alpha = 0.5, size = 2.5) +
+          scale_x_log10() + scale_y_log10() +
+          scale_color_viridis_c(end = 0.95, name = "log10(infection rate)") +
+          labs(x = "Peak Density (cfu/mL)", y = "Final Density (cfu/mL)",
+               subtitle = "Resistance Transition Rate") +
+          theme_bw() +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+          NULL)
+  dev.off()
+  
+  ##Make figures to support the point that h has little effect
+  ## on other observed patterns, like peak dens-peak time,
+  ## peak time at all, peat time - extin time, etc
+  
+  
+}
 
-ggplot(data = filter(ybig3, Pop == "B"),
-       aes(x = time, y = Density, color = as.factor(h))) +
-  geom_line() +
-  facet_grid(a_S1 ~ g*f, scales = "free_y") +
-  scale_y_continuous(trans = "log10") +
-  scale_color_manual(values = colorRampPalette(c("gray70", "black"))(5)) +
-  theme_bw()
+
+ggplot(data = ysum3,
+       aes(x = peak_time, y = peak_dens)) +
+  geom_point(aes(color = as.factor(a_S1))) +
+  facet_grid(g*h ~ f) +
+  geom_line(data = data.frame(x = seq(from = 0, to = 3000),
+                              y = logis_func(S_0 = 10**6,
+                                             u_S = signif(0.04*10**-0.35, 3),
+                                             k = 10**9,
+                                             times = seq(from = 0, to = 3000))),
+            aes(x = x, y = y), lty = 2)
+
+ggplot(data = filter(ysum3, f == 0, g == 0),
+       aes(y = peak_time, x = h)) +
+  facet_wrap(~a_S1) +
+  geom_point(alpha = 0.5) +
+  scale_x_log10() + scale_y_log10()
+
 
 #Findings:
-#     rate of transition determines how low the pop is after S1 extin
-#     a_t modulation must have only a very narrow window where it
-#      produces a partial drop-off. Instead mostly what we see is
-#      either extinction or lack of drop entirely
-#     production of resistant cells does produce the partial drop-off
-#      rate and model (logistic vs linear) both appear to control how
-#      low the drop off is. Can't see any other differences between
-#      the two modes
-#     drop off from peak is at the same time regardless of g or h,
-#      suggesting that peak time, peak density, and extin time (assuming 
-#      the pop drops below that extin threshold) should be unaltered
-#      TODO: why doesn't this hold on the peak dens vs peak time plot
-#     logistic transition to resistance leads to phage infectivity
-#      having a larger effect on final bact density bc the resis pop
-#      mostly accumulates right at the end. W/ constant transition rate
-#      phage infectivity has smaller effect on final density
-#     f really is just a binary effect - either the population doesn't
-#      drop at all, or the population drops entirely. Which occurs
-#      depends on how high the pop gets before phage would start
-#      killing (and therefore is basically determined by phage
-#      infectivity and bact growth). It can have some small small effect
-#      on the rate of extinction but really tiny effects overall
-#     h has only a very weak effect (really basically no effect,
-#      in comparison to even small changes in a) on peak density or
-#      on peak time
+  # rate of transition determines how low the pop is after S1 extin
+  # a_t modulation must have only a very narrow window where it
+  #  produces a partial drop-off. Instead mostly what we see is
+  #  either extinction or lack of drop entirely
+  # production of resistant cells does produce the partial drop-off
+  #  rate and model (logistic vs linear) both appear to control how
+  #  low the drop off is. Can't see any other differences between
+  #  the two modes
+  # drop off from peak is at the same time regardless of g or h,
+  #  suggesting that peak time, peak density, and extin time (assuming
+  #  the pop drops below that extin threshold) should be unaltered
+  #  TODO: why doesn't this hold on the peak dens vs peak time plot
+  # logistic transition to resistance leads to phage infectivity
+  #  having a larger effect on final bact density bc the resis pop
+  #  mostly accumulates right at the end. W/ constant transition rate
+  #  phage infectivity has smaller effect on final density
+  # f really is just a binary effect - either the population doesn't
+  #  drop at all, or the population drops entirely. Which occurs
+  #  depends on how high the pop gets before phage would start
+  #  killing (and therefore is basically determined by phage
+  #  infectivity and bact growth). It can have some small small effect
+  #  on the rate of extinction but really tiny effects overall
+  # h has only a very weak effect (really basically no effect,
+  #  in comparison to even small changes in a) on peak density or
+  #  on peak time
 
 
 ##Run 4 ----
