@@ -960,7 +960,7 @@ run2 <- run_sims_filewrapper(
   init_time = 12*60,
   max_time = 48*60,
   init_stepsize = 5,
-  print_info = TRUE, read_file = FALSE)
+  print_info = TRUE, read_file = glob_read_files)
 
 ybig2 <- run2[[1]]
 
@@ -1233,6 +1233,26 @@ run4 <- run_sims_filewrapper(
     print_info = TRUE))
 
 ybig4 <- run4[[1]]
+
+dir.create("run4_noequil_dens", showWarnings = FALSE)
+for (run in run4[[2]]$uniq_run) {
+  png(paste("./run4_noequil_dens/", run, ".png", sep = ""),
+      width = 5, height = 4, units = "in", res = 100)
+  print(ggplot(filter(ybig4, uniq_run == run,
+                Pop %in% c("S1", "S2", "I1", "I2", "P", "N")),
+         aes(x = time/60, y = Density, color = Pop)) +
+    geom_line(lwd = 2, alpha = 0.5) +
+    scale_y_log10(limits = c(1, NA)) +
+    facet_wrap(~uniq_run))
+  dev.off()
+}
+
+ggplot(filter(ybig4, uniq_run %in% run4[[2]]$uniq_run,
+              Pop %in% c("S1", "S2", "I", "P", "N")),
+       aes(x = time/60, y = Density, color = Pop)) +
+  geom_line() +
+  scale_y_log10() +
+  facet_wrap(~uniq_run)
 
 ggplot(filter(ybig4, Pop == "B"),
        aes(x = time, y = Density, color = as.factor(a_S1))) +
