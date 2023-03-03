@@ -1188,7 +1188,7 @@ ggplot(data = filter(ysum3, f == 0, g == 0),
 
 ##Run 4: test of metrics across dift bact ----
 run4 <- run_sims_filewrapper(
-  name = "run4", read_file = glob_read_files,
+  name = "run4", read_file = TRUE,
   a = list(
     u_S1vals = signif(0.04*10**seq(from=-0.175, to=-0.525, length.out = 3), 3),
     kvals = signif(10**seq(from = 8.75, to = 9.25, length.out = 3), 3),
@@ -1211,8 +1211,8 @@ run4 <- run_sims_filewrapper(
     init_stepsize = 5,
     print_info = TRUE),
   b = list(
-    u_S1vals = signif(0.04*10**seq(from=-0.175, to=-0.525, length.out = 4), 3),
-    kvals = signif(10**seq(from = 8.75, to = 9.25, length.out = 4), 3),
+    u_S1vals = signif(0.04*10**seq(from=-0.175, to=-0.525, length.out = 3), 3),
+    kvals = signif(10**seq(from = 8.75, to = 9.25, length.out = 3), 3),
     a_S1vals = 0,
     a_S2vals = 0,
     tauvals = 31.6,
@@ -1254,13 +1254,53 @@ ggplot(filter(ybig4, uniq_run %in% run4[[2]]$uniq_run,
   scale_y_log10() +
   facet_wrap(~uniq_run)
 
-ggplot(filter(ybig4, Pop == "B"),
+ggplot(filter(ybig4, h == 0, Pop == "B"),
        aes(x = time, y = Density, color = as.factor(a_S1))) +
-  geom_line(aes(lty = as.factor(h))) +
+  geom_line(aes(lty = as.factor(init_moi),
+                group = paste(a_S1, init_moi, h))) +
   scale_y_log10() +
   facet_grid(u_S1 ~ k)
 
-#Relative AUC
-#Relative AUC over dift MOIs
+#For the purposes of analyses, set all Dens below 0 to 0
+# and set all runs to end at same time
+ybig4 <- mutate(ybig4, 
+                time = ifelse(time == max(time), max(ybig3$time), time),
+                Density = ifelse(Density < 0, 0, Density))
+
+ysum4 <- 
+  summarize(group_by(filter(ybig4, Pop == "B"),
+                     uniq_run, u_S1, k, a_S1, a_S2,
+                     tau, b, z, f, d, v_a1, v_a2, g, h,
+                     init_S1_dens, init_S2_dens,
+                     init_moi, init_N_dens),
+            peak_dens = max(Density),
+            peak_time = time[which.max(Density)],
+            auc = auc(x = time, y = Density),
+            extin_time_4 = 
+              first_below(y = Density, x = time,
+                          threshold = 10**4, return = "x"))
+
+#Relative AUC (incl over dift MOIs)
+ysum4 <- mutate(group_by(ysum4, u_S1, k, z, f, d, v_a1, v_a2, g, h,
+                         init_S1_dens, init_S2_dens, init_N_dens),
+                rel_auc = auc/auc[init_moi == 0])
+
+
+ggplot(data = ysum4, aes(x = init_moi, y = rel_auc)) +
+  geom_point(aes(color = as.factor(a_S1))) +
+  scale_x_log10() +
+  scale_y_log10() +
+  facet_grid(u_S1 ~ h*k) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(data = ysum4, aes(x = init_moi, y = auc)) +
+  geom_point(aes(color = as.factor(a_S1))) +
+  scale_x_log10() +
+  scale_y_log10() +
+  facet_grid(u_S1 ~ h*k) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+
 #All OD into PCA
 #OD of control minus phage_added into PCA
