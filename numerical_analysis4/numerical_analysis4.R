@@ -592,7 +592,7 @@ run_sims_filewrapper <- function(name, dir = ".",
 }
 
 ## Global Settings ----
-glob_read_files <- FALSE
+glob_read_files <- TRUE
 glob_make_curveplots <- FALSE
 glob_make_statplots <- TRUE
 
@@ -1188,7 +1188,7 @@ ggplot(data = filter(ysum3, f == 0, g == 0),
 
 ##Run 4: test of metrics across dift bact ----
 run4 <- run_sims_filewrapper(
-  name = "run4", read_file = TRUE,
+  name = "run4", read_file = glob_read_files,
   a = list(
     u_S1vals = signif(0.04*10**seq(from=-0.175, to=-0.525, length.out = 3), 3),
     kvals = signif(10**seq(from = 8.75, to = 9.25, length.out = 3), 3),
@@ -1234,37 +1234,10 @@ run4 <- run_sims_filewrapper(
 
 ybig4 <- run4[[1]]
 
-dir.create("run4_noequil_dens", showWarnings = FALSE)
-for (run in run4[[2]]$uniq_run) {
-  png(paste("./run4_noequil_dens/", run, ".png", sep = ""),
-      width = 5, height = 4, units = "in", res = 100)
-  print(ggplot(filter(ybig4, uniq_run == run,
-                Pop %in% c("S1", "S2", "I1", "I2", "P", "N")),
-         aes(x = time/60, y = Density, color = Pop)) +
-    geom_line(lwd = 2, alpha = 0.5) +
-    scale_y_log10(limits = c(1, NA)) +
-    facet_wrap(~uniq_run))
-  dev.off()
-}
-
-ggplot(filter(ybig4, uniq_run %in% run4[[2]]$uniq_run,
-              Pop %in% c("S1", "S2", "I", "P", "N")),
-       aes(x = time/60, y = Density, color = Pop)) +
-  geom_line() +
-  scale_y_log10() +
-  facet_wrap(~uniq_run)
-
-ggplot(filter(ybig4, h == 0, Pop == "B"),
-       aes(x = time, y = Density, color = as.factor(a_S1))) +
-  geom_line(aes(lty = as.factor(init_moi),
-                group = paste(a_S1, init_moi, h))) +
-  scale_y_log10() +
-  facet_grid(u_S1 ~ k)
-
 #For the purposes of analyses, set all Dens below 0 to 0
 # and set all runs to end at same time
-ybig4 <- mutate(ybig4, 
-                time = ifelse(time == max(time), max(ybig3$time), time),
+ybig4 <- mutate(group_by(ybig4, uniq_run), 
+                time = ifelse(time == max(time), max(ybig4$time), time),
                 Density = ifelse(Density < 0, 0, Density))
 
 ysum4 <- 
@@ -1285,22 +1258,325 @@ ysum4 <- mutate(group_by(ysum4, u_S1, k, z, f, d, v_a1, v_a2, g, h,
                          init_S1_dens, init_S2_dens, init_N_dens),
                 rel_auc = auc/auc[init_moi == 0])
 
-
-ggplot(data = ysum4, aes(x = init_moi, y = rel_auc)) +
-  geom_point(aes(color = as.factor(a_S1))) +
-  scale_x_log10() +
+ggplot(data = filter(ysum4, init_moi %in% c(0, 0.01)), 
+       aes(x = paste(u_S1, k), y = rel_auc)) +
+  geom_point(aes(color = as.factor(init_moi))) +
+  #scale_x_log10() +
   scale_y_log10() +
-  facet_grid(u_S1 ~ h*k) +
+  facet_grid(a_S1 ~ h) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-ggplot(data = ysum4, aes(x = init_moi, y = auc)) +
-  geom_point(aes(color = as.factor(a_S1))) +
-  scale_x_log10() +
+ggplot(data = filter(ysum4, init_moi %in% c(0, 0.01)), 
+       aes(x = paste(u_S1, k), y = auc)) +
+  geom_point(aes(color = as.factor(init_moi))) +
+  #scale_x_log10() +
   scale_y_log10() +
-  facet_grid(u_S1 ~ h*k) +
+  facet_grid(a_S1 ~ h) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+temp <- mutate(filter(ysum4, a_S1 != 0),
+               u_S1 = as.factor(u_S1),
+               k = as.factor(k),
+               h = as.factor(h),
+               log_a_S1 = log10(a_S1),
+               a_S1 = as.factor(a_S1),
+               bact = paste(u_S1, k, h))
+
+library(lme4)
+summary(lmer(data = temp,
+             log10(auc) ~ a_S1 * (1|bact)))
+summary(lm(data = temp,
+           log10(auc) ~ a_S1))
+
+summary(lmer(data = temp,
+             log10(rel_auc) ~ a_S1 * (1|bact)))
+summary(lm(data = temp,
+           log10(rel_auc) ~ a_S1))
+
+##when we haven't normalized auc, we want to do a lm of auc ~ bact * phage or not
+## thus the "normalization" happens within the lm where it's an assumption
+## of additivity or whatever the lm assumes
+##when we do normalize auc, we just do an lm of norm auc ~ bact
+## in this way, we've already done the normalization ahead of the model
+## and it should give us a more biologically meaningful normalization
+##this is for the case where we're comparing one phage across multiple bacteria
+## if we're imagining our phage has the same a on all the bacteria,
+## then the response should vary less with bacteria when we normalize by relative
+## auc than when we normalize within the lm
+##So what we want to look for is less variance being explained by the
+## bacteria? Or rather, since we've already normalized, less residual
+## variance
+## 
+
+temp <- mutate(
+  filter(ysum4, a_S1 %in% c(0, 10**-9, 10**-10), h == 0, 
+         init_moi %in% c(0, 0.01)),
+  u_S1 = as.factor(u_S1),
+  k = as.factor(k),
+  h = as.factor(h),
+  log_a_S1 = log10(a_S1),
+  a_S1 = as.factor(a_S1),
+  bact = paste(u_S1, k, h))
+
+ggplot(data = temp,
+       aes(x = bact, y = log10(auc), color = as.factor(init_moi),
+           shape = as.factor(a_S1))) +
+  geom_point() +
+  #scale_y_log10() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(data = temp,
+       aes(x = bact, y = log10(rel_auc), color = as.factor(init_moi),
+           shape = as.factor(a_S1))) +
+  geom_point() +
+  #scale_y_log10() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+#Need to dup the init_moi == 0 data across all a_S1 vals
+temp2 <- temp
+mini <- filter(temp2, init_moi == 0)
+mini <- rep(mini, length(unique(temp2$a_S1)))
+temp2 <- rbind(temp2,
+               
+
+
+
+lmer(data = temp,
+     log10(auc) ~ a_S1 * init_moi * (1|bact))
+
+lmer(data = filter(temp, init_moi != 0),
+   log10(rel_auc) ~ a_S1 * (1|bact))
+
+
+
+summary(lmer(data = temp,
+     log10(auc) ~ log_a_S1 * (log_a_S1|u_S1) * (log_a_S1|k) * (log_a_S1|h)))
+summary(lmer(data = temp,
+     log10(rel_auc) ~ log_a_S1 * (log_a_S1|u_S1) * (log_a_S1|k) * (log_a_S1|h)))
+
+
+
+ggplot(data = filter(temp, a_S1 != 0),
+       aes(x = log10(a_S1), y = log10(auc))) +
+  geom_point()
+ggplot(data = filter(temp, a_S1 != 0),
+       aes(x = log10(a_S1), y = log10(rel_auc))) +
+  geom_point()
 
 
 
 #All OD into PCA
 #OD of control minus phage_added into PCA
+
+
+point_slope <- function(...) {
+  #Provide x1 and y1, either m or x2 and y2, and either x or y
+  #Provide any 4 of 5: y, y1, x, x1, and either m or x2 and y2
+  dots <- list(...)
+  if(any(!names(dots) %in% c("y", "y1", "x", "x1", "m", "x2", "y2"))) {
+    stop("invalid argument specified")}
+  if(!"x1" %in% names(dots) || !"y1" %in% names(dots)) {
+    stop("x1 and y1 must be provided")}
+  if(!"m" %in% names(dots)) {
+    if(!"x2" %in% names(dots) || !"y2" %in% names(dots)) {
+      stop("when m is not provided, x2 and y2 must be provided")}
+    dots[["m"]] <- (dots[["y2"]] - dots[["y1"]])/(dots[["x2"]] - dots[["x1"]])
+  }
+  if(!"x" %in% names(dots) && !"y" %in% names(dots)) {
+    return(dots[["m"]])
+  } else {
+    if(!"x" %in% names(dots)) {
+      return((dots[["y"]] - dots[["y1"]])/dots[["m"]] + dots[["x1"]])
+    } else if (!"y" %in% names(dots)) {
+      return(dots[["m"]] * (dots[["x"]] - dots[["x1"]]) + dots[["y1"]])
+    }
+  }
+}
+
+interp_data <- function(df, x, y, subset_by) {
+  #This function adds new rows such that all the unique x values in
+  #  df are present in each subset_by
+  #It interpolates y values as necessary
+  #x and y are column names
+  #subset_by is a vector
+  #Note: this function is slow and could be improved by
+  # vectorizing the interpolations
+  
+  alltimes <- unique(df[, x])
+  alltimes <- alltimes[order(alltimes)]
+  out <- 
+    data.frame(matrix(ncol = ncol(df), 
+                      nrow = length(unique(subset_by))*length(alltimes)))
+  colnames(out) <- colnames(df)
+  for (i in 1:length(unique(subset_by))) {
+    if(i %% 10 == 0) {print(paste0(i, "/", length(unique(subset_by))))}
+    mygroup <- unique(subset_by)[i]
+    mysub <- df[subset_by == mygroup, ]
+    mysub <- mysub[order(mysub[, x]), ]
+    myrows <- ((i-1)*length(alltimes)+1):(i*length(alltimes))
+    
+    #Fill in id cols
+    for(mycol in colnames(out)) {
+      if(!mycol %in% c(x, y)) {out[myrows, mycol] <- mysub[1, mycol]}
+    }
+    
+    #fill in (all) x vals
+    out[myrows, x] <- alltimes
+    
+    #fill in values we already have
+    myrows2 <- myrows[out[myrows, x] %in% mysub[, x]]
+    out[myrows2, y] <- mysub[match(mysub[, x], out[myrows2, x]), y]
+    
+    submin <- min(mysub[, x])
+    submax <- max(mysub[, x])
+    
+    for(myrow in myrows[is.na(out[myrows, y])]) {
+      if(out[myrow, x] > submin && out[myrow, x] < submax) {
+        #then interpolate
+        idx1 <- max(which(mysub[, x] < out[myrow, x]))
+        idx2 <- min(which(mysub[, x] > out[myrow, x]))
+        out[myrow, y] <- 
+          point_slope(x1 = mysub[idx1, x], x2 = mysub[idx2, x],
+                      y1 = mysub[idx1, y], y2 = mysub[idx2, y],
+                      x = out[myrow, x])
+      } else if (out[myrow, x] > submax) {
+        #project last timepoint out to the end
+        out[myrow, y] <- mysub[max(which(mysub[, x] < out[myrow, x])), y]
+      }
+    }
+  }
+  return(out)
+}
+
+temp <- filter(ybig4, Pop == "B")
+ybig4_new <- interp_data(df = temp, 
+                         x = "time", y = "Density",
+                         subset_by = temp$uniq_run)
+ybig4_new <- mutate(group_by(ybig4_new, u_S1, k, h, time),
+                    Dens_norm = Density - Density[init_moi == 0])
+
+dir.create("test_ybig4", showWarnings = FALSE)                    
+for (run in unique(ybig4$uniq_run)) {
+  png(width = 4, height = 6, units = "in", res = 150,
+      filename = paste0("./test_ybig4/", run, ".png"))
+  print(cowplot::plot_grid(ncol = 1,
+    ggplot(data = filter(ybig4_new, uniq_run == run),
+           aes(x = time/60, y = Density)) +
+      geom_point() +
+      scale_y_log10(),
+    ggplot(data = filter(ybig4_new, uniq_run == run),
+           aes(x = time/60, y = Dens_norm)) +
+      geom_point()
+  ))
+  dev.off()
+}
+
+ybig4_wide <- tidyr::pivot_wider(ybig4_new,
+                                 id_cols = !Dens_norm,
+                                names_from = time,
+                                names_prefix = "time_",
+                                values_from = Density)
+ybig4_wide_norm <- tidyr::pivot_wider(ybig4_new,
+                                      id_cols = !Density,
+                                      names_from = time,
+                                      names_prefix = "time_",
+                                      values_from = Dens_norm)
+
+#Define function to make chi-square quantile plots 
+# to test for multivariate normality of data or residuals
+# (credit to Jonathan Reuning-Scherer)
+CSQPlot<-function(vars,label="Chi-Square Quantile Plot"){
+  #usually, vars is xxx$residuals or data from one group and label is for plot
+  x<-cov(scale(vars),use="pairwise.complete.obs")
+  squares<-sort(diag(as.matrix(scale(vars))%*%solve(x)%*%as.matrix(t(scale(vars)))))
+  quantiles<-quantile(squares)
+  hspr<-quantiles[4]-quantiles[2]
+  cumprob<-c(1:length(vars[,1]))/length(vars[,1])-1/(2*length(vars[,1]))
+  degf<-dim(x)[1]
+  quants<-qchisq(cumprob,df=degf)
+  gval<-(quants**(-1+degf/2))/(exp(quants/2)*gamma(degf/2)*(sqrt(2)**degf))
+  scale<-hspr / (qchisq(.75,degf)-qchisq(.25,degf))
+  se<-(scale/gval)*sqrt(cumprob*(1-cumprob)/length(squares))
+  lower<-quants-2*se
+  upper<-quants+2*se
+  
+  plot(quants,squares,col='red',pch=19,cex=1.2,xlab="Chi-Square Quantiles",
+       ylab=label,main=paste("Chi-Square Quantiles for",label),ylim=range(upper,lower, squares) , xlim=range(c(0,quants)))
+  lines(c(0,100),c(0,100),col=1)
+  lines(quants,upper,col="blue",lty=2,lwd=2)
+  lines(quants,lower,col="blue",lty=2,lwd=2)
+  legend(0,range(upper,lower)[2]*.9,c("Data","95% Conf Limits"),lty=c(0,2),col=c("red","blue"),lwd=c(2,2),
+         pch=c(19,NA))
+}
+
+#Make CSQ plot for multivariate normality
+CSQPlot(ybig4_wide[, grep("time_", colnames(ybig4_wide))[-1]])
+
+mypca <- prcomp(ybig4_wide[, grep("time_", colnames(ybig4_wide))[-1]],
+                center = TRUE, scale = TRUE, retx = TRUE)
+mypcanorm <- 
+  prcomp(ybig4_wide_norm[, grep("time_", colnames(ybig4_wide_norm))[-1]],
+         center = TRUE, scale = TRUE, retx = TRUE)
+
+#Merge pca with data
+ybig4_wide <- cbind(ybig4_wide, as.data.frame(mypca$x))
+ybig4_wide_norm <- cbind(ybig4_wide_norm, as.data.frame(mypcanorm$x))
+
+summary(mypca)
+
+ggplot(ybig4_wide, aes(x = PC1, y = PC2)) +
+  geom_point(aes(color = as.factor(a_S1))) +
+  # geom_segment(data = as.data.frame(isol_pca_7x$rotation),
+  #              aes(x = 0, y = 0, xend = arrow_len*PC1, yend = arrow_len*PC2),
+  #              arrow = arrow(length = unit(0.02, "npc")),
+  #              alpha = .5, lwd = 2, color = "red4") +
+  # ggrepel::geom_text_repel(data = as.data.frame(isol_pca_7x$rotation),
+  #                          aes(x = arrow_len*PC1, y = arrow_len*PC2,
+  #                              label = row.names(isol_pca_7x$rotation)),
+  #                          size = 8, alpha = .8, color = "red4", seed = 8,
+  #                          min.segment.length = unit(1, "native")) +
+  theme_bw() +
+  # labs(x = paste("PC1 (", 
+  #                round((100*((isol_pca_7x$sdev)**2)/
+  #                         sum((isol_pca_7x$sdev)**2))[1], 1),
+  #                "%)", sep = ""),
+  #      y = paste("PC2 (", 
+  #                round((100*((isol_pca_7x$sdev)**2)/
+  #                         sum((isol_pca_7x$sdev)**2))[2], 1),
+  #                "%)", sep = "")) +
+  NULL
+
+ggplot(ybig4_wide_norm, aes(x = PC1, y = PC2)) +
+  geom_point(aes(color = as.factor(u_S1), shape = as.factor(k))) +
+  # geom_segment(data = as.data.frame(isol_pca_7x$rotation),
+  #              aes(x = 0, y = 0, xend = arrow_len*PC1, yend = arrow_len*PC2),
+  #              arrow = arrow(length = unit(0.02, "npc")),
+  #              alpha = .5, lwd = 2, color = "red4") +
+  # ggrepel::geom_text_repel(data = as.data.frame(isol_pca_7x$rotation),
+  #                          aes(x = arrow_len*PC1, y = arrow_len*PC2,
+  #                              label = row.names(isol_pca_7x$rotation)),
+  #                          size = 8, alpha = .8, color = "red4", seed = 8,
+  #                          min.segment.length = unit(1, "native")) +
+  theme_bw() +
+  # labs(x = paste("PC1 (", 
+  #                round((100*((isol_pca_7x$sdev)**2)/
+  #                         sum((isol_pca_7x$sdev)**2))[1], 1),
+  #                "%)", sep = ""),
+  #      y = paste("PC2 (", 
+  #                round((100*((isol_pca_7x$sdev)**2)/
+  #                         sum((isol_pca_7x$sdev)**2))[2], 1),
+  #                "%)", sep = "")) +
+  NULL
+
+
+
+temp <- filter(ybig4_wide_norm, k == 10**9, u_S1 == 0.0179,
+               init_moi == 0.01)
+mypca_tmp <- prcomp(temp[, grep("time_", colnames(temp))[-1]],
+  center = TRUE, scale = TRUE, retx = TRUE)
+
+temp <- cbind(temp, as.data.frame(mypca_tmp$x))
+
+ggplot(temp, aes(x = PC1, y = PC2)) +
+  geom_point(aes(color = as.factor(a_S1), shape = as.factor(h)))
