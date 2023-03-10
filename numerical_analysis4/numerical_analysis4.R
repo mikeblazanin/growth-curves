@@ -1334,10 +1334,10 @@ ggplot(data = temp,
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 #Need to dup the init_moi == 0 data across all a_S1 vals
-temp2 <- temp
-mini <- filter(temp2, init_moi == 0)
-mini <- rep(mini, length(unique(temp2$a_S1)))
-temp2 <- rbind(temp2,
+# temp2 <- temp
+# mini <- filter(temp2, init_moi == 0)
+# mini <- rep(mini, length(unique(temp2$a_S1)))
+# temp2 <- rbind(temp2,)
                
 
 
