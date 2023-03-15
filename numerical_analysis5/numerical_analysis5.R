@@ -166,6 +166,13 @@ ode_deriv <- function(t, y, parms) {
   names(I_n) <- paste("I", 1:parms["nI"], sep = "")
   dY <- c(S = 0, I_n, P = 0, R = 0)
   
+  #Calculate increased lysis time depending on nutrients
+  # (technically it's the ode rate equivalent of the lysis time)
+  #lysrt_t = nI/tau * (1 - f_tau + f_tau * N/k)
+  lysrt_t <- 
+    (parms["nI"] / parms["tau"] *
+     max(0, (1 - parms["f_tau"] + parms["f_tau"]*y["N"]/parms["k"])))
+  
   ##Calculate dS
   #dS/dt = u_S*S*N/k - aSP
   dY["S"] <- 
@@ -173,23 +180,23 @@ ode_deriv <- function(t, y, parms) {
      - parms["a_S1"] * y["S1"] * y["P"])
   
   ##Calculate dI
-  #dI_1/dt = aSP - I1 * nI / tau
+  #dI_1/dt = aSP - I1 * lysrt_t
   dY["I1"] <- 
     (parms["a_S1"] * y["S1"] * y["P"]
-     - y["I1"] * parms["nI"] / parms["tau"])
+     - y["I1"] * lysrt_t)
   
-  #dI_i/dt = nI / tau * I_(i-1) - nI / tau * I_i
+  #dI_i/dt = lysrt_t * I_(i-1) - lysrt_t * I_i
   if(parms["nI"] > 1) {
     #Note S pop is dY[1], so I pops are dY[2: nI+1]
     dY[3:(parms["nI"]+1)] <- 
-      (y[2:(parms["nI"])] * parms["nI"] / parms["tau"]
-       - y[3:(parms["nI"]+1)] * parms["nI"] / parms["tau"])
+      (y[2:(parms["nI"])] * lysrt_t
+       - y[3:(parms["nI"]+1)] * lysrt_t)
   }
   
   ##Calculate dP
-  #dP/dt = b * I_nI * nI / tau - aSP - z * aP*sum(I)
+  #dP/dt = b * I_nI * lysrt_t - aSP - z * aP*sum(I)
   dY["P"] <- 
-    (parms["b"] * y[(parms["nI"]+1)] * parms["nI"] / parms["tau"]
+    (parms["b"] * y[(parms["nI"]+1)] * lysrt_t
      - parms["a_S1"] * y["S1"] * y["P"]
      - parms["z"] * parms["a_S1"] * y["S1"] * y["P"])
   
@@ -197,7 +204,7 @@ ode_deriv <- function(t, y, parms) {
   #dN/dt = -u_S*S*N/k + d * I_nI * nI / tau
   dY["N"] <-
     (-parms["u_S1"] * y["S1"] * y["N"]/parms["k"] +
-      parms["d"] * y[(parms["nI"]+1)] * parms["nI"] / parms["tau"])
+      parms["d"] * y[(parms["nI"]+1)] * lysrt_t)
   
   #Issue warning about too large pop (if warnings is TRUE)
   if (parms["warnings"]==1 & any(y > 10**100)) {
