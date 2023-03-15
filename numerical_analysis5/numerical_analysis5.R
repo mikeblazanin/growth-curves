@@ -198,7 +198,7 @@ ode_deriv <- function(t, y, parms) {
   dY["P"] <- 
     (parms["b"] * y[(parms["nI"]+1)] * lysrt_t
      - parms["a_S1"] * y["S1"] * y["P"]
-     - parms["z"] * parms["a_S1"] * y["S1"] * y["P"])
+     - parms["z"] * parms["a_S1"] * y["I"] * y["P"])
   
   ##Calcunate dN
   #dN/dt = -u_S*S*N/k + d * I_nI * nI / tau
