@@ -151,6 +151,67 @@ delay_deriv <- function(t, y, parms) {
   return(list(dY))
 }
 
+ode_deriv <- function(t, y, parms) {
+  #The derivs function must return a list, whose first element is 
+  # the derivative of all the variables at a given time
+  
+  #Set small/negative y values to 0 so they don't affect the dN's
+  y[y < parms["thresh_min_dens"]] <- 0
+  
+  #Calculate y["I"] = sum(y[I_i])
+  y["I"] <- sum(y[2:(parms["nI"]+1)])
+  
+  #Create output vector
+  I_n <- rep(0, parms["nI"])
+  names(I_n) <- paste("I", 1:parms["nI"], sep = "")
+  dY <- c(S = 0, I_n, P = 0, R = 0)
+  
+  ##Calculate dS
+  #dS/dt = u_S*S*N/k - aSP
+  dY["S"] <- 
+    (parms["u_S1"] * y["S1"] * y["N"]/parms["k"]
+     - parms["a_S1"] * y["S1"] * y["P"])
+  
+  ##Calculate dI
+  #dI_1/dt = aSP - I1 * nI / tau
+  dY["I1"] <- 
+    (parms["a_S1"] * y["S1"] * y["P"]
+     - y["I1"] * parms["nI"] / parms["tau"])
+  
+  #dI_i/dt = nI / tau * I_(i-1) - nI / tau * I_i
+  if(parms["nI"] > 1) {
+    #Note S pop is dY[1], so I pops are dY[2: nI+1]
+    dY[3:(parms["nI"]+1)] <- 
+      (y[2:(parms["nI"])] * parms["nI"] / parms["tau"]
+       - y[3:(parms["nI"]+1)] * parms["nI"] / parms["tau"])
+  }
+  
+  ##Calculate dP
+  #dP/dt = b * I_nI * nI / tau - aSP - z * aP*sum(I)
+  dY["P"] <- 
+    (parms["b"] * y[(parms["nI"]+1)] * parms["nI"] / parms["tau"]
+     - parms["a_S1"] * y["S1"] * y["P"]
+     - parms["z"] * parms["a_S1"] * y["S1"] * y["P"])
+  
+  ##Calcunate dN
+  #dN/dt = -u_S*S*N/k + d * I_nI * nI / tau
+  dY["N"] <-
+    (-parms["u_S1"] * y["S1"] * y["N"]/parms["k"] +
+      parms["d"] * y[(parms["nI"]+1)] * parms["nI"] / parms["tau"])
+  
+  #Issue warning about too large pop (if warnings is TRUE)
+  if (parms["warnings"]==1 & any(y > 10**100)) {
+    warning(paste("pop(s)",
+                  paste(which(y > 10**100), collapse = ","),
+                  "exceed max limit, 10^100, returning dY = 0"))
+  }
+  dY[y > 10**100] <- 0
+  
+  #From documentation: The return value of func should be a list, whose first 
+  #element is a vector containing the derivatives of y with respect to time
+  return(list(dY))
+}
+
 
 ## Simple test run ----
 if(F) {
