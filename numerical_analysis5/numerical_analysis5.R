@@ -200,7 +200,7 @@ ode_deriv <- function(t, y, parms) {
      - parms["a_S1"] * y["S1"] * y["P"]
      - parms["z"] * parms["a_S1"] * y["I"] * y["P"])
   
-  ##Calcunate dN
+  ##Calculate dN
   #dN/dt = -u_S*S*N/k + d * I_nI * nI / tau
   dY["N"] <-
     (-parms["u_S1"] * y["S1"] * y["N"]/parms["k"] +
