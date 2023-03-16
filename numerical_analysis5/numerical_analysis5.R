@@ -355,7 +355,7 @@ check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens,
   at_equil <- FALSE
   
   #Infinite loop prevention check (j = 10 is 24 hrs for init_time 100)
-  if (cntrs$j >= max_j | cntrs$k >= 15 | cntrs$j+cntrs$k >= 20) {
+  if (cntrs$j >= max_j || cntrs$k >= 15 || cntrs$j+cntrs$k >= 20) {
     keep_running <- FALSE
   }
   
@@ -390,7 +390,7 @@ check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens,
     #Any I not at equil (but S or N is because above check failed)
     } else if (any(temp[grep("I", names(temp))] >= equil_cutoff_dens)) {
       #If any I are still changing, lengthen
-      if(any((temp[grep("I", names(temp))] - temp2[grep("I", names(temp2))]) > 0)) {
+      if(any(abs(temp[grep("I", names(temp))] - temp2[grep("I", names(temp2))]) > 0)) {
         cntrs$j <- cntrs$j+1
       #If none are changing, shorten step size
       } else {
@@ -871,7 +871,7 @@ run_sims_dede(u_S1 = 0.01, u_S2 = 0,
               tau = 100, b = 50)
 
 ##Define file save/load wrapper for run_sims ----
-run_sims_filewrapper <- function(name, dir = ".",
+run_sims_filewrapper <- function(name, mydir = ".",
                                  read_file = TRUE, write_file = TRUE,
                                  type = "dede", ...) {
   #type = c('dede', 'ode')
@@ -890,17 +890,17 @@ run_sims_filewrapper <- function(name, dir = ".",
   #Check to see if results have previously been simulated & saved
   # if so, load them
   if (read_file == TRUE &
-      paste(name, "_1.csv", sep = "") %in% list.files(dir)) {
+      paste(name, "_1.csv", sep = "") %in% list.files(mydir)) {
     warning("Does not check if current param inputs are same as existing data")
     temp <- list(NULL, NULL, NULL)
-    temp[[1]] <- read.csv(paste(dir, "/", name, "_1.csv", sep = ""),
+    temp[[1]] <- read.csv(paste(mydir, "/", name, "_1.csv", sep = ""),
                           stringsAsFactors = F)
-    if (paste(name, "_2.csv", sep = "") %in% list.files(dir)) {
-      temp[[2]] <- read.csv(paste(dir, "/", name, "_2.csv", sep = ""), 
+    if (paste(name, "_2.csv", sep = "") %in% list.files(mydir)) {
+      temp[[2]] <- read.csv(paste(mydir, "/", name, "_2.csv", sep = ""), 
                             stringsAsFactors = F)
     }
-    if (paste(name, "_3.csv", sep = "") %in% list.files(dir)) {
-      temp[[3]] <- read.csv(paste(dir, "/", name, "_3.csv", sep = ""), 
+    if (paste(name, "_3.csv", sep = "") %in% list.files(mydir)) {
+      temp[[3]] <- read.csv(paste(mydir, "/", name, "_3.csv", sep = ""), 
                             stringsAsFactors = F)
     }
   } else {
@@ -931,21 +931,25 @@ run_sims_filewrapper <- function(name, dir = ".",
                    do.call(rbind, lapply(temp_list, function(x) x[[2]])),
                    do.call(rbind, lapply(temp_list, function(x) x[[3]])))
     } else {
-      temp <- run_sims(...)
+      if(type == "dede") {
+        temp <- run_sims_dede(...)
+      } else if (type == "ode") {
+        temp <- run_sims_ode(...)
+      } else {stop("type must be 'dede' or 'ode'")}
     }
     
     #Save results so they can be re-loaded in future
     if (write_file) {
       #Save results so they can be re-loaded in future
       write.csv(temp[[1]], row.names = F,
-                paste(dir, "/", name, "_1.csv", sep = ""))
+                paste(mydir, "/", name, "_1.csv", sep = ""))
       if (!is.null(temp[[2]])) {
         write.csv(temp[[2]], row.names = F,
-                  paste(dir, "/", name, "_2.csv", sep = ""))
+                  paste(mydir, "/", name, "_2.csv", sep = ""))
       }
       if (!is.null(temp[[3]])) {
         write.csv(temp[[3]], row.names = F,
-                  paste(dir, "/", name, "_3.csv", sep = ""))
+                  paste(mydir, "/", name, "_3.csv", sep = ""))
       }
     }
   }
@@ -971,21 +975,19 @@ logis_def_integral <- function(S_0, u_S, k, times) {
            logis_integral(S_0 = S_0, u_S = u_S, k = k, times = min(times)))
 }
 
+
 ## Run 1: phage traits ----
 run1 <- run_sims_filewrapper(
   name = "run1",
-  u_S1vals = signif(0.04*10**-0.35, 3),
-  kvals = 10**9,
-  a_S1vals = 10**seq(from = -12, to = -8, length.out = 5),
-  tauvals = signif(10**seq(from = 1, to = 2, length.out = 5), 3),
-  bvals = signif(5*10**seq(from = 0, to = 2, length.out = 5), 3),
-  zvals = 1,
-  fvals = 0,
-  dvals = 0,
-  v_a1vals = 1,
-  v_a2vals = 1,
-  init_S1_dens_vals = 10**6,
-  init_moi_vals = 10**-2,
+  u_S1 = signif(0.04*10**-0.35, 3), u_S2 = 0,
+  k = 10**9,
+  a_S1 = 10**seq(from = -12, to = -8, length.out = 5),
+  a_S2 = 0,
+  tau = signif(10**seq(from = 1, to = 2, length.out = 5), 3),
+  b = signif(5*10**seq(from = 0, to = 2, length.out = 5), 3),
+  z = 1,
+  init_S1 = 10**6,
+  init_moi = 10**-2,
   equil_cutoff_dens = 0.1,
   init_time = 12*60,
   max_time = 48*60,
