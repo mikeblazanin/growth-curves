@@ -381,7 +381,7 @@ check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens,
     
     #All I are at equil, and either S1 or N are at equil, we're done
     if (all(temp[grep("I", names(temp))] < equil_cutoff_dens) &&
-        temp$S1 < equil_cutoff_dens || temp$N < equil_cutoff_dens) {
+        (temp$S1 < equil_cutoff_dens || temp$N < equil_cutoff_dens)) {
       keep_running <- FALSE
       at_equil <- TRUE
     #S and N not at equil, need more time
@@ -390,7 +390,7 @@ check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens,
     #Any I not at equil (but S or N is because above check failed)
     } else if (any(temp[grep("I", names(temp))] >= equil_cutoff_dens)) {
       #If any I are still changing, lengthen
-      if(any(temp[grep("I", names(temp))] - temp2[grep("I", names(temp2))] > 0)) {
+      if(any((temp[grep("I", names(temp))] - temp2[grep("I", names(temp2))]) > 0)) {
         cntrs$j <- cntrs$j+1
       #If none are changing, shorten step size
       } else {
@@ -404,25 +404,25 @@ check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens,
 }
 
 run_sims_dede <- function(u_S1, u_S2,
-                     k,
-                     a_S1, a_S2 = NA,
-                     tau, b,
-                     z = 0,
-                     f_a = 0, f_b = 0,
-                     d = 1,
-                     h = 0, g1 = 0, g2 = 0,
-                     init_S1 = 10**6,
-                     init_S2 = 0,
-                     init_moi = 10**-2,
-                     init_N = NA,
-                     equil_cutoff_dens = 0.1,
-                     max_time = 48*60,
-                     init_time = 12*60,
-                     init_stepsize = 15,
-                     combinatorial = TRUE,
-                     dynamic_stepsize = TRUE,
-                     fixed_time = FALSE,
-                     print_info = TRUE) {
+                          k,
+                          a_S1, a_S2 = NA,
+                          tau, b,
+                          z = 0,
+                          f_a = 0, f_b = 0,
+                          d = 1,
+                          h = 0, g1 = 0, g2 = 0,
+                          init_S1 = 10**6,
+                          init_S2 = 0,
+                          init_moi = 10**-2,
+                          init_N = NA,
+                          equil_cutoff_dens = 0.1,
+                          max_time = 48*60,
+                          init_time = 12*60,
+                          init_stepsize = 15,
+                          combinatorial = TRUE,
+                          dynamic_stepsize = TRUE,
+                          fixed_time = FALSE,
+                          print_info = TRUE) {
   #Inputs: vectors of parameters to be combined factorially to make
   #         all possible combinations & run simulations with
   #       equil_cutoff_dens is threshold density to consider a population at equilibrium
@@ -479,10 +479,10 @@ run_sims_dede <- function(u_S1, u_S2,
   }
   
   #if N is NA, N = k-S-R
-  param_combos$init_N_dens[is.na(param_combos$init_N_dens)] <-
-    (param_combos$k[is.na(param_combos$init_N_dens)] -
-       param_combos$init_S1_dens[is.na(param_combos$init_N_dens)] -
-       param_combos$init_S2_dens[is.na(param_combos$init_N_dens)])
+  param_combos$init_N[is.na(param_combos$init_N)] <-
+    (param_combos$k[is.na(param_combos$init_N)] -
+       param_combos$init_S1[is.na(param_combos$init_N)] -
+       param_combos$init_S2[is.na(param_combos$init_N)])
   #if a_S2 is NA, a_S2 = a_S1
   param_combos$a_S2[is.na(param_combos$a_S2)] <-
     param_combos$a_S1[is.na(param_combos$a_S2)]
@@ -517,12 +517,12 @@ run_sims_dede <- function(u_S1, u_S2,
   
   for (i in 1:nrow(param_combos)) { #i acts as the uniq_run counter
     #Define pops & parameters
-    yinit <- c(S1 = param_combos$init_S1_dens[i],
-               S2 = param_combos$init_S2_dens[i],
+    yinit <- c(S1 = param_combos$init_S1[i],
+               S2 = param_combos$init_S2[i],
                I1 = 0,
                I2 = 0,
-               P = param_combos$init_S1_dens[i]*param_combos$init_moi[i],
-               N = param_combos$init_N_dens[i])
+               P = param_combos$init_S1[i]*param_combos$init_moi[i],
+               N = param_combos$init_N[i])
     params <- c(unlist(param_combos[i, ]),
                 warnings = 0, thresh_min_dens = 10**-100)
     
@@ -710,10 +710,10 @@ run_sims_ode <- function(u_S1,
   }
   
   #if N is NA, N = k-S-R
-  param_combos$init_N_dens[is.na(param_combos$init_N_dens)] <-
-    (param_combos$k[is.na(param_combos$init_N_dens)] -
-       param_combos$init_S1_dens[is.na(param_combos$init_N_dens)] -
-       param_combos$init_S2_dens[is.na(param_combos$init_N_dens)])
+  param_combos$init_N[is.na(param_combos$init_N)] <-
+    (param_combos$k[is.na(param_combos$init_N)] -
+       param_combos$init_S1[is.na(param_combos$init_N)] -
+       param_combos$init_S2[is.na(param_combos$init_N)])
   #if a_S2 is NA, a_S2 = a_S1
   param_combos$a_S2[is.na(param_combos$a_S2)] <-
     param_combos$a_S1[is.na(param_combos$a_S2)]
@@ -748,11 +748,11 @@ run_sims_ode <- function(u_S1,
   
   for (i in 1:nrow(param_combos)) { #i acts as the uniq_run counter
     #Define pops & parameters
-    yinit <- c(S1 = param_combos$init_S1_dens[i],
-               S2 = param_combos$init_S2_dens[i],
+    yinit <- c(S1 = param_combos$init_S1[i],
+               S2 = param_combos$init_S2[i],
                rep(0, nI),
-               P = param_combos$init_S1_dens[i]*param_combos$init_moi[i],
-               N = param_combos$init_N_dens[i])
+               P = param_combos$init_S1[i]*param_combos$init_moi[i],
+               N = param_combos$init_N[i])
     names(yinit)[3:(3+nI-1)] <- paste0("I", 1:nI)
     params <- c(unlist(param_combos[i, ]),
                 warnings = 0, thresh_min_dens = 10**-100)
@@ -864,6 +864,11 @@ run_sims_ode <- function(u_S1,
   
   return(list(ybig, y_noequil, yfail))
 }
+
+run_sims_dede(u_S1 = 0.01, u_S2 = 0,
+              k = 10**9,
+              a_S1 = 10**-10, a_S2 = NA,
+              tau = 100, b = 50)
 
 ##Define file save/load wrapper for run_sims ----
 run_sims_filewrapper <- function(name, dir = ".",
