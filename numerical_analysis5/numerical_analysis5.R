@@ -19,7 +19,7 @@ my_cols <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
 scales::show_col(my_cols)
                       
 ## Define derivatives functions ----
-delay_deriv <- function(t, y, parms) {
+deriv_dede <- function(t, y, parms) {
   #The derivs function must return the derivative of all the variables at a
   # given time, in a list
 
@@ -152,7 +152,7 @@ delay_deriv <- function(t, y, parms) {
   return(list(dY))
 }
 
-ode_deriv <- function(t, y, parms) {
+deriv_ode <- function(t, y, parms) {
   #The derivs function must return a list, whose first element is 
   # the derivative of all the variables at a given time
 
@@ -233,7 +233,7 @@ if(F) {
               h = 0, g1 = 0, g2 = 0,
               warnings = 1, thresh_min_dens = 10**-100)
   
-  test <- as.data.frame(dede(y = yinit, times = times, func = delay_deriv, 
+  test <- as.data.frame(dede(y = yinit, times = times, func = deriv_dede, 
                                         parms = params))
   test$S <- test$S1 + test$S2
   test$I <- test$I1 + test$I2
@@ -264,7 +264,7 @@ if(F) {
               nI = 4,
               warnings = 1, thresh_min_dens = 10**-100)
   
-  test <- as.data.frame(ode(y = yinit, times = times, func = ode_deriv, 
+  test <- as.data.frame(ode(y = yinit, times = times, func = deriv_ode, 
                              parms = params))
   test$I <- test$I1 + test$I2 + test$I3 + test$I4
   test$B <- test$S1 + test$I
@@ -297,7 +297,7 @@ if(F) {
               nI = 50,
               warnings = 1, thresh_min_dens = 10**-100)
   
-  test <- as.data.frame(ode(y = yinit, times = times, func = ode_deriv, 
+  test <- as.data.frame(ode(y = yinit, times = times, func = deriv_ode, 
                             parms = params))
   test$I <- rowSums(test[, grep("I", colnames(test))])
   test$B <- test$S1 + test$I
@@ -406,27 +406,22 @@ check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens,
   return(list(keep_running = keep_running, at_equil = at_equil, cntrs = cntrs))
 }
 
-run_sims <- function(u_S1vals,
-                     kvals,
-                     a_S1vals,
-                     a_S2vals = NA,
-                     tauvals,
-                     bvals,
-                     zvals = 0,
-                     fvals = 0,
-                     dvals = 1,
-                     v_a1vals = 1,
-                     v_a2vals = 1,
-                     gvals = 0,
-                     hvals = 0,
-                     init_S1_dens_vals = 10**6,
-                     init_S2_dens_vals = 0,
-                     init_moi_vals = 10**-2,
-                     init_N_dens_vals = NA,
+run_sims_dede <- function(u_S1, u_S2,
+                     k,
+                     a_S1, a_S2 = NA,
+                     tau, b,
+                     z = 0,
+                     f_a = 0, f_b = 0,
+                     d = 1,
+                     h = 0, g1 = 0, g2 = 0,
+                     init_S1 = 10**6,
+                     init_S2 = 0,
+                     init_moi = 10**-2,
+                     init_N = NA,
                      equil_cutoff_dens = 0.1,
                      max_time = 48*60,
-                     init_time = 100,
-                     init_stepsize = 1,
+                     init_time = 12*60,
+                     init_stepsize = 15,
                      combinatorial = TRUE,
                      dynamic_stepsize = TRUE,
                      fixed_time = FALSE,
@@ -450,6 +445,243 @@ run_sims <- function(u_S1vals,
   #   3. a dataframe (AKA yfail) with the parameters for runs that failed
   #       to successfully complete
 
+  if(fixed_time == TRUE & dynamic_stepsize == TRUE) {
+    warning("fixed_time == TRUE overrides dynamic_stepsize == TRUE")
+  }
+  
+  #placeholder for when derivs changes, currently S1 S2 I1 I2 P N S I B PI
+  num_pops <- 10 
+  
+  if(init_time %% init_stepsize != 0) {
+    warning("init_time is not divisible by init_stepsize, this has not been tested")
+  }
+  
+  #Save parameter values provided into dataframe
+  # taking all different combinations
+  sim_vars <- as.list(environment())
+  sim_vars <- sim_vars[names(sim_vars) %in%
+                         c("u_S1", "u_S2", "k", "a_S1", "a_S2",
+                           "tau", "b", "z", "f_a", "f_b", "d",
+                           "h", "g1", "g2",
+                           "init_S1", "init_S2", "init_moi", "init_N")]
+  
+  if (combinatorial) {
+    param_combos <- expand.grid(sim_vars, stringsAsFactors = FALSE)
+    num_sims <- nrow(param_combos)
+  } else { #not combinatorial
+    num_sims <- max(sapply(X = sim_vars, FUN = length))
+    
+    #Check for parameter lengths being non-divisible with num_sims
+    if (!all(num_sims %% sapply(X = sim_vars, FUN = length) == 0)) {
+      warning("Combinatorial=TRUE but longest param vals length is not a multiple of all other param vals lengths")
+    }
+    
+    #Save parameters into dataframe, replicating as needed
+    param_combos <- sapply(X = sim_vars,
+                           FUN = function(x) {rep_len(x, num_sims)})
+  }
+  
+  #if N is NA, N = k-S-R
+  param_combos$init_N_dens[is.na(param_combos$init_N_dens)] <-
+    (param_combos$k[is.na(param_combos$init_N_dens)] -
+       param_combos$init_S1_dens[is.na(param_combos$init_N_dens)] -
+       param_combos$init_S2_dens[is.na(param_combos$init_N_dens)])
+  #if a_S2 is NA, a_S2 = a_S1
+  param_combos$a_S2[is.na(param_combos$a_S2)] <-
+    param_combos$a_S1[is.na(param_combos$a_S2)]
+  
+  #Print number of simulations that will be run
+  if(print_info) {
+    print(paste(num_sims, "simulations will be run"))
+    
+    #Save sequence of 10% cutoff points for later reference
+    progress_seq <- round(seq(from = 0, to = num_sims, by = num_sims/10))
+  }
+  
+  #Make placeholders
+  yfail <- NULL #for runs that fail
+  #for runs that succeed, pre-allocate ybig now to save on memory/speed
+  ybig <- 
+    data.frame(matrix(as.numeric(NA),
+                      nrow = num_pops*(1+init_time/init_stepsize)*num_sims,
+                      #(adding cols for uniq_run, equil, time, Pop, Density)
+                      ncol = 1+length(sim_vars)+4),
+               stringsAsFactors = FALSE)
+  colnames(ybig) <- c("uniq_run", names(sim_vars),
+                      "equil", "time", "Pop", "Density")
+  ybig$Pop <- as.character(ybig$Pop)
+  
+  #Define counters
+  cntrs <- list(
+    "start_row" = 1, #row where next sim should start being saved
+    #number of rows this sim is (constant when dynamic_stepsize = FALSE)
+    "this_run_nrows" = num_pops*(1+init_time/init_stepsize),
+    "still_needed_toadd" = 0) #num rows needed to add. Minimized redefining ybig
+  
+  for (i in 1:nrow(param_combos)) { #i acts as the uniq_run counter
+    #Define pops & parameters
+    yinit <- c(S1 = param_combos$init_S1_dens[i],
+               S2 = param_combos$init_S2_dens[i],
+               I1 = 0,
+               I2 = 0,
+               P = param_combos$init_S1_dens[i]*param_combos$init_moi[i],
+               N = param_combos$init_N_dens[i])
+    params <- c(unlist(param_combos[i, ]),
+                warnings = 0, thresh_min_dens = 10**-100)
+    
+    #Counters
+    cntrs["I_only_cntr"] <- 0 #num times S or N at equil but I is not
+    cntrs["j"] <- 0 #length counter (larger is longer times)
+    cntrs["k"] <- 0 #step size counter (larger is smaller steps)
+    cntrs["cntrl_mxhist"] <- 10**4
+    
+    #Keep running until meets some quit criteria
+    while(TRUE) {
+      #Define times
+      if (dynamic_stepsize) { #double for ea j so length(times) is constant
+        times <- seq(0, init_time*2**cntrs$j, init_stepsize*2**cntrs$j)
+      } else { #keep stepsize at init_stepsize
+        times <- seq(0, init_time*2**cntrs$j, init_stepsize)
+      }
+      
+      #Calculate hmax (max step size integrator uses)
+      if (dynamic_stepsize) {hmax_val <- init_stepsize*2**(cntrs$j-cntrs$k) #halved for ea k
+      } else {hmax_val <- min(init_stepsize*2**(cntrs$j-cntrs$k), init_stepsize)}
+      
+      #Run simulation
+      yout_list <- myTryCatch(expr = {
+        as.data.frame(dede(y = yinit, times = times, func = deriv_dede, 
+                           parms = params, hmax = hmax_val,
+                           control = list(mxhist = cntrs["cntrl_mxhist"])))
+      })
+      
+      #Check for equil
+      checks <- check_equil(yout_list = yout_list, cntrs = cntrs, 
+                            fixed_time = fixed_time, 
+                            equil_cutoff_dens = equil_cutoff_dens,
+                            max_j = ceiling(log2(max_time/init_time)))
+      if(checks$keep_running == FALSE) {break
+      } else {cntrs <- checks$cntrs}
+    }
+    
+    #Once end conditions triggered, if run succeeded (or warning-d)
+    if(!is.null(yout_list$value)) {
+      #Calculate S
+      yout_list$value$S <- yout_list$value$S1 + yout_list$value$S2
+      #Calculate I
+      yout_list$value$I <- yout_list$value$I1 + yout_list$value$I2
+      #Calculate all bacteria (B)
+      yout_list$value$B <- yout_list$value$S + yout_list$value$I
+      #Calculate all phage (PI)
+      yout_list$value$PI <- yout_list$value$P + yout_list$value$I
+      
+      if (!dynamic_stepsize) {
+        cntrs$this_run_nrows <- num_pops*nrow(yout_list$value)
+        cntrs$still_needed_toadd <- 
+          cntrs$still_needed_toadd + 
+          (cntrs$this_run_nrows - num_pops*(1+init_time/init_stepsize))
+        
+        #Add rows if we don't have enough room to save this simulation
+        if((cntrs$start_row+cntrs$this_run_nrows-1)>nrow(ybig)) {
+          ybig[(nrow(ybig)+1):(nrow(ybig)+cntrs$still_needed_toadd), ] <-
+            rep(list(rep(NA, cntrs$still_needed_toadd)), ncol(ybig))
+          
+          cntrs$still_needed_toadd <- 0
+        }
+      }
+      
+      #Reshape, add parameters, and fill into ybig in right rows
+      myrows <- cntrs$start_row : (cntrs$start_row + cntrs$this_run_nrows - 1)
+      ybig[myrows, ] <-
+        cbind(uniq_run = i,
+              param_combos[i, ],
+              equil = checks$at_equil,
+              data.table::melt(data = data.table::as.data.table(yout_list$value), 
+                               id.vars = c("time"),
+                               value.name = "Density", 
+                               variable.name = "Pop",
+                               variable.factor = FALSE),
+              row.names = myrows)
+      #If the run failed
+    } else if (!is.null(yout_list$error)) {
+      temp <- cbind(uniq_run = i, param_combos[i, ], equil = checks$at_equil)
+      if (is.null(yfail)) {yfail <- temp
+      } else {yfail <- rbind(yfail, temp)}
+    } else {stop("tryCatch failed during saving, neither success nor warning nor error detected")}
+    
+    #Update cumulative offset (for non-dynamic stepsize runs)
+    cntrs$start_row <- cntrs$start_row + cntrs$this_run_nrows
+    
+    #Print progress update
+    if (print_info & i %in% progress_seq) {
+      print(paste((which(progress_seq == i)-1)*10,
+                  "% completed", sep = ""))
+    }
+  }
+  
+  #Pull out all the runs that didn't reach equilibrium (just the params)
+  y_noequil <- NULL
+  for (run in unique(ybig$uniq_run[which(!ybig$equil)])) {
+    if (is.null(y_noequil)) {
+      y_noequil <- ybig[min(which(ybig$uniq_run == run)), 1:21]
+    } else {
+      y_noequil <- rbind(y_noequil, ybig[min(which(ybig$uniq_run == run)), 1:21])
+    }
+  }
+  
+  print(paste(nrow(param_combos), " sims run, ",
+              length(unique(ybig$uniq_run)), " succeeded (",
+              length(unique(y_noequil$uniq_run)), " did not equil), ",
+              length(unique(yfail$uniq_run)), " failed",
+              sep = ""))
+  
+  return(list(ybig, y_noequil, yfail))
+}
+
+run_sims_ode <- function(u_S1vals,
+                          kvals,
+                          a_S1vals,
+                          a_S2vals = NA,
+                          tauvals,
+                          bvals,
+                          zvals = 0,
+                          fvals = 0,
+                          dvals = 1,
+                          v_a1vals = 1,
+                          v_a2vals = 1,
+                          gvals = 0,
+                          hvals = 0,
+                          init_S1_dens_vals = 10**6,
+                          init_S2_dens_vals = 0,
+                          init_moi_vals = 10**-2,
+                          init_N_dens_vals = NA,
+                          equil_cutoff_dens = 0.1,
+                          max_time = 48*60,
+                          init_time = 100,
+                          init_stepsize = 1,
+                          combinatorial = TRUE,
+                          dynamic_stepsize = TRUE,
+                          fixed_time = FALSE,
+                          print_info = TRUE) {
+  #Inputs: vectors of parameters to be combined factorially to make
+  #         all possible combinations & run simulations with
+  #       equil_cutoff_dens is threshold density to consider a population at equilibrium
+  #       init_time is the length of simulation that will first be tried
+  #         (and subsequently lengthened as necessary to find equilibrium)
+  #       init_stepsize is the length of stepsize that will first be tried
+  #         (step sizes scale as simulation legnth increases so that the 
+  #         number of timepoints returned for each simulation is constant)
+  #       print_info will print about the simulations (e.g. how many will be run)
+  #
+  #Output: a list with three entries
+  #   1. a dataframe (AKA ybig) with all parameters and densities of each pop 
+  #       at each timepoint (melted), along with a boolean for whether it'd 
+  #       reached equilibrium
+  #   2. a dataframe (AKA y_noequil) with just the parameters for runs where
+  #       at least one pop didn't reach equilibrium
+  #   3. a dataframe (AKA yfail) with the parameters for runs that failed
+  #       to successfully complete
+  
   if(fixed_time == TRUE & dynamic_stepsize == TRUE) {
     warning("fixed_time == TRUE overrides dynamic_stepsize == TRUE")
   }
@@ -560,7 +792,7 @@ run_sims <- function(u_S1vals,
       
       #Run simulation
       yout_list <- myTryCatch(expr = {
-        as.data.frame(dede(y = yinit, times = times, func = derivs, 
+        as.data.frame(dede(y = yinit, times = times, func = deriv_ode, 
                            parms = params, hmax = hmax_val,
                            control = list(mxhist = cntrs["cntrl_mxhist"])))
       })
