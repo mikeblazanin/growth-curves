@@ -22,7 +22,7 @@ scales::show_col(my_cols)
 delay_deriv <- function(t, y, parms) {
   #The derivs function must return the derivative of all the variables at a
   # given time, in a list
-  
+
   #Set small/negative y values to 0 so they don't affect the dN's
   y[y < parms["thresh_min_dens"]] <- 0
   if (t >= parms["tau"]) {
@@ -55,7 +55,8 @@ delay_deriv <- function(t, y, parms) {
   
   #Transitions into resistance could increase with growth rate, decrease with
   # growth rate, or be constant
-  #To control  these three options, we have two flags: g1 and g2
+  #To control  these three options, we have three flags: h, g1 and g2
+  # h controls the rate
   # g1 controls if it's constant (g1 = 0) or variable (g1 = 1) with growth
   # g2 controls if it increases (g2 = 1) or decreases (g2 = -1) with growth
   #h*u_S1*S1*(1 - g1 + g1(g2 * (N/k - 1/2) + 1/2))
@@ -154,17 +155,13 @@ delay_deriv <- function(t, y, parms) {
 ode_deriv <- function(t, y, parms) {
   #The derivs function must return a list, whose first element is 
   # the derivative of all the variables at a given time
-  
+
   #Set small/negative y values to 0 so they don't affect the dN's
   y[y < parms["thresh_min_dens"]] <- 0
   
-  #Calculate y["I"] = sum(y[I_i])
-  y["I"] <- sum(y[2:(parms["nI"]+1)])
-  
   #Create output vector
-  I_n <- rep(0, parms["nI"])
-  names(I_n) <- paste("I", 1:parms["nI"], sep = "")
-  dY <- c(S = 0, I_n, P = 0, R = 0)
+  dY <- rep(0, length(y))
+  names(dY) <- names(y)
   
   #Calculate increased lysis time depending on nutrients
   # (technically it's the ode rate equivalent of the lysis time)
@@ -175,7 +172,7 @@ ode_deriv <- function(t, y, parms) {
   
   ##Calculate dS
   #dS/dt = u_S*S*N/k - aSP
-  dY["S"] <- 
+  dY["S1"] <- 
     (parms["u_S1"] * y["S1"] * y["N"]/parms["k"]
      - parms["a_S1"] * y["S1"] * y["P"])
   
@@ -198,7 +195,7 @@ ode_deriv <- function(t, y, parms) {
   dY["P"] <- 
     (parms["b"] * y[(parms["nI"]+1)] * lysrt_t
      - parms["a_S1"] * y["S1"] * y["P"]
-     - parms["z"] * parms["a_S1"] * y["I"] * y["P"])
+     - parms["z"] * parms["a_S1"] * y["P"] * sum(y[2:(parms["nI"]+1)]))
   
   ##Calculate dN
   #dN/dt = -u_S*S*N/k + d * I_nI * nI / tau
@@ -222,24 +219,22 @@ ode_deriv <- function(t, y, parms) {
 
 ## Simple test run ----
 if(F) {
-  times <- seq(from = 0, to = 1000, by = 1)
+  #delay differential
+  times <- seq(from = 0, to = 48*60, by = 15)
   yinit <- c("S1" = 10**6, "S2" = 0, "I1" = 0, "I2" = 0, 
              "P" = 10**4, "N" = (10**9 - 10**6))
-  params <- c(u_S1 = 0.0179,
+  params <- c(u_S1 = 0.0179, u_S2 = 0,
               k = 10**9,
-              a_S1 = 10**-8,
-              a_S2 = 0,
-              tau = 100,
-              b = 50,
+              a_S1 = 10**-8, a_S2 = 0,
+              tau = 100, b = 50,
               z = 1,
-              f = 0,
+              f_a = 0, f_b = 0,
               d = 0,
-              v_a1 = 1, v_a2 = 1,
-              g = 0, h = 0,
+              h = 0, g1 = 0, g2 = 0,
               warnings = 1, thresh_min_dens = 10**-100)
   
-  test <- myTryCatch(as.data.frame(dede(y = yinit, times = times, func = derivs, 
-                                        parms = params, hmax = 0.01)))
+  test <- as.data.frame(dede(y = yinit, times = times, func = delay_deriv, 
+                                        parms = params))
   test$S <- test$S1 + test$S2
   test$I <- test$I1 + test$I2
   test$B <- test$S + test$I
@@ -248,7 +243,70 @@ if(F) {
        exp(-params[["u_S1"]]*test$time))
   test2 <- tidyr::pivot_longer(test, cols = -c(time), 
                                names_to = "Pop", values_to = "Density")
-  ggplot(data = filter(test2, Pop %in% c("S1", "S2", "I1", "I2", "P", "N")), 
+  ggplot(data = filter(test2, Pop %in% c("S1", "S2", "I1", "I2", "P")), 
+         aes(x = time, y = Density, color = Pop)) +
+    geom_line() + scale_y_continuous(trans = "log10", limits = c(1, NA)) +
+    #geom_line(data = filter(test2, Pop == "pred"), lty = 2, color = "black") +
+    NULL
+  
+  #ode differential
+  times <- seq(from = 0, to = 48*60, by = 15)
+  yinit <- c("S1" = 10**6, "I1" = 0, "I2" = 0, "I3" = 0, "I4" = 0, 
+             "P" = 10**4, "N" = (10**9 - 10**6))
+  params <- c(u_S1 = 0.0179,
+              k = 10**9,
+              a_S1 = 10**-8,
+              tau = 100,
+              b = 50,
+              z = 1,
+              f_tau = 0,
+              d = 0,
+              nI = 4,
+              warnings = 1, thresh_min_dens = 10**-100)
+  
+  test <- as.data.frame(ode(y = yinit, times = times, func = ode_deriv, 
+                             parms = params))
+  test$I <- test$I1 + test$I2 + test$I3 + test$I4
+  test$B <- test$S1 + test$I
+  test$pred <- params[["k"]]/
+    (1+((params[["k"]] - yinit[["S1"]])/yinit[["S1"]])*
+       exp(-params[["u_S1"]]*test$time))
+  test2 <- tidyr::pivot_longer(test, cols = -c(time), 
+                               names_to = "Pop", values_to = "Density")
+  ggplot(data = filter(test2, Pop %in% c("S1", "I1", "I2", "I3", "I4", "P", "N")), 
+         aes(x = time, y = Density, color = Pop)) +
+    geom_line() + scale_y_continuous(trans = "log10", limits = c(1, NA)) +
+    #geom_line(data = filter(test2, Pop == "pred"), lty = 2, color = "black") +
+    NULL
+  
+  #ode w/ nI = 50
+  times <- seq(from = 0, to = 48*60, by = 15)
+  yinit <- rep(0, 53)
+  names(yinit) <- c("S1", paste0("I", 1:50), "P", "N")
+  yinit["S1"] <- 10**6
+  yinit["P"] <- 10**4
+  yinit["N"] <- 10**9 - 10**6
+  params <- c(u_S1 = 0.0179,
+              k = 10**9,
+              a_S1 = 10**-8,
+              tau = 100,
+              b = 50,
+              z = 1,
+              f_tau = 0,
+              d = 0,
+              nI = 50,
+              warnings = 1, thresh_min_dens = 10**-100)
+  
+  test <- as.data.frame(ode(y = yinit, times = times, func = ode_deriv, 
+                            parms = params))
+  test$I <- rowSums(test[, grep("I", colnames(test))])
+  test$B <- test$S1 + test$I
+  test$pred <- params[["k"]]/
+    (1+((params[["k"]] - yinit[["S1"]])/yinit[["S1"]])*
+       exp(-params[["u_S1"]]*test$time))
+  test2 <- tidyr::pivot_longer(test, cols = -c(time), 
+                               names_to = "Pop", values_to = "Density")
+  ggplot(data = filter(test2, Pop %in% c("S1", "I", "P", "N")), 
          aes(x = time, y = Density, color = Pop)) +
     geom_line() + scale_y_continuous(trans = "log10", limits = c(1, NA)) +
     #geom_line(data = filter(test2, Pop == "pred"), lty = 2, color = "black") +
@@ -256,6 +314,25 @@ if(F) {
 }
 
 ## Define function for running simulations across many parameter values ----
+
+##Save a tryCatch function for later use
+##  I didn't write this, see: https://stackoverflow.com/a/24569739/14805829
+##  notably, returns list with $value $warning and $error
+##  successful will have NULL $warning and $error
+##  warning will have NULL $error (and value in $value)
+##  error will have NULL $value and $warning
+myTryCatch <- function(expr) {
+  warn <- err <- NULL
+  value <- withCallingHandlers(
+    tryCatch(expr, error=function(e) {
+      err <<- e
+      NULL
+    }), warning=function(w) {
+      warn <<- w
+      invokeRestart("muffleWarning")
+    })
+  list(value=value, warning=warn, error=err)
+}
 
 #sub-function for checking for equilibrium
 check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens,
@@ -372,26 +449,7 @@ run_sims <- function(u_S1vals,
   #       at least one pop didn't reach equilibrium
   #   3. a dataframe (AKA yfail) with the parameters for runs that failed
   #       to successfully complete
-  
-  ##Save a tryCatch function for later use
-  ##  I didn't write this, see: https://stackoverflow.com/a/24569739/14805829
-  ##  notably, returns list with $value $warning and $error
-  ##  successful will have NULL $warning and $error
-  ##  warning will have NULL $error (and value in $value)
-  ##  error will have NULL $value and $warning
-  myTryCatch <- function(expr) {
-    warn <- err <- NULL
-    value <- withCallingHandlers(
-      tryCatch(expr, error=function(e) {
-        err <<- e
-        NULL
-      }), warning=function(w) {
-        warn <<- w
-        invokeRestart("muffleWarning")
-      })
-    list(value=value, warning=warn, error=err)
-  }
-  
+
   if(fixed_time == TRUE & dynamic_stepsize == TRUE) {
     warning("fixed_time == TRUE overrides dynamic_stepsize == TRUE")
   }
