@@ -374,34 +374,31 @@ check_equil <- function(yout_list, cntrs, fixed_time, equil_cutoff_dens,
     yout_list$value <- 
       yout_list$value[apply(X = yout_list$value, MARGIN = 1,
                             FUN = function(x) {all(!is.nan(x))}), ]
+    #keep the last row
+    temp <- yout_list$value[nrow(yout_list$value), ]
+    #keep the second-to-last row
+    temp2 <- yout_list$value[(nrow(yout_list$value)-1), ]
     
-    #I1 and I2 at equil, and either S1 or N are at equil, we're done
-    if (yout_list$value$I1[nrow(yout_list$value)] < equil_cutoff_dens &
-        yout_list$value$I2[nrow(yout_list$value)] < equil_cutoff_dens &
-        (yout_list$value$S1[nrow(yout_list$value)] < equil_cutoff_dens |
-         yout_list$value$N[nrow(yout_list$value)] < equil_cutoff_dens)) {
+    #All I are at equil, and either S1 or N are at equil, we're done
+    if (all(temp[grep("I", names(temp))] < equil_cutoff_dens) &&
+        temp$S1 < equil_cutoff_dens || temp$N < equil_cutoff_dens) {
       keep_running <- FALSE
       at_equil <- TRUE
-      #S and N not at equil, need more time
-    } else if (yout_list$value$S1[nrow(yout_list$value)] >= equil_cutoff_dens &
-               yout_list$value$N[nrow(yout_list$value)] >= equil_cutoff_dens) {
+    #S and N not at equil, need more time
+    } else if (temp$S1 >= equil_cutoff_dens && temp$N >= equil_cutoff_dens) {
       cntrs$j <- cntrs$j + 1
-      #I1 or I2 not at equil (but S or N is because above check failed)
-    } else if (yout_list$value$I1[nrow(yout_list$value)] >= equil_cutoff_dens |
-               yout_list$value$I2[nrow(yout_list$value)] >= equil_cutoff_dens) {
-      #If I1 or I2 are still changing, lengthen
-      if(abs(yout_list$value$I1[nrow(yout_list$value)] - 
-             yout_list$value$I1[nrow(yout_list$value)-1]) > 0 |
-         abs(yout_list$value$I2[nrow(yout_list$value)] - 
-             yout_list$value$I2[nrow(yout_list$value)-1]) > 0) {
+    #Any I not at equil (but S or N is because above check failed)
+    } else if (any(temp[grep("I", names(temp))] >= equil_cutoff_dens)) {
+      #If any I are still changing, lengthen
+      if(any(temp[grep("I", names(temp))] - temp2[grep("I", names(temp2))] > 0)) {
         cntrs$j <- cntrs$j+1
-        #If neither are changing, shorten step size
+      #If none are changing, shorten step size
       } else {
         cntrs$I_only_cntr <- cntrs$I_only_cntr+1
         cntrs$k <- cntrs$k+1
       }
     } else {stop("check_equil found an unexpected case")}
-  } else {stop("tryCatch failed, niether success, warning, nor error detected")}
+  } else {stop("tryCatch failed, neither success, warning, nor error detected")}
   
   return(list(keep_running = keep_running, at_equil = at_equil, cntrs = cntrs))
 }
@@ -638,31 +635,26 @@ run_sims_dede <- function(u_S1, u_S2,
   return(list(ybig, y_noequil, yfail))
 }
 
-run_sims_ode <- function(u_S1vals,
-                          kvals,
-                          a_S1vals,
-                          a_S2vals = NA,
-                          tauvals,
-                          bvals,
-                          zvals = 0,
-                          fvals = 0,
-                          dvals = 1,
-                          v_a1vals = 1,
-                          v_a2vals = 1,
-                          gvals = 0,
-                          hvals = 0,
-                          init_S1_dens_vals = 10**6,
-                          init_S2_dens_vals = 0,
-                          init_moi_vals = 10**-2,
-                          init_N_dens_vals = NA,
-                          equil_cutoff_dens = 0.1,
-                          max_time = 48*60,
-                          init_time = 100,
-                          init_stepsize = 1,
-                          combinatorial = TRUE,
-                          dynamic_stepsize = TRUE,
-                          fixed_time = FALSE,
-                          print_info = TRUE) {
+run_sims_ode <- function(u_S1,
+                         k,
+                         a_S1,
+                         tau, b,
+                         z = 0,
+                         f_tau = 0,
+                         d = 1,
+                         nI = 1,
+                         init_S1 = 10**6,
+                         init_S2 = 0,
+                         init_moi = 10**-2,
+                         init_N = NA,
+                         equil_cutoff_dens = 0.1,
+                         max_time = 48*60,
+                         init_time = 12*60,
+                         init_stepsize = 15,
+                         combinatorial = TRUE,
+                         dynamic_stepsize = TRUE,
+                         fixed_time = FALSE,
+                         print_info = TRUE) {
   #Inputs: vectors of parameters to be combined factorially to make
   #         all possible combinations & run simulations with
   #       equil_cutoff_dens is threshold density to consider a population at equilibrium
@@ -686,8 +678,8 @@ run_sims_ode <- function(u_S1vals,
     warning("fixed_time == TRUE overrides dynamic_stepsize == TRUE")
   }
   
-  #placeholder for when derivs changes, currently S1 S2 I1 I2 P N S I B PI
-  num_pops <- 10 
+  #placeholder for when derivs changes, currently S1 I1 ... In P N I B PI
+  num_pops <- 6 + nI
   
   if(init_time %% init_stepsize != 0) {
     warning("init_time is not divisible by init_stepsize, this has not been tested")
@@ -695,17 +687,11 @@ run_sims_ode <- function(u_S1vals,
   
   #Save parameter values provided into dataframe
   # taking all different combinations
-  sim_vars <- list("u_S1" = u_S1vals, "k" = kvals,
-                   "a_S1" = a_S1vals, "a_S2" = a_S2vals,
-                   "tau" = tauvals, "b" = bvals,
-                   "z" = zvals,
-                   "f" = fvals, "d" = dvals,
-                   "v_a1" = v_a1vals, "v_a2" = v_a2vals,
-                   "g" = gvals, "h" = hvals,
-                   "init_S1_dens" = init_S1_dens_vals, 
-                   "init_S2_dens" = init_S2_dens_vals,
-                   "init_moi" = init_moi_vals,
-                   "init_N_dens" = init_N_dens_vals)
+  sim_vars <- as.list(environment())
+  sim_vars <- sim_vars[names(sim_vars) %in%
+                         c("u_S1", "k", "a_S1",
+                           "tau", "b", "z", "f_tau", "d", "nI",
+                           "init_S1", "init_S2", "init_moi", "init_N")]
   
   if (combinatorial) {
     param_combos <- expand.grid(sim_vars, stringsAsFactors = FALSE)
@@ -728,7 +714,7 @@ run_sims_ode <- function(u_S1vals,
     (param_combos$k[is.na(param_combos$init_N_dens)] -
        param_combos$init_S1_dens[is.na(param_combos$init_N_dens)] -
        param_combos$init_S2_dens[is.na(param_combos$init_N_dens)])
-  #if a_S2 is na, a_S2 = a_S1
+  #if a_S2 is NA, a_S2 = a_S1
   param_combos$a_S2[is.na(param_combos$a_S2)] <-
     param_combos$a_S1[is.na(param_combos$a_S2)]
   
@@ -764,10 +750,10 @@ run_sims_ode <- function(u_S1vals,
     #Define pops & parameters
     yinit <- c(S1 = param_combos$init_S1_dens[i],
                S2 = param_combos$init_S2_dens[i],
-               I1 = 0,
-               I2 = 0,
+               rep(0, nI),
                P = param_combos$init_S1_dens[i]*param_combos$init_moi[i],
                N = param_combos$init_N_dens[i])
+    names(yinit)[3:(3+nI-1)] <- paste0("I", 1:nI)
     params <- c(unlist(param_combos[i, ]),
                 warnings = 0, thresh_min_dens = 10**-100)
     
@@ -792,7 +778,7 @@ run_sims_ode <- function(u_S1vals,
       
       #Run simulation
       yout_list <- myTryCatch(expr = {
-        as.data.frame(dede(y = yinit, times = times, func = deriv_ode, 
+        as.data.frame(ode(y = yinit, times = times, func = deriv_dede, 
                            parms = params, hmax = hmax_val,
                            control = list(mxhist = cntrs["cntrl_mxhist"])))
       })
@@ -808,12 +794,11 @@ run_sims_ode <- function(u_S1vals,
     
     #Once end conditions triggered, if run succeeded (or warning-d)
     if(!is.null(yout_list$value)) {
-      #Calculate S
-      yout_list$value$S <- yout_list$value$S1 + yout_list$value$S2
       #Calculate I
-      yout_list$value$I <- yout_list$value$I1 + yout_list$value$I2
+      yout_list$value$I <- 
+        rowSums(yout_list$value[, grep("I", colnames(yout_list$value))])
       #Calculate all bacteria (B)
-      yout_list$value$B <- yout_list$value$S + yout_list$value$I
+      yout_list$value$B <- yout_list$value$S1 + yout_list$value$I
       #Calculate all phage (PI)
       yout_list$value$PI <- yout_list$value$P + yout_list$value$I
       
