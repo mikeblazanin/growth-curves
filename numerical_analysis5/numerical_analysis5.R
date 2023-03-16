@@ -996,12 +996,15 @@ run1 <- run_sims_filewrapper(
 
 ybig1 <- run1[[1]]
 
+#Set below 0 values to 0
+ybig1 <- mutate(ybig1,
+                Density = ifelse(Density < 0, 0, Density))
+
 ysum1 <- full_join(
   summarize(group_by(filter(ybig1, Pop == "B"),
-                     uniq_run, u_S1, k, a_S1, a_S2,
-                     tau, b, z, f, d, v_a1, v_a2, g, h,
-                     init_S1_dens, init_S2_dens,
-                     init_moi, init_N_dens),
+                     uniq_run, u_S1, u_S2, k, a_S1, a_S2,
+                     tau, b, z, f_a, f_b, d, h, g1, g2,
+                     init_S1, init_S2, init_moi, init_N, equil),
             peak_dens = max(Density),
             peak_time = time[which.max(Density)],
             auc = auc(x = time, y = Density),
@@ -1010,17 +1013,16 @@ ysum1 <- full_join(
                           threshold = 10**4, return = "x"),
             run_time = max(time)),
   summarize(group_by(filter(ybig1, Pop == "P"),
-                     uniq_run, u_S1, k, a_S1, a_S2,
-                     tau, b, z, f, d, v_a1, v_a2, g, h,
-                     init_S1_dens, init_S2_dens,
-                     init_moi, init_N_dens),
+                     uniq_run, u_S1, u_S2, k, a_S1, a_S2,
+                     tau, b, z, f_a, f_b, d, h, g1, g2,
+                     init_S1, init_S2, init_moi, init_N, equil),
             phage_final = Density[which.max(time)]))
 ysum1 <- mutate(
   ysum1,
   extin_flag = ifelse(is.na(extin_time_4), "noextin",
                       ifelse(peak_dens >= 0.9*k, "neark", "none")),
   extin_time_4 = ifelse(is.na(extin_time_4), run_time, extin_time_4),
-  phage_r = (log(phage_final)-log(init_moi*(init_S1_dens+init_S2_dens)))/
+  phage_r = (log(phage_final)-log(init_moi*(init_S1+init_S2)))/
     extin_time_4)
 
 
@@ -1302,3 +1304,4 @@ if (glob_make_statplots) {
       NULL)
   dev.off()
 }
+
