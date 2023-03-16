@@ -1305,3 +1305,45 @@ if (glob_make_statplots) {
   dev.off()
 }
 
+## Run 2: bact traits ----
+run2 <- run_sims_filewrapper(
+  name = "run2",
+  u_S1 = signif(0.04*10**seq(from = 0, to = -0.7, length.out = 5), 3),
+  k = signif(10**c(8, 8.5, 9, 9.5, 10), 3),
+  a_S1 = 10**seq(from = -12, to = -8, length.out = 5),
+  tau = signif(10**1.5, 3),
+  b = 50,
+  z = 1,
+  f = 0,
+  d = 0,
+  init_S1_dens = 10**6,
+  init_moi = 10**-2,
+  equil_cutoff_dens = 0.1,
+  init_time = 12*60,
+  max_time = 48*60,
+  init_stepsize = 5,
+  print_info = TRUE, read_file = glob_read_files)
+
+ybig2 <- run2[[1]]
+
+ggplot(data = filter(ybig2, uniq_run %in% run2[[2]]$uniq_run,
+                     Pop %in% c("S", "I", "P", "N")),
+       aes(x = time/60, y = Density, color = Pop)) +
+  geom_line() + scale_y_continuous(trans = "log10", limits = c(1, NA)) +
+  facet_wrap(~uniq_run)
+
+## Run 3: plasticity in a ----
+
+
+## Run 4: plasticity in b ----
+
+
+## Run 5: plasticity in tau ----
+
+
+## Run 6: transitions to resistant subpop ----
+
+
+## Run 7: test of metrics across dift bact ----
+
+
