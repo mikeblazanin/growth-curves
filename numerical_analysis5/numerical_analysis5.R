@@ -873,7 +873,9 @@ run_sims_dede(u_S1 = 0.01, u_S2 = 0,
 ##Define file save/load wrapper for run_sims ----
 run_sims_filewrapper <- function(name, dir = ".",
                                  read_file = TRUE, write_file = TRUE,
-                                 ...) {
+                                 type = "dede", ...) {
+  #type = c('dede', 'ode')
+  
   #Note: ... can be all the arguments to pass to run sims
   #          or it can be multiple lists, each containing the named arguments
   #          to pass to run sims. In the latter case, each list will be
@@ -907,7 +909,11 @@ run_sims_filewrapper <- function(name, dir = ".",
       #Run multiple sub-simulations
       temp_list <- vector(mode = "list", length(list(...))) 
       for(i in 1:length(temp_list)) {
-        temp_list[[i]] <- do.call(run_sims, list(...)[[i]])
+        if(type == "dede") {
+          temp_list[[i]] <- do.call(run_sims_dede, list(...)[[i]])
+        } else if (type == "ode") {
+          temp_list[[i]] <- do.call(run_sims_ode, list(...)[[i]])
+        } else {stop("type must be 'dede' or 'ode'")}
         
         #Modify uniq_run #'s as needed
         if(i > 1) {
