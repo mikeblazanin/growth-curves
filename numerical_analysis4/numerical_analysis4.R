@@ -697,7 +697,7 @@ if(glob_make_statplots) {
   dev.off()
   
   png("./statplots/run1_Bcurves.png",
-      width = 5, height = 5, units = "in", res = 150)
+      width = 5, height = 4, units = "in", res = 150)
   print(
     ggplot(data = filter(ybig1, Pop == "B", b == 50, tau == 31.6),
            aes(x = time/60, y = Density)) +
@@ -1449,7 +1449,7 @@ interp_data <- function(df, x, y, subset_by) {
   return(out)
 }
 
-temp <- filter(ybig4, Pop == "B")
+temp <- as.data.frame(filter(ybig4, Pop == "B"))
 ybig4_new <- interp_data(df = temp, 
                          x = "time", y = "Density",
                          subset_by = temp$uniq_run)
@@ -1548,7 +1548,7 @@ ggplot(ybig4_wide, aes(x = PC1, y = PC2)) +
   NULL
 
 ggplot(ybig4_wide_norm, aes(x = PC1, y = PC2)) +
-  geom_point(aes(color = as.factor(u_S1), shape = as.factor(k))) +
+  geom_point(aes(color = as.factor(a_S1), shape = as.factor(k))) +
   # geom_segment(data = as.data.frame(isol_pca_7x$rotation),
   #              aes(x = 0, y = 0, xend = arrow_len*PC1, yend = arrow_len*PC2),
   #              arrow = arrow(length = unit(0.02, "npc")),
