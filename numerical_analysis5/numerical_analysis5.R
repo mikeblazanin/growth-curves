@@ -620,9 +620,11 @@ run_sims_dede <- function(u_S1, u_S2,
   y_noequil <- NULL
   for (run in unique(ybig$uniq_run[which(!ybig$equil)])) {
     if (is.null(y_noequil)) {
-      y_noequil <- ybig[min(which(ybig$uniq_run == run)), 1:21]
+      y_noequil <- ybig[min(which(ybig$uniq_run == run)),
+                        1:(1+length(sim_vars)+1)] #params & cols for uniq_run, equil
     } else {
-      y_noequil <- rbind(y_noequil, ybig[min(which(ybig$uniq_run == run)), 1:21])
+      y_noequil <- rbind(y_noequil, ybig[min(which(ybig$uniq_run == run)), 
+                                         1:(1+length(sim_vars)+1)])
     }
   }
   
@@ -838,14 +840,16 @@ run_sims_ode <- function(u_S1,
                   "% completed", sep = ""))
     }
   }
-  
+
   #Pull out all the runs that didn't reach equilibrium (just the params)
   y_noequil <- NULL
   for (run in unique(ybig$uniq_run[which(!ybig$equil)])) {
     if (is.null(y_noequil)) {
-      y_noequil <- ybig[min(which(ybig$uniq_run == run)), 1:21]
+      y_noequil <- ybig[min(which(ybig$uniq_run == run)),
+                        1:(1+length(sim_vars)+1)] #params & cols for uniq_run, equil
     } else {
-      y_noequil <- rbind(y_noequil, ybig[min(which(ybig$uniq_run == run)), 1:21])
+      y_noequil <- rbind(y_noequil, ybig[min(which(ybig$uniq_run == run)), 
+                                         1:(1+length(sim_vars)+1)])
     }
   }
   
