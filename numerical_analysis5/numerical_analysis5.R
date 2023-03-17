@@ -1460,7 +1460,83 @@ ggplot(data = filter(ybig5, Pop == "N"),
   ylim(0, NA)
 
 ## Run 6: transitions to resistant subpop ----
+run6 <- run_sims_filewrapper(
+  name = "run6", read_file = glob_read_files,
+  a = list(
+    u_S1 = signif(0.04*10**-0.35, 3),
+    u_S2 = c(0, signif(0.04*10**-0.35, 3)),
+    k = 10**9,
+    a_S1 = signif(10**seq(from = -12, to = -8, length.out = 9), 3),
+    a_S2 = 0,
+    tau = 31.6,
+    b = 50,
+    z = 1,
+    d = 0,
+    h = c(0, 0.001, 0.01, 0.1),
+    g1 = 0,
+    init_S1 = 10**6,
+    init_moi = 10**-2,
+    equil_cutoff_dens = 0.1,
+    init_time = 12*60,
+    max_time = 48*60,
+    init_stepsize = 5,
+    print_info = TRUE),
+  b = list(
+    u_S1 = signif(0.04*10**-0.35, 3),
+    u_S2 = c(0, signif(0.04*10**-0.35, 3)),
+    k = 10**9,
+    a_S1 = signif(10**seq(from = -12, to = -8, length.out = 9), 3),
+    a_S2 = 0,
+    tau = 31.6,
+    b = 50,
+    z = 1,
+    d = 0,
+    h = c(0, 0.001, 0.01, 0.1),
+    g1 = 1,
+    g2 = c(1, -1),
+    init_S1 = 10**6,
+    init_moi = 10**-2,
+    equil_cutoff_dens = 0.1,
+    init_time = 12*60,
+    max_time = 48*60,
+    init_stepsize = 5,
+    print_info = TRUE)
+)
 
+ybig6 <- run6[[1]]
+
+#Add flag for class of transition to resistance
+#for plotting extend all to end at same time
+#Set Density below 0 to 0
+ybig6 <- mutate(group_by(ybig6, uniq_run),
+               transition = ifelse(g1 == 0, "constant",
+                                   ifelse(g2 == 1, "decr wo N", "incr wo N")),
+               time = ifelse(time == max(time), max(ybig6$time), time),
+               Density = ifelse(Density < 1, 0, Density))
+
+ggplot(data = filter(ybig6, Pop == "B", u_S2 == 0),
+             aes(x = time/60, y = Density, color = log10(a_S1), group = uniq_run)) +
+        geom_line() +
+        facet_grid(transition ~ h) +
+        scale_y_continuous(trans = "log10", limits = c(1, NA)) +
+        #coord_cartesian(xlim = c(NA, 30)) +
+        theme_bw() +
+        scale_color_viridis_c(end = 0.95, name = "log10(infection rate)") +
+        labs(x = "Time (hr)", y = "Density (cfu/mL)",
+             subtitle = "Resistance Transition Rate") +
+        NULL
+
+ggplot(data = filter(ybig6, Pop == "B", u_S2 != 0),
+       aes(x = time/60, y = Density, color = log10(a_S1), group = uniq_run)) +
+  geom_line() +
+  facet_grid(transition ~ h) +
+  scale_y_continuous(trans = "log10", limits = c(1, NA)) +
+  #coord_cartesian(xlim = c(NA, 30)) +
+  theme_bw() +
+  scale_color_viridis_c(end = 0.95, name = "log10(infection rate)") +
+  labs(x = "Time (hr)", y = "Density (cfu/mL)",
+       subtitle = "Resistance Transition Rate") +
+  NULL
 
 ## Run 7: test of metrics across dift bact ----
 
