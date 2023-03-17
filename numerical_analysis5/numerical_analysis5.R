@@ -1319,20 +1319,141 @@ run2 <- run_sims_filewrapper(
 
 ybig2 <- run2[[1]]
 
-ggplot(data = filter(ybig2, uniq_run %in% run2[[2]]$uniq_run,
-                     Pop %in% c("S", "I", "P", "N")),
-       aes(x = time/60, y = Density, color = Pop)) +
-  geom_line() + scale_y_continuous(trans = "log10", limits = c(1, NA)) +
-  facet_wrap(~uniq_run)
-
 ## Run 3: plasticity in a ----
+run3 <- run_sims_filewrapper(
+  name = "run3",
+  u_S1 = signif(0.04*10**-0.35, 3), u_S2 = 0,
+  k = 10**9,
+  a_S1 = 10**seq(from = -12, to = -8, length.out = 5),
+  a_S2 = 0,
+  tau = 31.6,
+  b = 50,
+  z = 1,
+  d = 0,
+  f_a = round(seq(from = 0, to = 2, length.out = 4), 2),
+  init_S1 = 10**6,
+  init_moi = 10**-2,
+  equil_cutoff_dens = 0.1,
+  init_time = 12*60,
+  max_time = 48*60,
+  init_stepsize = 5,
+  print_info = TRUE, read_file = glob_read_files)
 
+ybig3 <- run3[[1]]
+
+ggplot(data = filter(ybig3, Pop == "B"),
+       aes(x = time, y = Density)) +
+  geom_line() +
+  facet_grid(a_S1 ~ f_a, scales = "free") +
+  scale_y_log10()
+
+ggplot(data = filter(ybig3, Pop %in% c("S1", "I1", "P")),
+       aes(x = time, y = Density, color = Pop)) +
+  geom_line() +
+  facet_grid(a_S1 ~ f_a, scales = "free") +
+  scale_y_log10(limits = c(1, NA))
+
+ggplot(data = filter(ybig3, Pop == "N"),
+       aes(x = time, y = Density/k)) +
+  geom_line() +
+  facet_grid(a_S1 ~ f_a) +
+  #scale_y_log10(limits = ) +
+  geom_hline(aes(yintercept = 1 - 1/f_a), lty = 2)
+
+temp <- tidyr::pivot_wider(filter(ybig3, Pop %in% c("N", "B")),
+                           names_from = Pop,
+                           values_from = Density)
+
+ggplot(data = temp,
+       aes(x = N/k, y = B, color = time)) +
+  geom_path() +
+  facet_grid(a_S1 ~ f_a) +
+  geom_vline(aes(xintercept = 1 - 1/f_a), lty = 2) +
+  #scale_x_log10() +
+  scale_y_log10()
 
 ## Run 4: plasticity in b ----
+run4 <- run_sims_filewrapper(
+  name = "run4",
+  u_S1 = signif(0.04*10**-0.35, 3), u_S2 = 0,
+  k = 10**9,
+  a_S1 = 10**-10,
+  a_S2 = 0,
+  tau = 31.6,
+  b = signif(5*10**seq(from = 0, to = 2, length.out = 5), 3),
+  z = 1,
+  d = 0,
+  f_b = round(seq(from = 0, to = 2, length.out = 4), 2),
+  init_S1 = 10**6,
+  init_moi = 10**-2,
+  equil_cutoff_dens = 0.1,
+  init_time = 12*60,
+  max_time = 48*60,
+  init_stepsize = 5,
+  print_info = TRUE, read_file = glob_read_files)
 
+ybig4 <- run4[[1]]
+
+ggplot(data = filter(ybig4, Pop == "B"),
+       aes(x = time, y = Density)) +
+  geom_line() +
+  facet_grid(b ~ f_b, scales = "free") +
+  scale_y_log10()
+
+ggplot(data = filter(ybig4, Pop %in% c("S1", "I1", "P")),
+       aes(x = time, y = Density, color = Pop)) +
+  geom_line() +
+  facet_grid(b ~ f_b, scales = "free") +
+  scale_y_log10(limits = c(1, NA))
+
+ggplot(data = filter(ybig4, Pop == "N"),
+       aes(x = time, y = Density/k)) +
+  geom_line() +
+  facet_grid(b ~ f_b, scales = "free") +
+  geom_hline(aes(yintercept = 1 - 1/f_b), lty = 2) +
+  ylim(0, NA)
 
 ## Run 5: plasticity in tau ----
+run5 <- run_sims_filewrapper(
+  name = "run5",
+  type = "ode",
+  nI = 50,
+  u_S1 = signif(0.04*10**-0.35, 3),
+  k = 10**9,
+  a_S1 = 10**-10,
+  tau = signif(10**seq(from = 1, to = 2, length.out = 5), 3),
+  b = 50,
+  z = 1,
+  d = 0,
+  f_tau = round(seq(from = 0, to = 2, length.out = 4), 2),
+  init_S1 = 10**6,
+  init_moi = 10**-2,
+  equil_cutoff_dens = 0.1,
+  init_time = 12*60,
+  max_time = 48*60,
+  init_stepsize = 5,
+  print_info = TRUE, read_file = glob_read_files)
 
+ybig5 <- run5[[1]]
+
+ggplot(data = filter(ybig5, Pop == "B"),
+       aes(x = time, y = Density)) +
+  geom_line() +
+  facet_grid(tau ~ f_tau, scales = "free") +
+  scale_y_log10()
+
+ggplot(data = filter(ybig4, Pop %in% c("S1", "I1", "P")),
+       aes(x = time, y = Density, color = Pop)) +
+  geom_line() +
+  facet_grid(b ~ f_b, scales = "free") +
+  scale_y_log10(limits = c(1, NA))
+
+ggplot(data = filter(ybig4, Pop == "N"),
+       aes(x = time, y = Density/k)) +
+  geom_line() +
+  facet_grid(b ~ f_b, scales = "free") +
+  geom_hline(aes(yintercept = 1 - 1/f_b), lty = 2) +
+  ylim(0, NA)
 
 ## Run 6: transitions to resistant subpop ----
 
