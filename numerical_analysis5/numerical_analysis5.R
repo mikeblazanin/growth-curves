@@ -972,6 +972,84 @@ logis_def_integral <- function(S_0, u_S, k, times) {
            logis_integral(S_0 = S_0, u_S = u_S, k = k, times = min(times)))
 }
 
+point_slope <- function(...) {
+  #Provide x1 and y1, either m or x2 and y2, and either x or y
+  #Provide any 4 of 5: y, y1, x, x1, and either m or x2 and y2
+  dots <- list(...)
+  if(any(!names(dots) %in% c("y", "y1", "x", "x1", "m", "x2", "y2"))) {
+    stop("invalid argument specified")}
+  if(!"x1" %in% names(dots) || !"y1" %in% names(dots)) {
+    stop("x1 and y1 must be provided")}
+  if(!"m" %in% names(dots)) {
+    if(!"x2" %in% names(dots) || !"y2" %in% names(dots)) {
+      stop("when m is not provided, x2 and y2 must be provided")}
+    dots[["m"]] <- (dots[["y2"]] - dots[["y1"]])/(dots[["x2"]] - dots[["x1"]])
+  }
+  if(!"x" %in% names(dots) && !"y" %in% names(dots)) {
+    return(dots[["m"]])
+  } else {
+    if(!"x" %in% names(dots)) {
+      return((dots[["y"]] - dots[["y1"]])/dots[["m"]] + dots[["x1"]])
+    } else if (!"y" %in% names(dots)) {
+      return(dots[["m"]] * (dots[["x"]] - dots[["x1"]]) + dots[["y1"]])
+    }
+  }
+}
+
+interp_data <- function(df, x, y, subset_by) {
+  #This function adds new rows such that all the unique x values in
+  #  df are present in each subset_by
+  #It interpolates y values as necessary
+  #x and y are column names
+  #subset_by is a vector
+  #Note: this function is slow and could be improved by
+  # vectorizing the interpolations
+  
+  alltimes <- unique(df[, x])
+  alltimes <- alltimes[order(alltimes)]
+  out <- 
+    data.frame(matrix(ncol = ncol(df), 
+                      nrow = length(unique(subset_by))*length(alltimes)))
+  colnames(out) <- colnames(df)
+  for (i in 1:length(unique(subset_by))) {
+    if(i %% 10 == 0) {print(paste0(i, "/", length(unique(subset_by))))}
+    mygroup <- unique(subset_by)[i]
+    mysub <- df[subset_by == mygroup, ]
+    mysub <- mysub[order(mysub[, x]), ]
+    myrows <- ((i-1)*length(alltimes)+1):(i*length(alltimes))
+    
+    #Fill in id cols
+    for(mycol in colnames(out)) {
+      if(!mycol %in% c(x, y)) {out[myrows, mycol] <- mysub[1, mycol]}
+    }
+    
+    #fill in (all) x vals
+    out[myrows, x] <- alltimes
+    
+    #fill in values we already have
+    myrows2 <- myrows[out[myrows, x] %in% mysub[, x]]
+    out[myrows2, y] <- mysub[match(mysub[, x], out[myrows2, x]), y]
+    
+    submin <- min(mysub[, x])
+    submax <- max(mysub[, x])
+    
+    for(myrow in myrows[is.na(out[myrows, y])]) {
+      if(out[myrow, x] > submin && out[myrow, x] < submax) {
+        #then interpolate
+        idx1 <- max(which(mysub[, x] < out[myrow, x]))
+        idx2 <- min(which(mysub[, x] > out[myrow, x]))
+        out[myrow, y] <- 
+          point_slope(x1 = mysub[idx1, x], x2 = mysub[idx2, x],
+                      y1 = mysub[idx1, y], y2 = mysub[idx2, y],
+                      x = out[myrow, x])
+      } else if (out[myrow, x] > submax) {
+        #project last timepoint out to the end
+        out[myrow, y] <- mysub[max(which(mysub[, x] < out[myrow, x])), y]
+      }
+    }
+  }
+  return(out)
+}
 
 ## Run 1: phage traits ----
 run1 <- run_sims_filewrapper(
@@ -1714,7 +1792,7 @@ run3 <- run_sims_filewrapper(
   b = 50,
   z = 1,
   d = 0,
-  f_a = round(seq(from = 0, to = 2, length.out = 4), 2),
+  f_a = round(seq(from = 0, to = 3, length.out = 3), 2),
   init_S1 = 10**6,
   init_moi = 10**-2,
   equil_cutoff_dens = 0.1,
@@ -1725,36 +1803,48 @@ run3 <- run_sims_filewrapper(
 
 ybig3 <- run3[[1]]
 
-ggplot(data = filter(ybig3, Pop == "B"),
-       aes(x = time, y = Density)) +
-  geom_line() +
-  facet_grid(a_S1 ~ f_a, scales = "free") +
-  scale_y_log10()
+ybig3 <- mutate(ybig3,
+                Density = ifelse(Density <= 0, 0, Density))
 
-ggplot(data = filter(ybig3, Pop %in% c("S1", "I1", "P")),
-       aes(x = time, y = Density, color = Pop)) +
-  geom_line() +
-  facet_grid(a_S1 ~ f_a, scales = "free") +
-  scale_y_log10(limits = c(1, NA))
+ybig3 <- interp_data(ybig3, x = "time", y = "Density",
+                     subset_by = paste(ybig3$uniq_run, ybig3$Pop))
 
-ggplot(data = filter(ybig3, Pop == "N"),
-       aes(x = time, y = Density/k)) +
-  geom_line() +
-  facet_grid(a_S1 ~ f_a) +
-  #scale_y_log10(limits = ) +
-  geom_hline(aes(yintercept = 1 - 1/f_a), lty = 2)
-
-temp <- tidyr::pivot_wider(filter(ybig3, Pop %in% c("N", "B")),
+ybig3_wide <- tidyr::pivot_wider(filter(ybig3, Pop %in% c("N", "B", "P")),
                            names_from = Pop,
                            values_from = Density)
+ybig3_wide <- tidyr::pivot_longer(ybig3_wide,
+                                  names_to = "Pop",
+                                  values_to = "Density",
+                                  cols = c("B", "P"))
 
-ggplot(data = temp,
-       aes(x = N/k, y = B, color = time)) +
-  geom_path() +
-  facet_grid(a_S1 ~ f_a) +
-  geom_vline(aes(xintercept = 1 - 1/f_a), lty = 2) +
-  #scale_x_log10() +
-  scale_y_log10()
+#Subsample so point types are visible
+ybig3_wide <- filter(ybig3_wide,
+                     time %% 20 == 0)
+
+if(glob_make_statplots) {
+  png("./statplots/run3_BvsNk.png", width = 6, height = 4,
+      units = "in", res = 300)
+  print(ggplot(data = ybig3_wide,
+               aes(x = (k-N)/k, y = Density, color = time/60)) +
+          geom_point(size = 1, aes(pch = Pop)) +
+          facet_grid(f_a ~ a_S1, scales = "free_y",
+                     labeller = labeller(f_a = function(x){paste("f =", x)})) +
+          scale_color_viridis_c(direction = -1, name = "Time (hr)",
+                                breaks = c(12, 24, 36, 48)) +
+          scale_shape_manual(name = "Population",
+                             breaks = c("B", "P"),
+                             values = c(19, 4),
+                             labels = c("Bacteria", "Phages")) +
+          labs(x = "Fraction of N consumed", y = "Density (cfu/mL or pfu/mL)",
+               subtitle = "Infection rate (/min)") +
+          scale_y_log10() +
+          geom_vline(data = filter(ybig3_wide, f_a >= 1), 
+                     aes(xintercept = 1/f_a), lty = 2) +
+          theme_bw() +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+          NULL)
+  dev.off()
+}
 
 ## Run 4: plasticity in b ----
 run4 <- run_sims_filewrapper(
@@ -1767,7 +1857,7 @@ run4 <- run_sims_filewrapper(
   b = signif(5*10**seq(from = 0, to = 2, length.out = 5), 3),
   z = 1,
   d = 0,
-  f_b = round(seq(from = 0, to = 2, length.out = 4), 2),
+  f_b = round(seq(from = 0, to = 3, length.out = 3), 2),
   init_S1 = 10**6,
   init_moi = 10**-2,
   equil_cutoff_dens = 0.1,
@@ -1778,24 +1868,48 @@ run4 <- run_sims_filewrapper(
 
 ybig4 <- run4[[1]]
 
-ggplot(data = filter(ybig4, Pop == "B"),
-       aes(x = time, y = Density)) +
-  geom_line() +
-  facet_grid(b ~ f_b, scales = "free") +
-  scale_y_log10()
+ybig4 <- mutate(ybig4,
+                Density = ifelse(Density <= 0, 0, Density))
 
-ggplot(data = filter(ybig4, Pop %in% c("S1", "I1", "P")),
-       aes(x = time, y = Density, color = Pop)) +
-  geom_line() +
-  facet_grid(b ~ f_b, scales = "free") +
-  scale_y_log10(limits = c(1, NA))
+ybig4 <- interp_data(ybig4, x = "time", y = "Density",
+                     subset_by = paste(ybig4$uniq_run, ybig4$Pop))
 
-ggplot(data = filter(ybig4, Pop == "N"),
-       aes(x = time, y = Density/k)) +
-  geom_line() +
-  facet_grid(b ~ f_b, scales = "free") +
-  geom_hline(aes(yintercept = 1 - 1/f_b), lty = 2) +
-  ylim(0, NA)
+ybig4_wide <- tidyr::pivot_wider(filter(ybig4, Pop %in% c("N", "B", "P")),
+                                 names_from = Pop,
+                                 values_from = Density)
+ybig4_wide <- tidyr::pivot_longer(ybig4_wide,
+                                  names_to = "Pop",
+                                  values_to = "Density",
+                                  cols = c("B", "P"))
+
+#Subsample so point types are visible
+ybig4_wide <- filter(ybig4_wide,
+                     time %% 20 == 0)
+
+if(glob_make_statplots) {
+  png("./statplots/run4_BvsNk.png", width = 6, height = 4,
+      units = "in", res = 300)
+  print(ggplot(data = ybig4_wide,
+               aes(x = (k-N)/k, y = Density, color = time/60)) +
+          geom_point(size = 1, aes(pch = Pop)) +
+          facet_grid(f_b ~ b, scales = "free_y",
+                     labeller = labeller(f_b = function(x){paste("f =", x)})) +
+          scale_color_viridis_c(direction = -1, name = "Time (hr)",
+                                breaks = c(12, 24, 36, 48)) +
+          scale_shape_manual(name = "Population",
+                             breaks = c("B", "P"),
+                             values = c(19, 4),
+                             labels = c("Bacteria", "Phages")) +
+          labs(x = "Fraction of N consumed", y = "Density (cfu/mL or pfu/mL)",
+               subtitle = "Burst size") +
+          scale_y_log10() +
+          geom_vline(data = filter(ybig4_wide, f_b >= 1), 
+                     aes(xintercept = 1/f_b), lty = 2) +
+          theme_bw() +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+          NULL)
+  dev.off()
+}
 
 ## Run 5: plasticity in tau ----
 run5 <- run_sims_filewrapper(
@@ -1809,35 +1923,61 @@ run5 <- run_sims_filewrapper(
   b = 50,
   z = 1,
   d = 0,
-  f_tau = round(seq(from = 0, to = 2, length.out = 4), 2),
+  f_tau = round(seq(from = 0, to = 3, length.out = 3), 2),
   init_S1 = 10**6,
   init_moi = 10**-2,
   equil_cutoff_dens = 0.1,
   init_time = 12*60,
   max_time = 48*60,
   init_stepsize = 5,
-  print_info = TRUE, read_file = glob_read_files)
+  print_info = TRUE, read_file = FALSE)#glob_read_files)
 
 ybig5 <- run5[[1]]
 
-ggplot(data = filter(ybig5, Pop == "B"),
-       aes(x = time, y = Density, color = as.factor(tau))) +
-  geom_line() +
-  facet_grid( ~ f_tau, scales = "free") +
-  scale_y_log10()
+ybig5 <- mutate(ybig5,
+                Density = ifelse(Density <= 0, 0, Density))
 
-ggplot(data = filter(ybig5, Pop %in% c("S1", "I1", "P")),
-       aes(x = time, y = Density, color = Pop)) +
-  geom_line() +
-  facet_grid(tau ~ f_tau, scales = "free") +
-  scale_y_log10(limits = c(1, NA))
+ybig5_interp <- filter(ybig5, Pop %in% c("N", "B", "P"))
+ybig5_interp <- interp_data(ybig5_interp, 
+                            x = "time", y = "Density",
+                     subset_by = paste(ybig5_interp$uniq_run, ybig5_interp$Pop))
 
-ggplot(data = filter(ybig5, Pop == "N"),
-       aes(x = time, y = Density/k)) +
-  geom_line() +
-  facet_grid(tau ~ f_tau, scales = "free") +
-  geom_hline(aes(yintercept = 1 - 1/f_tau), lty = 2) +
-  ylim(0, NA)
+ybig5_wide <- tidyr::pivot_wider(ybig5_interp,
+                                 names_from = Pop,
+                                 values_from = Density)
+ybig5_wide <- tidyr::pivot_longer(ybig5_wide,
+                                  names_to = "Pop",
+                                  values_to = "Density",
+                                  cols = c("B", "P"))
+
+#Subsample so point types are visible
+ybig5_wide <- filter(ybig5_wide,
+                     time %% 20 == 0)
+
+if(glob_make_statplots) {
+  png("./statplots/run5_BvsNk.png", width = 6, height = 4,
+      units = "in", res = 300)
+  print(ggplot(data = ybig5_wide,
+               aes(x = (k-N)/k, y = Density, color = time/60)) +
+          geom_point(size = 1, aes(pch = Pop)) +
+          facet_grid(f_tau ~ tau, scales = "free_y",
+                     labeller = labeller(f_tau = function(x){paste("f =", x)})) +
+          scale_color_viridis_c(direction = -1, name = "Time (hr)",
+                                breaks = c(12, 24, 36, 48)) +
+          scale_shape_manual(name = "Population",
+                             breaks = c("B", "P"),
+                             values = c(19, 4),
+                             labels = c("Bacteria", "Phages")) +
+          labs(x = "Fraction of N consumed", y = "Density (cfu/mL or pfu/mL)",
+               subtitle = "Lag time (min)") +
+          scale_y_log10() +
+          geom_vline(data = filter(ybig5_wide, f_tau >= 1), 
+                     aes(xintercept = 1/f_tau), lty = 2) +
+          theme_bw() +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+          NULL)
+  dev.off()
+}
 
 ## Run 6: transitions to resistant subpop ----
 run6 <- run_sims_filewrapper(
