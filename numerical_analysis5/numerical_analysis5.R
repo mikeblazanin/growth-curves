@@ -644,7 +644,6 @@ run_sims_ode <- function(u_S1,
                          d = 1,
                          nI = 1,
                          init_S1 = 10**6,
-                         init_S2 = 0,
                          init_moi = 10**-2,
                          init_N = NA,
                          equil_cutoff_dens = 0.1,
@@ -711,12 +710,8 @@ run_sims_ode <- function(u_S1,
   
   #if N is NA, N = k-S-R
   param_combos$init_N[is.na(param_combos$init_N)] <-
-    (param_combos$k[is.na(param_combos$init_N)] -
-       param_combos$init_S1[is.na(param_combos$init_N)] -
-       param_combos$init_S2[is.na(param_combos$init_N)])
-  #if a_S2 is NA, a_S2 = a_S1
-  param_combos$a_S2[is.na(param_combos$a_S2)] <-
-    param_combos$a_S1[is.na(param_combos$a_S2)]
+    (param_combos$k[is.na(param_combos$init_N)] 
+     - param_combos$init_S1[is.na(param_combos$init_N)])
   
   #Print number of simulations that will be run
   if(print_info) {
@@ -749,11 +744,10 @@ run_sims_ode <- function(u_S1,
   for (i in 1:nrow(param_combos)) { #i acts as the uniq_run counter
     #Define pops & parameters
     yinit <- c(S1 = param_combos$init_S1[i],
-               S2 = param_combos$init_S2[i],
                rep(0, nI),
                P = param_combos$init_S1[i]*param_combos$init_moi[i],
                N = param_combos$init_N[i])
-    names(yinit)[3:(3+nI-1)] <- paste0("I", 1:nI)
+    names(yinit)[2:(2+nI-1)] <- paste0("I", 1:nI)
     params <- c(unlist(param_combos[i, ]),
                 warnings = 0, thresh_min_dens = 10**-100)
     
@@ -778,9 +772,8 @@ run_sims_ode <- function(u_S1,
       
       #Run simulation
       yout_list <- myTryCatch(expr = {
-        as.data.frame(ode(y = yinit, times = times, func = deriv_dede, 
-                           parms = params, hmax = hmax_val,
-                           control = list(mxhist = cntrs["cntrl_mxhist"])))
+        as.data.frame(ode(y = yinit, times = times, func = deriv_ode, 
+                           parms = params, hmax = hmax_val))
       })
       
       #Check for equil
