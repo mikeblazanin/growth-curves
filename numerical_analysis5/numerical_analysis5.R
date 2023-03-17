@@ -2028,35 +2028,62 @@ ybig6 <- run6[[1]]
 #Add flag for class of transition to resistance
 #for plotting extend all to end at same time
 #Set Density below 0 to 0
-ybig6 <- mutate(group_by(ybig6, uniq_run),
-               transition = ifelse(g1 == 0, "constant",
-                                   ifelse(g2 == 1, "decr wo N", "incr wo N")),
-               time = ifelse(time == max(time), max(ybig6$time), time),
-               Density = ifelse(Density < 1, 0, Density))
+ybig6 <- 
+  mutate(group_by(ybig6, uniq_run),
+         transition = ifelse(g1 == 0, "Constant",
+                             ifelse(g2 == 1, "Decreasing with\nN scarcity", 
+                                    "Increasing with\nN scarcity")),
+         time = ifelse(time == max(time), max(ybig6$time), time),
+         Density = ifelse(Density < 1, 0, Density))
 
-ggplot(data = filter(ybig6, Pop == "B", u_S2 == 0),
-             aes(x = time/60, y = Density, color = log10(a_S1), group = uniq_run)) +
-        geom_line() +
-        facet_grid(transition ~ h) +
-        scale_y_continuous(trans = "log10", limits = c(1, NA)) +
-        #coord_cartesian(xlim = c(NA, 30)) +
-        theme_bw() +
-        scale_color_viridis_c(end = 0.95, name = "log10(infection rate)") +
-        labs(x = "Time (hr)", y = "Density (cfu/mL)",
-             subtitle = "Resistance Transition Rate") +
-        NULL
-
-ggplot(data = filter(ybig6, Pop == "B", u_S2 != 0),
-       aes(x = time/60, y = Density, color = log10(a_S1), group = uniq_run)) +
-  geom_line() +
-  facet_grid(transition ~ h) +
-  scale_y_continuous(trans = "log10", limits = c(1, NA)) +
-  #coord_cartesian(xlim = c(NA, 30)) +
-  theme_bw() +
-  scale_color_viridis_c(end = 0.95, name = "log10(infection rate)") +
-  labs(x = "Time (hr)", y = "Density (cfu/mL)",
-       subtitle = "Resistance Transition Rate") +
-  NULL
+if(glob_make_statplots) {
+  png("./statplots/h_Bcurves_constant_uS20.png", width = 6, height = 2.5,
+      units = "in", res = 300)
+  print(ggplot(data = filter(ybig6, Pop == "B", transition == "Constant",
+                             u_S2 == 0),
+               aes(x = time/60, y = Density, color = log10(a_S1), group = uniq_run)) +
+          geom_line() +
+          facet_grid(~ h) +
+          scale_y_continuous(trans = "log10", limits = c(1, NA)) +
+          coord_cartesian(xlim = c(NA, 30)) +
+          theme_bw() +
+          scale_color_viridis_c(end = 0.95, name = "log10(infection rate)") +
+          labs(x = "Time (hr)", y = "Density (cfu/mL)",
+               subtitle = "Resistance Transition Rate") +
+          NULL)
+  dev.off()
+  
+  png("./statplots/h_Bcurves_uS20.png", width = 6, height = 4,
+      units = "in", res = 300)
+  print(ggplot(data = filter(ybig6, Pop == "B", u_S2 == 0),
+               aes(x = time/60, y = Density, color = log10(a_S1), group = uniq_run)) +
+          geom_line() +
+          facet_grid(transition ~ h) +
+          scale_y_continuous(trans = "log10", limits = c(1, NA)) +
+          coord_cartesian(xlim = c(NA, 30)) +
+          theme_bw() +
+          scale_color_viridis_c(end = 0.95, name = "log10(infection rate)") +
+          labs(x = "Time (hr)", y = "Density (cfu/mL)",
+               subtitle = "Resistance Transition Rate") +
+          NULL)
+  dev.off()
+  
+  png("./statplots/h_Bcurves_uS2not0.png", width = 6, height = 4,
+      units = "in", res = 300)
+  print(ggplot(data = filter(ybig6, Pop == "B", u_S2 != 0),
+               aes(x = time/60, y = Density, color = log10(a_S1), group = uniq_run)) +
+          geom_line() +
+          facet_grid(transition ~ h) +
+          scale_y_continuous(trans = "log10", limits = c(1, NA)) +
+          coord_cartesian(xlim = c(NA, 30)) +
+          theme_bw() +
+          scale_color_viridis_c(end = 0.95, name = "log10(infection rate)") +
+          labs(x = "Time (hr)", y = "Density (cfu/mL)",
+               subtitle = "Resistance Transition Rate") +
+          NULL)
+  dev.off()
+  
+}
 
 ## Run 7: test of metrics across dift bact ----
 
