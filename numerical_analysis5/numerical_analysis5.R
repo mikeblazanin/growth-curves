@@ -1303,25 +1303,25 @@ if (glob_make_statplots) {
 }
 
 ## Run 2: bact traits ----
-run2 <- run_sims_filewrapper(
-  name = "run2",
-  u_S1 = signif(0.04*10**seq(from = 0, to = -0.7, length.out = 5), 3),
-  k = signif(10**c(8, 8.5, 9, 9.5, 10), 3),
-  a_S1 = 10**seq(from = -12, to = -8, length.out = 5),
-  tau = signif(10**1.5, 3),
-  b = 50,
-  z = 1,
-  f = 0,
-  d = 0,
-  init_S1_dens = 10**6,
-  init_moi = 10**-2,
-  equil_cutoff_dens = 0.1,
-  init_time = 12*60,
-  max_time = 48*60,
-  init_stepsize = 5,
-  print_info = TRUE, read_file = glob_read_files)
-
-ybig2 <- run2[[1]]
+# run2 <- run_sims_filewrapper(
+#   name = "run2",
+#   u_S1 = signif(0.04*10**seq(from = 0, to = -0.7, length.out = 5), 3),
+#   k = signif(10**c(8, 8.5, 9, 9.5, 10), 3),
+#   a_S1 = 10**seq(from = -12, to = -8, length.out = 5),
+#   tau = signif(10**1.5, 3),
+#   b = 50,
+#   z = 1,
+#   f = 0,
+#   d = 0,
+#   init_S1_dens = 10**6,
+#   init_moi = 10**-2,
+#   equil_cutoff_dens = 0.1,
+#   init_time = 12*60,
+#   max_time = 48*60,
+#   init_stepsize = 5,
+#   print_info = TRUE, read_file = glob_read_files)
+# 
+# ybig2 <- run2[[1]]
 
 ## Run 3: plasticity in a ----
 run3 <- run_sims_filewrapper(
@@ -1446,17 +1446,17 @@ ggplot(data = filter(ybig5, Pop == "B"),
   facet_grid(tau ~ f_tau, scales = "free") +
   scale_y_log10()
 
-ggplot(data = filter(ybig4, Pop %in% c("S1", "I1", "P")),
+ggplot(data = filter(ybig5, Pop %in% c("S1", "I1", "P")),
        aes(x = time, y = Density, color = Pop)) +
   geom_line() +
-  facet_grid(b ~ f_b, scales = "free") +
+  facet_grid(tau ~ f_tau, scales = "free") +
   scale_y_log10(limits = c(1, NA))
 
-ggplot(data = filter(ybig4, Pop == "N"),
+ggplot(data = filter(ybig5, Pop == "N"),
        aes(x = time, y = Density/k)) +
   geom_line() +
-  facet_grid(b ~ f_b, scales = "free") +
-  geom_hline(aes(yintercept = 1 - 1/f_b), lty = 2) +
+  facet_grid(tau ~ f_tau, scales = "free") +
+  geom_hline(aes(yintercept = 1 - 1/f_tau), lty = 2) +
   ylim(0, NA)
 
 ## Run 6: transitions to resistant subpop ----
