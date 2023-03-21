@@ -1082,24 +1082,31 @@ ybig1 <- mutate(group_by(ybig1, uniq_run, Pop),
                 Density = ifelse(Density < 0, 0, Density),
                 deriv = calc_deriv(y = Density, x = time, x_scale = 60))
 
-ysum1 <- full_join(
-  summarize(group_by(filter(ybig1, Pop == "B"),
-                     uniq_run, u_S1, u_S2, k, a_S1, a_S2,
-                     tau, b, z, f_a, f_b, d, h, g1, g2,
-                     init_S1, init_S2, init_moi, init_N, equil),
-            peak_dens = max(Density),
-            peak_time = time[which.max(Density)],
-            auc = auc(x = time, y = Density),
-            extin_time_4 = 
-              first_below(y = Density, x = time,
-                          threshold = 10**4, return = "x"),
-            run_time = max(time),
-            death_slope = min(deriv, na.rm = TRUE)),
-  summarize(group_by(filter(ybig1, Pop == "P"),
-                     uniq_run, u_S1, u_S2, k, a_S1, a_S2,
-                     tau, b, z, f_a, f_b, d, h, g1, g2,
-                     init_S1, init_S2, init_moi, init_N, equil),
-            phage_final = Density[which.max(time)]))
+ysum1_1 <- summarize(group_by(filter(ybig1, Pop == "B"),
+                          uniq_run, u_S1, u_S2, k, a_S1, a_S2,
+                          tau, b, z, f_a, f_b, d, h, g1, g2,
+                          init_S1, init_S2, init_moi, init_N, equil),
+                 peak_dens = max(Density),
+                 auc = auc(x = time, y = Density),
+                 extin_time_4 = 
+                   first_below(y = Density, x = time,
+                               threshold = 10**4, return = "x"),
+                 run_time = max(time),
+                 death_slope = min(deriv, na.rm = TRUE))
+ysum1_2 <- summarize(group_by(filter(ybig1, Pop == "P"),
+                              uniq_run, u_S1, u_S2, k, a_S1, a_S2,
+                              tau, b, z, f_a, f_b, d, h, g1, g2,
+                              init_S1, init_S2, init_moi, init_N, equil),
+                     phage_final = Density[which.max(time)])
+ysum1_3 <- summarize(group_by(filter(ybig1, Pop %in% c("B", "P")),
+                              uniq_run, u_S1, u_S2, k, a_S1, a_S2,
+                              tau, b, z, f_a, f_b, d, h, g1, g2,
+                              init_S1, init_S2, init_moi, init_N, equil),
+                     peak_time = time[which.max(Density[Pop == "B"])],
+                     phage_bactpeak = Density[Pop == "P" & time == peak_time])
+
+ysum1 <- full_join(full_join(ysum1_1, ysum1_2), ysum1_3)
+
 ysum1 <- mutate(
   ysum1,
   extin_flag = ifelse(is.na(extin_time_4), "noextin",
@@ -1399,6 +1406,74 @@ if(glob_make_statplots) {
           scale_x_log10() +
           labs(x = "Peak Density (cfu/mL)", 
                y = "Maximum death rate\n(cfu/mL/hr)") +
+          theme_bw() +
+          theme(axis.title = element_text(size = 20)) +
+          NULL)
+  dev.off()
+}
+
+# Run 1: maxtime extintime supp plots ----
+if(glob_make_statplots) {
+  png("./statplots/run1_extinpeakratio_peakdens.png",
+      width = 5, height = 5, units = "in", res = 150)
+  print(ggplot(data = ysum1,
+               aes(x = peak_time/60, y = extin_time_4/peak_time,
+                   color = as.factor(a_S1), shape = extin_flag)) +
+          geom_point() +
+          scale_color_viridis_d(
+            name = "Infection rate\n(/min)", end = 0.85,
+            labels = c(expression(10^-12),
+                       expression(10^-11), expression(10^-10),
+                       expression(10^-9), expression(10^-8))) +
+          scale_shape_manual(breaks = c("none", "neark", "noextin"),
+                             values = c(16, 4, 3)) +
+          labs(x = "Peak density (cfu/mL)",
+               y = "Extinction time:Peak time") +
+          guides(shape = "none") +
+          theme_bw() +
+          theme(axis.title = element_text(size = 20)) +
+          NULL)
+  dev.off()
+  
+  png("./statplots/run1_extinpeakratio_phageatpeak.png",
+      width = 5, height = 5, units = "in", res = 150)
+  print(ggplot(data = ysum1,
+               aes(x = phage_bactpeak, y = extin_time_4/peak_time,
+                   color = as.factor(a_S1), shape = extin_flag)) +
+          geom_point() +
+          scale_color_viridis_d(
+            name = "Infection rate\n(/min)", end = 0.85,
+            labels = c(expression(10^-12),
+                       expression(10^-11), expression(10^-10),
+                       expression(10^-9), expression(10^-8))) +
+          scale_shape_manual(breaks = c("none", "neark", "noextin"),
+                             values = c(16, 4, 3)) +
+          scale_x_log10() +
+          labs(x = "Peak density (cfu/mL)",
+               y = "Extinction time:Peak time") +
+          guides(shape = "none") +
+          theme_bw() +
+          theme(axis.title = element_text(size = 20)) +
+          NULL)
+  dev.off()
+  
+  png("./statplots/run1_extinpeakdiff_peakdens.png",
+      width = 5, height = 5, units = "in", res = 150)
+  print(ggplot(data = ysum1,
+               aes(x = peak_time/60, y = extin_time_4/60 - peak_time/60,
+                   color = as.factor(a_S1), shape = extin_flag)) +
+          geom_point() +
+          scale_color_viridis_d(
+            name = "Infection rate\n(/min)", end = 0.85,
+            labels = c(expression(10^-12),
+                       expression(10^-11), expression(10^-10),
+                       expression(10^-9), expression(10^-8))) +
+          scale_shape_manual(breaks = c("none", "neark", "noextin"),
+                             values = c(16, 4, 3)) +
+          scale_y_log10() +
+          labs(x = "Peak density (cfu/mL)",
+               y = "Extinction time - peak time (hr)") +
+          guides(shape = "none") +
           theme_bw() +
           theme(axis.title = element_text(size = 20)) +
           NULL)
