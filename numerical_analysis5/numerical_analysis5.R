@@ -957,6 +957,7 @@ run_sims_filewrapper <- function(name, mydir = ".",
 glob_read_files <- TRUE
 glob_make_curveplots <- FALSE
 glob_make_statplots <- TRUE
+dir.create("./statplots", showWarnings = FALSE)
 
 ## Useful funcs ----
 logis_func <- function(S_0, u_S, k, times) {
@@ -1107,8 +1108,113 @@ ysum1 <- mutate(
   phage_r = (log(phage_final)-log(init_moi*(init_S1+init_S2)))/
     extin_time_4)
 
+# Run 1: example curves for conceptual figure ----
+if(glob_make_statplots) {
+  myrun <- 3
+  dens_offset <- 1
+  
+  temp <- filter(ybig1, uniq_run == myrun, Pop %in% c("S", "I", "P", "N"))
+  png("./statplots/run1_example_pops.png",
+      width = 6, height = 4, units = "in", res = 150)
+  print(
+    ggplot(data = temp, 
+           aes(x = time/60, y = Density+dens_offset, color = Pop)) +
+      geom_line(lwd = 1.5, alpha = 1) + 
+      scale_y_continuous(trans = "log10",
+                         breaks = 10**c(0, 3, 6, 9),
+                         labels = scales::trans_format("log10", 
+                                                       scales::math_format(10^.x))) +
+      scale_x_continuous(breaks = seq(from = 0, to = 10, by = 2.5)) +
+      scale_color_manual(limits = c("S", "I", "P", "N"),
+                         values = my_cols[c(2, 3, 1, 7)],
+                         labels = c("Susceptible", "Infected", 
+                                    "Phage", "Nutrients")) +
+      geom_hline(yintercept = 1, lty = 2) +
+      theme_bw() +
+      theme(axis.text.x = element_text(size = 18),
+            axis.text.y = element_text(size = 18),
+            axis.title = element_text(size = 20),
+            legend.text = element_text(size = 18),
+            legend.title = element_text(size = 20),
+            plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "in")) +
+      labs(y = "Density", color = "Population", x = "Time (hr)") +
+      NULL
+  )
+  dev.off()
+  
+  
+  temp <- filter(ybig1, uniq_run == myrun, Pop == "B")
+  png("./statplots/run1_example_B.png",
+      width = 5, height = 5, units = "in", res = 150)
+  print(
+    ggplot(data = temp, 
+           aes(x = time/60, y = Density+dens_offset)) +
+      geom_line(lwd = 1.5, alpha = 1, color = "black") + 
+      scale_y_continuous(trans = "log10",
+                         breaks = scales::trans_breaks("log10", function(x) 10^x),
+                         labels = scales::trans_format("log10", 
+                                                       scales::math_format(10^.x))) +
+      scale_x_continuous(breaks = seq(from = 0, to = 10, by = 2.5)) +
+      theme_bw() +
+      theme(axis.text.x = element_text(size = 18),
+            axis.text.y = element_text(size = 18),
+            axis.title = element_text(size = 20),
+            legend.text = element_text(size = 18),
+            legend.title = element_text(size = 20),
+            plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "in")) +
+      labs(y = "Density", x = "Time (hr)") +
+      NULL)
+  dev.off()
+  
+  png("./statplots/run1_example_Ballsum.png",
+      width = 5, height = 5, units = "in", res = 150)
+  print(
+    ggplot(data = temp, 
+           aes(x = time/60, y = Density+dens_offset)) +
+      geom_line(lwd = 1.5, alpha = 1, color = "black") + 
+      geom_point(data = filter(ysum1, uniq_run == myrun),
+                 aes(x = peak_time/60, y = peak_dens+dens_offset), 
+                 color = "red", size = 3) +
+      geom_point(data = filter(ysum1, uniq_run == myrun),
+                 aes(x = extin_time_4/60, y = 10**4+dens_offset), 
+                 color = "red", size = 3) +
+      scale_y_continuous(trans = "log10",
+                         breaks = scales::trans_breaks("log10", function(x) 10^x),
+                         labels = scales::trans_format("log10", 
+                                                       scales::math_format(10^.x))) +
+      scale_x_continuous(breaks = seq(from = 0, to = 10, by = 2.5)) +
+      geom_segment(data = filter(ysum1, uniq_run == myrun),
+                   aes(y = peak_dens + dens_offset,
+                       yend = peak_dens + dens_offset,
+                       x = 0, xend = peak_time/60),
+                   lty = 2, size = 1.5, color = "red", alpha = 0.8) +
+      geom_segment(data = filter(ysum1, uniq_run == myrun),
+                   aes(y = 0 + dens_offset,
+                       yend = peak_dens + dens_offset,
+                       x = peak_time/60, xend = peak_time/60),
+                   lty = 2, size = 1.5, color = "red", alpha = 0.8) +
+      geom_segment(data = filter(ysum1, uniq_run == myrun),
+                   aes(y = 0 + dens_offset,
+                       yend = 10**4 + dens_offset,
+                       x = extin_time_4/60, xend = extin_time_4/60),
+                   lty = 2, size = 1.5, color = "red", alpha = 0.8) +
+      geom_area(aes(y = Density+dens_offset),
+                fill = "red", alpha = 0.5) +
+      #geom_hline(yintercept = dens_offset, lty = 2) +
+      theme_bw() +
+      theme(axis.text.x = element_text(size = 18),
+            axis.text.y = element_text(size = 18),
+            axis.title = element_text(size = 20),
+            legend.text = element_text(size = 18),
+            legend.title = element_text(size = 20),
+            plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "in")) +
+      labs(y = "Density", x = "Time (hr)") +
+      NULL)
+  dev.off()
+}
+
+
 # Run 1: B curves & stat v stat plots ----
-dir.create("./statplots", showWarnings = FALSE)
 if(glob_make_statplots) {
   png("./statplots/run1_peakdens_peaktime.png",
       width = 5, height = 5, units = "in", res = 150)
@@ -2725,38 +2831,44 @@ if(glob_make_statplots) {
   set.seed(1)
   png("./statplots/run10_relauc_a_moi_allpoints.png", width = 5, height = 3,
       units = "in", res = 300)
-  ggplot(data = filter(ysum10, a_S1 != 0),
+  print(ggplot(data = filter(ysum10, a_S1 != 0),
          aes(x = init_moi, y = rel_auc, color = as.factor(a_S1))) +
     geom_point(position = position_jitter(width = 0.1, height = 0),
                size = 1, alpha = 0.5) +
     geom_line(aes(group = paste(bact, a_S1)), lwd = 0.05) +
     scale_x_log10() +
     scale_y_log10() +
-    scale_color_viridis_d(name = "Infection rate\n(/min)", end = 0.85) +
+    scale_color_viridis_d(name = "Infection rate\n(/min)", end = 0.85,
+                          labels = c(expression(10^-12),
+                                     expression(10^-11), expression(10^-10),
+                                     expression(10^-9), expression(10^-8))) +
     theme_bw() +
     labs(x = "Initial multiplicity of infection (MOI)",
-         y = "Area under the curve\nrelative to phage-less control")
+         y = "Area under the curve\nrelative to phage-less control") +
+      NULL)
   dev.off()
   
   png("./statplots/run10_auc_a_moi_allpoints.png", width = 5, height = 3,
       units = "in", res = 300)
-  ggplot(data = ysum10,
+  print(ggplot(data = ysum10,
          aes(x = init_moi, y = log10(auc/60), color = as.factor(a_S1))) +
     geom_point(position = position_jitter(width = 0.1, height = 0),
                size = 1, alpha = 0.5) +
     geom_line(aes(group = paste(bact, a_S1)), lwd = 0.05) +
     scale_x_log10() +
     scale_color_viridis_d(name = "Infection rate\n(/min)", end = 0.85,
-                          labels = c("NA", 10**-12, 10**-11, 10**-10,
-                                     10**-9, 10**-8)) +
+                          labels = c("NA", expression(10^-12),
+                                     expression(10^-11), expression(10^-10),
+                                     expression(10^-9), expression(10^-8))) +
     theme_bw() +
     labs(x = "Initial multiplicity of infection (MOI)",
-         y = "log10(Area under the curve)\n(hr cfu/mL)")
+         y = "log10(Area under the curve)\n(hr cfu/mL)") +
+      NULL)
   dev.off()
   
   png("./statplots/run10_relauc_a_moi_sum.png", width = 5, height = 3,
       units = "in", res = 300)
-  ggplot(data = filter(ysum10, a_S1 != 0),
+  print(ggplot(data = filter(ysum10, a_S1 != 0),
          aes(x = init_moi, y = rel_auc, color = as.factor(a_S1))) +
     geom_point(position = position_jitter(width = 0.1, height = 0),
                size = 1, alpha = 0.5) +
@@ -2764,15 +2876,19 @@ if(glob_make_statplots) {
               aes(y = rel_auc_avg), lwd = 1.5) +
     scale_x_log10() +
     scale_y_log10() +
-    scale_color_viridis_d(name = "Infection rate\n(/min)", end = 0.85) +
+    scale_color_viridis_d(name = "Infection rate\n(/min)", end = 0.85,
+                          labels = c(expression(10^-12),
+                                     expression(10^-11), expression(10^-10),
+                                     expression(10^-9), expression(10^-8))) +
     theme_bw() +
     labs(x = "Initial multiplicity of infection (MOI)",
-         y = "Area under the curve\nrelative to phage-less control")
+         y = "Area under the curve\nrelative to phage-less control") +
+      NULL)
   dev.off()
   
   png("./statplots/run10_auc_a_moi_sum.png", width = 5, height = 3,
       units = "in", res = 300)
-  ggplot(data = ysum10,
+  print(ggplot(data = ysum10,
          aes(x = as.factor(init_moi), y = log10(auc/60), 
              color = as.factor(a_S1))) +
     geom_point(position = position_jitter(width = 0.1, height = 0),
@@ -2784,7 +2900,30 @@ if(glob_make_statplots) {
                                      expression(10^-9), expression(10^-8))) +
     theme_bw() +
     labs(x = "Initial multiplicity of infection (MOI)",
-         y = "log10(Area under the curve)\n(hr cfu/mL)")
+         y = "log10(Area under the curve)\n(hr cfu/mL)") +
+      NULL)
+  dev.off()
+  
+  png("./statplots/run10_auc_faceted.png", width = 6, height = 6,
+      units = "in", res = 300)
+  print(ggplot(data = ysum10,
+               aes(x = as.factor(init_moi), y = log10(auc/60), 
+                   color = as.factor(a_S1))) +
+          geom_point() +
+          ggh4x::facet_nested(h*k ~ u_S1,
+                              labeller = labeller(
+                                k = function(x) paste("k =", x),
+                                h = function(x) paste("h =", x),
+                                u_S1 = function(x) paste("u_S1 =", x))) +
+          scale_color_viridis_d(name = "Infection rate\n(/min)", end = 0.85,
+                                labels = c("NA", expression(10^-12),
+                                           expression(10^-11), expression(10^-10),
+                                           expression(10^-9), expression(10^-8))) +
+          theme_bw() +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+          labs(x = "Initial multiplicity of infection (MOI)",
+               y = "log10(Area under the curve) (hr cfu/mL)") +
+          NULL)
   dev.off()
 }
 
