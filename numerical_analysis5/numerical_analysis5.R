@@ -1895,7 +1895,84 @@ ysum2 <- mutate(
   ysum2,
   extin_flag = ifelse(is.na(extin_time_4), "noextin",
                       ifelse(peak_dens >= 0.9*k, "neark", "none")),
-  extin_time_4 = ifelse(is.na(extin_time_4), run_time, extin_time_4))
+  extin_time_4 = ifelse(is.na(extin_time_4), run_time, extin_time_4),
+  )
+
+run2_preds <-  expand.grid(time = unique(ybig2$time),
+                           u_S1 = unique(ybig2$u_S1),
+                           k = unique(ybig2$k),
+                           init_S1 = unique(ybig2$init_S1))
+run2_preds <- mutate(run2_preds,
+                     peak_dens_pred = logis_func(S_0 = init_S1, u_S = u_S1, 
+                                                 k = k, times = time),
+                     auc_pred = logis_def_integral(S_0 = init_S1, u_S = u_S1, 
+                                                   k = k, times = time))
+                         
+
+# Run 2: stat v stat plots ----
+if(glob_make_statplots) {
+  png("./statplots/run2_peakdens_peaktime.png",
+      width = 6, height = 5, units = "in", res = 150)
+  print(
+    ggplot(data = ysum2,
+           aes(x = peak_time/60, y = peak_dens)) +
+      geom_point(aes(shape = extin_flag)) +
+      geom_line(data = run2_preds,
+                aes(x = time/60, y = peak_dens_pred),
+                lty = 2) +
+      facet_grid(k ~ u_S1, scales = "free_y",
+                 labeller = labeller(u_S1 = function(x) paste("u_S1 =", x),
+                                     k = function(x) paste("k =", x))) +
+      xlim(0, 24) +
+      scale_shape_manual(breaks = c("none", "neark", "noextin"),
+                         values = c(16, 4, 3)) +
+      labs(x = "Peak Time (hr)", y = "Peak Density (cfu/mL)") +
+      guides(shape = "none") + 
+      theme_bw() +
+      theme(axis.title = element_text(size = 20)) +
+      NULL
+  )
+  dev.off()
+  
+  png("./statplots/run2_extintime_peaktime.png",
+      width = 5, height = 5, units = "in", res = 150)
+  print(
+    ggplot(data = ysum2,
+           aes(x = peak_time/60, y = extin_time_4/60)) +
+      geom_point(aes(shape = extin_flag)) +
+      geom_abline(slope = 1, intercept = 0, alpha = 0.5) +
+      scale_shape_manual(breaks = c("none", "neark", "noextin"),
+                         values = c(16, 4, 3)) +
+      labs(x = "Peak Time (hr)", y = "Extinction Time (hr)") +
+      guides(shape = "none") +
+      theme_bw() +
+      theme(axis.title = element_text(size = 20)) +
+      NULL)
+  dev.off()
+  
+  png("./statplots/run2_auc_peaktime.png",
+      width = 6, height = 5, units = "in", res = 150)
+  print(
+    ggplot(data = ysum2,
+           aes(x = peak_time/60, y = auc/60)) +
+      geom_point(aes(shape = extin_flag)) +
+      geom_line(data = run2_preds,
+                aes(x = time/60, y = auc_pred/60),
+                lty = 2) +
+      facet_grid(k ~ u_S1, scales = "free_y",
+                 labeller = labeller(u_S1 = function(x) paste("u_S1 =", x),
+                                     k = function(x) paste("k =", x))) +
+      xlim(0, 24) +
+      scale_y_log10() +
+      scale_shape_manual(breaks = c("none", "neark", "noextin"),
+                         values = c(16, 4, 3)) +
+      labs(x = "Peak Time (hr)", y = "Area Under the Curve (hr cfu/mL)") +
+      guides(shape = "none") +
+      theme_bw() +
+      theme(axis.title = element_text(size = 20)) +
+      NULL)
+  dev.off()
+}
 
 #Run 2: contour plots ----
 if (glob_make_statplots) {
