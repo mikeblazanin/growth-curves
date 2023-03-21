@@ -2634,6 +2634,152 @@ if (glob_make_statplots) {
 }
 
 
-## Run n: test of metrics across dift bact ----
+## Run 10: test of metrics across dift bact ----
+run10 <- run_sims_filewrapper(
+  name = "run10",
+  read_file = glob_read_files,
+  a = list(
+    u_S1 = signif(0.04*10**seq(from = 0, to = -0.7, length.out = 3), 3),
+    u_S2 = 0,
+    k = 10**(8:10),
+    a_S1 = signif(10**seq(from = -12, to = -8, length.out = 5), 3),
+    a_S2 = 0,
+    tau = 31.6,
+    b = 50,
+    z = 1,
+    d = 0,
+    h = c(0, 0.1),
+    init_S1 = 10**6,
+    init_moi = c(1e-1, 1e-2, 1e-3, 1e-4, 1e-5),
+    equil_cutoff_dens = 0.1,
+    init_time = 12*60,
+    max_time = 48*60,
+    init_stepsize = 5,
+    print_info = TRUE),
+  b = list(
+    u_S1 = signif(0.04*10**seq(from = 0, to = -0.7, length.out = 3), 3),
+    u_S2 = 0,
+    k = 10**(8:10),
+    a_S1 = 0,
+    a_S2 = 0,
+    tau = 31.6,
+    b = 50,
+    z = 1,
+    d = 0,
+    h = c(0, 0.1),
+    init_S1 = 10**6,
+    init_moi = 0,
+    equil_cutoff_dens = 0.1,
+    init_time = 12*60,
+    max_time = 48*60,
+    init_stepsize = 5,
+    print_info = TRUE))
+    
+ybig10 <- run10[[1]]
 
+#Set below 0 values to 0
+#and set all runs to end at the same time
+ybig10 <- mutate(group_by(ybig10, uniq_run),
+                Density = ifelse(Density < 0, 0, Density),
+                time = ifelse(time == max(time), max(ybig10$time), time))
 
+ysum10 <- summarize(group_by(filter(ybig10, Pop == "B"),
+                            uniq_run, u_S1, u_S2, k, a_S1, a_S2,
+                            tau, b, z, f_a, f_b, d, h, g1, g2,
+                            init_S1, init_S2, init_moi, init_N, equil),
+                   peak_dens = max(Density),
+                   peak_time = time[which.max(Density)],
+                   auc = auc(x = time, y = Density),
+                   extin_time_4 = 
+                     first_below(y = Density, x = time,
+                                 threshold = 10**4, return = "x",
+                                 return_endpoints = FALSE),
+                   run_time = max(time))
+ysum10 <- mutate(
+  ysum10,
+  extin_flag = ifelse(is.na(extin_time_4), "noextin",
+                      ifelse(peak_dens >= 0.9*k, "neark", "none")),
+  extin_time_4 = ifelse(is.na(extin_time_4), run_time, extin_time_4),
+  bact = paste(u_S1, k, h))
+
+#Relative auc
+ysum10 <- mutate(group_by(ysum10, u_S1, u_S2, k, z, d,
+                         init_S1, init_S2, init_N),
+                rel_auc = auc/auc[init_moi == 0])
+
+ysum10_sum <- summarize(group_by(ysum10, init_moi, a_S1),
+                        logauc_avg = mean(log10(auc/60)),
+                        logauc_sd = sd(log10(auc)),
+                        logauc_min = min(log10(auc)),
+                        logauc_max = max(log10(auc)),
+                        rel_auc_avg = mean(rel_auc),
+                        rel_auc_sd = sd(rel_auc),
+                        rel_auc_min = min(rel_auc),
+                        rel_auc_max = max(rel_auc))
+
+if(glob_make_statplots) {
+  set.seed(1)
+  png("./statplots/run10_relauc_a_moi_allpoints.png", width = 5, height = 3,
+      units = "in", res = 300)
+  ggplot(data = filter(ysum10, a_S1 != 0),
+         aes(x = init_moi, y = rel_auc, color = as.factor(a_S1))) +
+    geom_point(position = position_jitter(width = 0.1, height = 0),
+               size = 1, alpha = 0.5) +
+    geom_line(aes(group = paste(bact, a_S1)), lwd = 0.05) +
+    scale_x_log10() +
+    scale_y_log10() +
+    scale_color_viridis_d(name = "Infection rate\n(/min)", end = 0.85) +
+    theme_bw() +
+    labs(x = "Initial multiplicity of infection (MOI)",
+         y = "Area under the curve\nrelative to phage-less control")
+  dev.off()
+  
+  png("./statplots/run10_auc_a_moi_allpoints.png", width = 5, height = 3,
+      units = "in", res = 300)
+  ggplot(data = ysum10,
+         aes(x = init_moi, y = log10(auc/60), color = as.factor(a_S1))) +
+    geom_point(position = position_jitter(width = 0.1, height = 0),
+               size = 1, alpha = 0.5) +
+    geom_line(aes(group = paste(bact, a_S1)), lwd = 0.05) +
+    scale_x_log10() +
+    scale_color_viridis_d(name = "Infection rate\n(/min)", end = 0.85,
+                          labels = c("NA", 10**-12, 10**-11, 10**-10,
+                                     10**-9, 10**-8)) +
+    theme_bw() +
+    labs(x = "Initial multiplicity of infection (MOI)",
+         y = "log10(Area under the curve)\n(hr cfu/mL)")
+  dev.off()
+  
+  png("./statplots/run10_relauc_a_moi_sum.png", width = 5, height = 3,
+      units = "in", res = 300)
+  ggplot(data = filter(ysum10, a_S1 != 0),
+         aes(x = init_moi, y = rel_auc, color = as.factor(a_S1))) +
+    geom_point(position = position_jitter(width = 0.1, height = 0),
+               size = 1, alpha = 0.5) +
+    geom_line(data = filter(ysum10_sum, a_S1 != 0),
+              aes(y = rel_auc_avg), lwd = 1.5) +
+    scale_x_log10() +
+    scale_y_log10() +
+    scale_color_viridis_d(name = "Infection rate\n(/min)", end = 0.85) +
+    theme_bw() +
+    labs(x = "Initial multiplicity of infection (MOI)",
+         y = "Area under the curve\nrelative to phage-less control")
+  dev.off()
+  
+  png("./statplots/run10_auc_a_moi_sum.png", width = 5, height = 3,
+      units = "in", res = 300)
+  ggplot(data = ysum10,
+         aes(x = as.factor(init_moi), y = log10(auc/60), 
+             color = as.factor(a_S1))) +
+    geom_point(position = position_jitter(width = 0.1, height = 0),
+               size = 1, alpha = 0.5) +
+    geom_line(data = ysum10_sum, aes(y = logauc_avg, group = a_S1), lwd = 1.5) +
+    scale_color_viridis_d(name = "Infection rate\n(/min)", end = 0.85,
+                          labels = c("NA", expression(10^-12),
+                                     expression(10^-11), expression(10^-10),
+                                     expression(10^-9), expression(10^-8))) +
+    theme_bw() +
+    labs(x = "Initial multiplicity of infection (MOI)",
+         y = "log10(Area under the curve)\n(hr cfu/mL)")
+  dev.off()
+}
