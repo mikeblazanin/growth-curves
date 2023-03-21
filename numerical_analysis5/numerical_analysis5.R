@@ -1004,6 +1004,10 @@ interp_data <- function(df, x, y, subset_by) {
   #subset_by is a vector
   #Note: this function is slow and could be improved by
   # vectorizing the interpolations
+
+  if(length(subset_by) != nrow(df)) {
+    stop("subset_by must be the same length as nrow(df)")}
+  if(inherits(df, "tbl_df")) {df <- as.data.frame(df)}
   
   alltimes <- unique(df[, x])
   alltimes <- alltimes[order(alltimes)]
@@ -2781,5 +2785,74 @@ if(glob_make_statplots) {
     theme_bw() +
     labs(x = "Initial multiplicity of infection (MOI)",
          y = "log10(Area under the curve)\n(hr cfu/mL)")
+  dev.off()
+}
+
+
+# Run 10: PCA ----
+ybig10_B <- filter(ybig10, Pop == "B")
+ybig10_B <- interp_data(df = ybig10_B,
+                        x = "time", y = "Density",
+                        subset_by = ybig10_B$uniq_run)
+ybig10_B <- mutate(group_by(ybig10_B, u_S1, k, h, time),
+                   Dens_norm = Density - Density[init_moi == 0])
+ybig10_B <- filter(ybig10_B, time %% 20 == 0)
+
+ybig10_B_wide <- tidyr::pivot_wider(ybig10_B,
+                                    names_from = time,
+                                    names_prefix = "t_",
+                                    values_from = c(Density, Dens_norm))
+
+mypca <- prcomp(ybig10_B_wide[, grep("Density_", colnames(ybig10_B_wide))[-1]],
+                center = TRUE, scale = TRUE, retx = TRUE)
+mypcanorm <- prcomp(ybig10_B_wide[, grep("Dens_norm", colnames(ybig10_B_wide))[-1]],
+                center = TRUE, scale = TRUE, retx = TRUE)
+
+#Merge with orig data
+colnames(mypcanorm$x) <- paste0("norm_", colnames(mypcanorm$x))
+ybig10_B_wide <- cbind(ybig10_B_wide,
+                       as.data.frame(mypca$x),
+                       as.data.frame(mypcanorm$x))
+
+#Plot
+if(glob_make_statplots) {
+  png("./statplots/run10_pca.png", width = 5, height = 4,
+      units = "in", res = 300)
+  ggplot(data = ybig10_B_wide,
+         aes(x = PC1, y = PC2)) +
+    geom_point(aes(color = as.factor(a_S1))) +
+    scale_color_viridis_d(name = "Infection rate\n(/min)", end = 0.85,
+                          labels = c("NA", expression(10^-12),
+                                     expression(10^-11), expression(10^-10),
+                                     expression(10^-9), expression(10^-8))) +
+    labs(x = paste("PC1 (",
+                   round((100*((mypca$sdev)**2)/
+                            sum((mypca$sdev)**2))[1], 1),
+                   "%)", sep = ""),
+         y = paste("PC2 (",
+                   round((100*((mypca$sdev)**2)/
+                            sum((mypca$sdev)**2))[2], 1),
+                   "%)", sep = "")) +
+    theme_bw()
+  dev.off()
+  
+  png("./statplots/run10_pca_norm.png", width = 5, height = 4,
+      units = "in", res = 300)
+  ggplot(data = ybig10_B_wide,
+         aes(x = norm_PC1, y = norm_PC2)) +
+    geom_point(aes(color = as.factor(a_S1))) +
+    scale_color_viridis_d(name = "Infection rate\n(/min)", end = 0.85,
+                          labels = c("NA", expression(10^-12),
+                                     expression(10^-11), expression(10^-10),
+                                     expression(10^-9), expression(10^-8))) +
+    labs(x = paste("PC1 (",
+                   round((100*((mypcanorm$sdev)**2)/
+                            sum((mypcanorm$sdev)**2))[1], 1),
+                   "%)", sep = ""),
+         y = paste("PC2 (",
+                   round((100*((mypcanorm$sdev)**2)/
+                            sum((mypcanorm$sdev)**2))[2], 1),
+                   "%)", sep = "")) +
+    theme_bw()
   dev.off()
 }
