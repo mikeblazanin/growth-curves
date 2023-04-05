@@ -1400,12 +1400,15 @@ if(glob_make_statplots) {
   png("./statplots/run1_deathslope_peakdens.png",
       width = 5, height = 4, units = "in", res = 150)
   print(ggplot(data = ysum1,
-               aes(x = peak_dens, y = -death_slope)) +
+               aes(x = peak_dens, y = -death_slope, shape = extin_flag)) +
           geom_point() +
+          scale_shape_manual(breaks = c("none", "neark", "noextin"),
+                             values = c(16, 4, 3)) +
           scale_y_log10() +
           scale_x_log10() +
           labs(x = "Peak Density (cfu/mL)", 
                y = "Maximum death rate\n(cfu/mL/hr)") +
+          guides(shape = "none") +
           theme_bw() +
           theme(axis.title = element_text(size = 20)) +
           NULL)
@@ -1449,7 +1452,7 @@ if(glob_make_statplots) {
           scale_shape_manual(breaks = c("none", "neark", "noextin"),
                              values = c(16, 4, 3)) +
           scale_x_log10() +
-          labs(x = "Peak density (cfu/mL)",
+          labs(x = "Phage density when\nbacteria peak (pfu/mL)",
                y = "Extinction time:Peak time") +
           guides(shape = "none") +
           theme_bw() +
@@ -2231,7 +2234,7 @@ if(glob_make_statplots) {
                              values = c(19, 4),
                              labels = c("Bacteria", "Phages")) +
           labs(x = "Fraction of N consumed", y = "Density (cfu/mL or pfu/mL)",
-               subtitle = "Lag time (min)") +
+               subtitle = "Lysis time (min)") +
           scale_y_log10() +
           geom_vline(data = filter(ybig5_wide, f_tau >= 1), 
                      aes(xintercept = 1/f_tau), lty = 2) +
@@ -2370,12 +2373,13 @@ ybig7 <- run7[[1]]
 
 #Set below 0 values to 0
 ybig7 <- mutate(ybig7,
-                Density = ifelse(Density < 0, 0, Density))
+                Density = ifelse(Density < 0, 0, Density),
+                init_P = init_moi*(init_S1+init_S2))
 
 ysum7 <- summarize(group_by(filter(ybig7, Pop == "B"),
                             uniq_run, u_S1, u_S2, k, a_S1, a_S2,
                             tau, b, z, f_a, f_b, d, h, g1, g2,
-                            init_S1, init_S2, init_moi, init_N, equil),
+                            init_S1, init_S2, init_moi, init_N, init_P, equil),
                    peak_dens = max(Density),
                    peak_time = time[which.max(Density)],
                    auc = auc(x = time, y = Density),
@@ -2383,7 +2387,8 @@ ysum7 <- summarize(group_by(filter(ybig7, Pop == "B"),
                      first_below(y = Density, x = time,
                                  threshold = 10**4, return = "x",
                                  return_endpoints = FALSE),
-                   run_time = max(time))
+                   run_time = max(time),
+                   init_P = (init_S1[1] + init_S2[1])*init_moi[1])
 ysum7 <- mutate(
   ysum7,
   extin_flag = ifelse(is.na(extin_time_4), "noextin",
@@ -2391,43 +2396,17 @@ ysum7 <- mutate(
   extin_time_4 = ifelse(is.na(extin_time_4), run_time, extin_time_4))
 
 if (glob_make_statplots) {
-  png("./statplots/run7_maxtime_a_initdens_contour.png", width = 5, height = 3.8,
-      units = "in", res = 300)
-  print(ggplot(data = filter(ysum7, init_moi == 0.01), 
-               aes(x = a_S1, y = init_S1)) +
-          geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
-          geom_segment(aes(x = a_S1, xend = a_S1,
-                           y = init_S1*qpois(0.025, 10)/10,
-                           yend = init_S1*qpois(0.975, 10)/10)) +
-          geom_segment(aes(x = a_S1, xend = a_S1,
-                           y = init_S1*qpois(0.025, 100)/100,
-                           yend = init_S1*qpois(0.975, 100)/100),
-                       lwd = 2) +
-          geom_point(aes(color = peak_time/60, shape = extin_flag),
-                     size = 3) +
-          scale_color_viridis_c(name = "Peak time (hr)",
-                                breaks = c(6, 12, 18, 24)) +
-          scale_shape_manual(breaks = c("neark", "noextin", "none"), 
-                             values = c(4, 4, 16)) +
-          scale_y_continuous(trans = "log10") +
-          scale_x_continuous(trans = "log10") +
-          labs(x = "Infection rate (/min)",
-               y = "Initial bacterial density (cfu/mL)") +
-          guides(fill = "none", shape = "none") +
-          NULL)
-  dev.off()
-  
-  png("./statplots/run7_maxtime_a_initmoi_contour.png", width = 5, height = 3.8,
+  png("./statplots/run7_maxtime_a_initSconst_contour.png", width = 5, height = 3.8,
       units = "in", res = 300)
   print(ggplot(data = filter(ysum7, init_S1 == 10**6), 
-               aes(x = a_S1, y = init_moi*init_S1)) +
+               aes(x = a_S1, y = init_P)) +
           geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
           geom_segment(aes(x = a_S1, xend = a_S1,
-                           y = init_S1*init_moi*qpois(0.025, 10)/10,
-                           yend = init_S1*init_moi*qpois(0.975, 10)/10)) +
+                           y = init_P*qpois(0.025, 10)/10,
+                           yend = init_P*qpois(0.975, 10)/10)) +
           geom_segment(aes(x = a_S1, xend = a_S1,
-                           y = init_S1*init_moi*qpois(0.025, 100)/100,
-                           yend = init_S1*init_moi*qpois(0.975, 100)/100),
+                           y = init_P*qpois(0.025, 100)/100,
+                           yend = init_P*qpois(0.975, 100)/100),
                        lwd = 2) +
           geom_point(aes(color = peak_time/60, shape = extin_flag),
                      size = 3) +
@@ -2443,9 +2422,54 @@ if (glob_make_statplots) {
           NULL)
   dev.off()
   
-  png("./statplots/run7_maxtime_a_initdenspois_contour.png", width = 5, height = 3.8,
+  png("./statplots/run7_maxtime_a_initPconst_contour.png", width = 5, height = 3.8,
+      units = "in", res = 300)
+  print(ggplot(data = filter(ysum7, init_P == 10**4), 
+               aes(x = a_S1, y = init_S1)) +
+          geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
+          geom_segment(aes(x = a_S1, xend = a_S1,
+                           y = init_S1*qpois(0.025, 10)/10,
+                           yend = init_S1*qpois(0.975, 10)/10)) +
+          geom_segment(aes(x = a_S1, xend = a_S1,
+                           y = init_S1*qpois(0.025, 100)/100,
+                           yend = init_S1*qpois(0.975, 100)/100),
+                       lwd = 2) +
+          geom_point(aes(color = peak_time/60, shape = extin_flag),
+                     size = 3) +
+          scale_color_viridis_c(name = "Peak time (hr)",
+                                breaks = c(4, 8, 12, 16)) +
+          scale_shape_manual(breaks = c("neark", "noextin", "none"), 
+                             values = c(4, 4, 16)) +
+          scale_y_continuous(trans = "log10") +
+          scale_x_continuous(trans = "log10") +
+          labs(x = "Infection rate (/min)",
+               y = "Initial bacterial density (cfu/mL)") +
+          guides(fill = "none", shape = "none") +
+          NULL)
+  dev.off()
+  
+  png("./statplots/run7_maxtime_a_moiconst_contour.png", width = 5, height = 3.8,
       units = "in", res = 300)
   print(ggplot(data = filter(ysum7, init_moi == 0.01), 
+               aes(x = a_S1, y = init_S1)) +
+          geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
+          geom_point(aes(color = peak_time/60, shape = extin_flag),
+                     size = 3) +
+          scale_color_viridis_c(name = "Peak time (hr)",
+                                breaks = c(6, 12, 18, 24)) +
+          scale_shape_manual(breaks = c("neark", "noextin", "none"), 
+                             values = c(4, 4, 16)) +
+          scale_y_continuous(trans = "log10") +
+          scale_x_continuous(trans = "log10") +
+          labs(x = "Infection rate (/min)",
+               y = "Initial bacterial density (cfu/mL)") +
+          guides(fill = "none", shape = "none") +
+          NULL)
+  dev.off()
+  
+  png("./statplots/run7_maxtime_a_initPconst_pois_contour.png", width = 5, height = 3.8,
+      units = "in", res = 300)
+  print(ggplot(data = filter(ysum7, init_P == 10**4), 
                aes(x = a_S1, y = init_S1)) +
           geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
           geom_point(aes(color = peak_time/60, shape = extin_flag),
@@ -2466,16 +2490,16 @@ if (glob_make_statplots) {
           NULL)
   dev.off()
   
-  png("./statplots/run7_maxtime_a_initmoipois_contour.png", width = 5, height = 3.8,
+  png("./statplots/run7_maxtime_a_initSconst_pois_contour.png", width = 5, height = 3.8,
       units = "in", res = 300)
   print(ggplot(data = filter(ysum7, init_S1 == 10**6), 
-               aes(x = a_S1, y = init_moi*init_S1)) +
+               aes(x = a_S1, y = init_P)) +
           geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
           geom_point(aes(color = peak_time/60, shape = extin_flag),
                      size = 3) +
           geom_segment(aes(x = a_S1, xend = a_S1,
-                           y = qpois(0.025, init_S1*init_moi),
-                           yend = qpois(0.975, init_S1*init_moi)),
+                           y = qpois(0.025, init_P),
+                           yend = qpois(0.975, init_P)),
                        lwd = 1) +
           scale_color_viridis_c(name = "Peak time (hr)",
                                 breaks = c(3, 6, 9, 12)) +
@@ -2489,7 +2513,7 @@ if (glob_make_statplots) {
           NULL)
   dev.off()
   
-  p1 <- ggplot(data = filter(ysum7, init_moi == 0.01), 
+  p1 <- ggplot(data = filter(ysum7, init_P == 10**4), 
                aes(x = a_S1, y = init_S1)) +
     geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
     geom_segment(aes(x = a_S1, xend = a_S1,
@@ -2517,18 +2541,18 @@ if (glob_make_statplots) {
     NULL
   
   p2 <- ggplot(data = filter(ysum7, init_S1 == 10**6), 
-               aes(x = a_S1, y = init_moi*init_S1)) +
+               aes(x = a_S1, y = init_P)) +
     geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
     geom_segment(aes(x = a_S1, xend = a_S1,
-                     y = init_S1*init_moi*qpois(0.025, 1*10)/1/10,
-                     yend = init_S1*init_moi*qpois(0.975, 1*10)/1/10)) +
+                     y = init_P*qpois(0.025, 1*10)/1/10,
+                     yend = init_P*qpois(0.975, 1*10)/1/10)) +
     geom_segment(aes(x = a_S1, xend = a_S1,
-                     y = init_S1*init_moi*qpois(0.025, 3*10)/3/10,
-                     yend = init_S1*init_moi*qpois(0.975, 3*10)/3/10),
+                     y = init_P*qpois(0.025, 3*10)/3/10,
+                     yend = init_P*qpois(0.975, 3*10)/3/10),
                  lwd = 2) +
     geom_segment(aes(x = a_S1, xend = a_S1,
-                     y = init_S1*init_moi*qpois(0.025, 5*10)/5/10,
-                     yend = init_S1*init_moi*qpois(0.975, 5*10)/5/10),
+                     y = init_P*qpois(0.025, 5*10)/5/10,
+                     yend = init_P*qpois(0.975, 5*10)/5/10),
                  lwd = 3) +
     geom_point(aes(color = peak_time/60, shape = extin_flag),
                size = 3) +
@@ -2543,12 +2567,12 @@ if (glob_make_statplots) {
     guides(fill = "none", shape = "none") +
     NULL
   
-  png("./statplots/run7_peaktime_a_initmoi_init_dens_varyingn_contour.png", 
+  png("./statplots/run7_peaktime_a_initP_initS_varyingn_contour.png", 
       width = 10, height = 4, units = "in", res = 300)
   print(cowplot::plot_grid(p1, p2, ncol = 2))
   dev.off()
   
-  p1 <- print(ggplot(data = filter(ysum7, init_moi == 0.01), 
+  p1 <- print(ggplot(data = filter(ysum7, init_P == 10**4), 
                aes(x = a_S1, y = init_S1)) +
           geom_contour_filled(aes(z = log10(peak_dens)), alpha = 0.5) +
           geom_segment(aes(x = a_S1, xend = a_S1,
@@ -2572,14 +2596,14 @@ if (glob_make_statplots) {
           NULL)
 
   p2 <- print(ggplot(data = filter(ysum7, init_S1 == 10**6), 
-               aes(x = a_S1, y = init_moi*init_S1)) +
+               aes(x = a_S1, y = init_P)) +
           geom_contour_filled(aes(z = log10(peak_dens)), alpha = 0.5) +
           geom_segment(aes(x = a_S1, xend = a_S1,
-                           y = init_S1*init_moi*qpois(0.025, 10)/10,
-                           yend = init_S1*init_moi*qpois(0.975, 10)/10)) +
+                           y = init_P*qpois(0.025, 10)/10,
+                           yend = init_P*qpois(0.975, 10)/10)) +
           geom_segment(aes(x = a_S1, xend = a_S1,
-                           y = init_S1*init_moi*qpois(0.025, 100)/100,
-                           yend = init_S1*init_moi*qpois(0.975, 100)/100),
+                           y = init_P*qpois(0.025, 100)/100,
+                           yend = init_P*qpois(0.975, 100)/100),
                        lwd = 2) +
           geom_point(aes(color = log10(peak_dens), shape = extin_flag),
                      size = 3) +
@@ -2594,7 +2618,7 @@ if (glob_make_statplots) {
           guides(fill = "none", shape = "none") +
           NULL)
   
-  p3 <- print(ggplot(data = filter(ysum7, init_moi == 0.01), 
+  p3 <- print(ggplot(data = filter(ysum7, init_P == 10**4), 
                      aes(x = a_S1, y = init_S1)) +
                 geom_contour_filled(aes(z = log10(extin_time_4/60)), alpha = 0.5) +
                 geom_segment(aes(x = a_S1, xend = a_S1,
@@ -2619,14 +2643,14 @@ if (glob_make_statplots) {
                 NULL)
   
   p4 <- print(ggplot(data = filter(ysum7, init_S1 == 10**6), 
-                     aes(x = a_S1, y = init_moi*init_S1)) +
+                     aes(x = a_S1, y = init_P)) +
                 geom_contour_filled(aes(z = log10(extin_time_4/60)), alpha = 0.5) +
                 geom_segment(aes(x = a_S1, xend = a_S1,
-                                 y = init_S1*init_moi*qpois(0.025, 10)/10,
-                                 yend = init_S1*init_moi*qpois(0.975, 10)/10)) +
+                                 y = init_P*qpois(0.025, 10)/10,
+                                 yend = init_P*qpois(0.975, 10)/10)) +
                 geom_segment(aes(x = a_S1, xend = a_S1,
-                                 y = init_S1*init_moi*qpois(0.025, 100)/100,
-                                 yend = init_S1*init_moi*qpois(0.975, 100)/100),
+                                 y = init_P*qpois(0.025, 100)/100,
+                                 yend = init_P*qpois(0.975, 100)/100),
                              lwd = 2) +
                 geom_point(aes(color = log10(extin_time_4/60), shape = extin_flag),
                            size = 3) +
@@ -2642,7 +2666,7 @@ if (glob_make_statplots) {
                 guides(fill = "none", shape = "none") +
                 NULL)
   
-  p5 <- print(ggplot(data = filter(ysum7, init_moi == 0.01), 
+  p5 <- print(ggplot(data = filter(ysum7, init_P == 10**4), 
                      aes(x = a_S1, y = init_S1)) +
                 geom_contour_filled(aes(z = log10(auc/60)), alpha = 0.5) +
                 geom_segment(aes(x = a_S1, xend = a_S1,
@@ -2670,14 +2694,14 @@ if (glob_make_statplots) {
                 NULL)
   
   p6 <- print(ggplot(data = filter(ysum7, init_S1 == 10**6), 
-                     aes(x = a_S1, y = init_moi*init_S1)) +
+                     aes(x = a_S1, y = init_P)) +
                 geom_contour_filled(aes(z = log10(auc/60)), alpha = 0.5) +
                 geom_segment(aes(x = a_S1, xend = a_S1,
-                                 y = init_S1*init_moi*qpois(0.025, 10)/10,
-                                 yend = init_S1*init_moi*qpois(0.975, 10)/10)) +
+                                 y = init_P*qpois(0.025, 10)/10,
+                                 yend = init_P*qpois(0.975, 10)/10)) +
                 geom_segment(aes(x = a_S1, xend = a_S1,
-                                 y = init_S1*init_moi*qpois(0.025, 100)/100,
-                                 yend = init_S1*init_moi*qpois(0.975, 100)/100),
+                                 y = init_P*qpois(0.025, 100)/100,
+                                 yend = init_P*qpois(0.975, 100)/100),
                              lwd = 2) +
                 geom_point(aes(color = log10(auc/60), shape = extin_flag),
                            size = 3) +
@@ -2696,7 +2720,7 @@ if (glob_make_statplots) {
                 guides(fill = "none", shape = "none") +
                 NULL)
   
-  png("./statplots/run7_othermetrics_a_initmoi_init_dens_contour.png", width = 11, height = 12,
+  png("./statplots/run7_othermetrics_a_initP_initS_contour.png", width = 11, height = 12,
       units = "in", res = 300)
   print(cowplot::plot_grid(p1, p2, p3, p4, p5, p6, ncol = 2))
   dev.off()
@@ -2726,12 +2750,13 @@ ybig8 <- run8[[1]]
 
 #Set below 0 values to 0
 ybig8 <- mutate(ybig8,
-                Density = ifelse(Density < 0, 0, Density))
+                Density = ifelse(Density < 0, 0, Density),
+                init_P = init_moi*(init_S1+init_S2))
 
 ysum8 <- summarize(group_by(filter(ybig8, Pop == "B"),
                             uniq_run, u_S1, u_S2, k, a_S1, a_S2,
                             tau, b, z, f_a, f_b, d, h, g1, g2,
-                            init_S1, init_S2, init_moi, init_N, equil),
+                            init_S1, init_S2, init_moi, init_N, init_P, equil),
                    peak_dens = max(Density),
                    peak_time = time[which.max(Density)],
                    auc = auc(x = time, y = Density),
@@ -2747,7 +2772,7 @@ ysum8 <- mutate(
   extin_time_4 = ifelse(is.na(extin_time_4), run_time, extin_time_4))
 
 if (glob_make_statplots) {
-  p1 <- ggplot(data = filter(ysum8, init_moi == 0.01), 
+  p1 <- ggplot(data = filter(ysum8, init_P == 10**4), 
                aes(x = b, y = init_S1)) +
           geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
           geom_segment(aes(x = b, xend = b,
@@ -2771,14 +2796,14 @@ if (glob_make_statplots) {
           NULL
 
   p2 <- ggplot(data = filter(ysum8, init_S1 == 10**6), 
-               aes(x = b, y = init_moi*init_S1)) +
+               aes(x = b, y = init_P)) +
           geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
           geom_segment(aes(x = b, xend = b,
-                           y = init_S1*init_moi*qpois(0.025, 10)/10,
-                           yend = init_S1*init_moi*qpois(0.975, 10)/10)) +
+                           y = init_P*qpois(0.025, 10)/10,
+                           yend = init_P*qpois(0.975, 10)/10)) +
           geom_segment(aes(x = b, xend = b,
-                           y = init_S1*init_moi*qpois(0.025, 100)/100,
-                           yend = init_S1*init_moi*qpois(0.975, 100)/100),
+                           y = init_P*qpois(0.025, 100)/100,
+                           yend = init_P*qpois(0.975, 100)/100),
                        lwd = 2) +
           geom_point(aes(color = peak_time/60, shape = extin_flag),
                      size = 3) +
@@ -2793,7 +2818,7 @@ if (glob_make_statplots) {
           guides(fill = "none", shape = "none") +
           NULL
   
-  png("./statplots/run8_peaktime_b_initmoi_init_dens_contour.png", width = 8, height = 3,
+  png("./statplots/run8_peaktime_b_initP_initS_contour.png", width = 8, height = 3,
       units = "in", res = 300)
   print(cowplot::plot_grid(p1, p2, ncol = 2))
   dev.off()
@@ -2822,12 +2847,13 @@ ybig9 <- run9[[1]]
 
 #Set below 0 values to 0
 ybig9 <- mutate(ybig9,
-                Density = ifelse(Density < 0, 0, Density))
+                Density = ifelse(Density < 0, 0, Density),
+                init_P = init_moi*(init_S1+init_S2))
 
 ysum9 <- summarize(group_by(filter(ybig9, Pop == "B"),
                             uniq_run, u_S1, u_S2, k, a_S1, a_S2,
                             tau, b, z, f_a, f_b, d, h, g1, g2,
-                            init_S1, init_S2, init_moi, init_N, equil),
+                            init_S1, init_S2, init_moi, init_N, init_P, equil),
                    peak_dens = max(Density),
                    peak_time = time[which.max(Density)],
                    auc = auc(x = time, y = Density),
@@ -2843,7 +2869,7 @@ ysum9 <- mutate(
   extin_time_4 = ifelse(is.na(extin_time_4), run_time, extin_time_4))
 
 if (glob_make_statplots) {
-  p1 <- ggplot(data = filter(ysum9, init_moi == 0.01), 
+  p1 <- ggplot(data = filter(ysum9, init_P == 10**4), 
                aes(x = tau, y = init_S1)) +
           geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
           geom_segment(aes(x = tau, xend = tau,
@@ -2867,14 +2893,14 @@ if (glob_make_statplots) {
           NULL
 
   p2 <- ggplot(data = filter(ysum9, init_S1 == 10**6), 
-               aes(x = tau, y = init_moi*init_S1)) +
+               aes(x = tau, y = init_P)) +
           geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
           geom_segment(aes(x = tau, xend = tau,
-                           y = init_S1*init_moi*qpois(0.025, 10)/10,
-                           yend = init_S1*init_moi*qpois(0.975, 10)/10)) +
+                           y = init_P*qpois(0.025, 10)/10,
+                           yend = init_P*qpois(0.975, 10)/10)) +
           geom_segment(aes(x = tau, xend = tau,
-                           y = init_S1*init_moi*qpois(0.025, 100)/100,
-                           yend = init_S1*init_moi*qpois(0.975, 100)/100),
+                           y = init_P*qpois(0.025, 100)/100,
+                           yend = init_P*qpois(0.975, 100)/100),
                        lwd = 2) +
           geom_point(aes(color = peak_time/60, shape = extin_flag),
                      size = 3) +
@@ -2889,7 +2915,7 @@ if (glob_make_statplots) {
           guides(fill = "none", shape = "none") +
           NULL
   
-  png("./statplots/run9_peaktime_tau_initmoi_init_dens_contour.png", width = 8, height = 3,
+  png("./statplots/run9_peaktime_tau_initP_initS_contour.png", width = 8, height = 3,
       units = "in", res = 300)
   print(cowplot::plot_grid(p1, p2, ncol = 2))
   dev.off()
@@ -2970,90 +2996,92 @@ ysum10 <- mutate(group_by(ysum10, u_S1, u_S2, k, z, d,
                 rel_auc = auc/auc[init_moi == 0])
 
 ysum10_sum <- summarize(group_by(ysum10, init_moi, a_S1),
-                        logauc_avg = mean(log10(auc/60)),
-                        logauc_sd = sd(log10(auc)),
-                        logauc_min = min(log10(auc)),
-                        logauc_max = max(log10(auc)),
-                        rel_auc_avg = mean(rel_auc),
-                        rel_auc_sd = sd(rel_auc),
-                        rel_auc_min = min(rel_auc),
-                        rel_auc_max = max(rel_auc))
+                        auc_avg = 10**mean(log10(auc/60)),
+                        rel_auc_avg = 10**mean(log10(rel_auc)))
 
 if(glob_make_statplots) {
-  set.seed(1)
-  png("./statplots/run10_relauc_a_moi_allpoints.png", width = 5, height = 3,
-      units = "in", res = 300)
-  print(ggplot(data = filter(ysum10, a_S1 != 0),
-         aes(x = init_moi, y = rel_auc, color = as.factor(a_S1))) +
-    geom_point(position = position_jitter(width = 0.1, height = 0),
-               size = 1, alpha = 0.5) +
-    geom_line(aes(group = paste(bact, a_S1)), lwd = 0.05) +
-    scale_x_log10() +
-    scale_y_log10() +
-    scale_color_viridis_d(name = "Infection rate\n(/min)", end = 0.85,
-                          labels = c(expression(10^-12),
-                                     expression(10^-11), expression(10^-10),
-                                     expression(10^-9), expression(10^-8))) +
-    theme_bw() +
-    labs(x = "Initial multiplicity of infection (MOI)",
-         y = "Area under the curve\nrelative to phage-less control") +
-      NULL)
-  dev.off()
-  
-  png("./statplots/run10_auc_a_moi_allpoints.png", width = 5, height = 3,
-      units = "in", res = 300)
-  print(ggplot(data = ysum10,
-         aes(x = init_moi, y = log10(auc/60), color = as.factor(a_S1))) +
-    geom_point(position = position_jitter(width = 0.1, height = 0),
-               size = 1, alpha = 0.5) +
-    geom_line(aes(group = paste(bact, a_S1)), lwd = 0.05) +
-    scale_x_log10() +
-    scale_color_viridis_d(name = "Infection rate\n(/min)", end = 0.85,
-                          labels = c("NA", expression(10^-12),
-                                     expression(10^-11), expression(10^-10),
-                                     expression(10^-9), expression(10^-8))) +
-    theme_bw() +
-    labs(x = "Initial multiplicity of infection (MOI)",
-         y = "log10(Area under the curve)\n(hr cfu/mL)") +
-      NULL)
-  dev.off()
+  mycolors <- c("black", scales::viridis_pal(end = 0.9)(5))
   
   png("./statplots/run10_relauc_a_moi_sum.png", width = 5, height = 3,
       units = "in", res = 300)
   print(ggplot(data = filter(ysum10, a_S1 != 0),
-         aes(x = init_moi, y = rel_auc, color = as.factor(a_S1))) +
-    geom_point(position = position_jitter(width = 0.1, height = 0),
-               size = 1, alpha = 0.5) +
-    geom_line(data = filter(ysum10_sum, a_S1 != 0),
-              aes(y = rel_auc_avg), lwd = 1.5) +
-    scale_x_log10() +
-    scale_y_log10() +
-    scale_color_viridis_d(name = "Infection rate\n(/min)", end = 0.85,
-                          labels = c(expression(10^-12),
-                                     expression(10^-11), expression(10^-10),
-                                     expression(10^-9), expression(10^-8))) +
-    theme_bw() +
-    labs(x = "Initial multiplicity of infection (MOI)",
-         y = "Area under the curve\nrelative to phage-less control") +
-      NULL)
+               aes(x = init_moi, y = rel_auc, color = as.factor(a_S1))) +
+          geom_point(position = position_dodge(width = 0.3),
+                     size = 1, alpha = 0.5) +
+          geom_line(data = filter(ysum10_sum, a_S1 != 0),
+                    aes(y = rel_auc_avg), lwd = 1.5) +
+          scale_x_log10() +
+          scale_y_log10() +
+          scale_color_manual(name = "Infection rate\n(/min)",
+                             breaks = 10**(-12:-8),
+                             values = mycolors[2:6],
+                             labels = c(expression(10^-12),
+                                        expression(10^-11), expression(10^-10),
+                                        expression(10^-9), expression(10^-8))) +
+          theme_bw() +
+          labs(x = "Initial multiplicity of infection (MOI)",
+               y = "Area under the curve\nrelative to phage-less control") +
+          NULL)
   dev.off()
   
   png("./statplots/run10_auc_a_moi_sum.png", width = 5, height = 3,
       units = "in", res = 300)
   print(ggplot(data = ysum10,
-         aes(x = as.factor(init_moi), y = log10(auc/60), 
-             color = as.factor(a_S1))) +
-    geom_point(position = position_jitter(width = 0.1, height = 0),
-               size = 1, alpha = 0.5) +
-    geom_line(data = ysum10_sum, aes(y = logauc_avg, group = a_S1), lwd = 1.5) +
-    scale_color_viridis_d(name = "Infection rate\n(/min)", end = 0.85,
-                          labels = c("NA", expression(10^-12),
-                                     expression(10^-11), expression(10^-10),
-                                     expression(10^-9), expression(10^-8))) +
-    theme_bw() +
-    labs(x = "Initial multiplicity of infection (MOI)",
-         y = "log10(Area under the curve)\n(hr cfu/mL)") +
-      NULL)
+               aes(x = as.factor(init_moi), y = log10(auc/60), 
+                   color = as.factor(a_S1))) +
+          geom_point(position = position_dodge(width = 0.3),
+                     size = 1, alpha = 0.5) +
+          geom_line(data = ysum10_sum, aes(y = log10(auc_avg), group = a_S1), lwd = 1.5) +
+          scale_color_manual(name = "Infection rate\n(/min)",
+                             breaks = c(0, 10**(-12:-8)),
+                             values = mycolors[1:6],
+                             labels = c("NA", expression(10^-12),
+                                        expression(10^-11), expression(10^-10),
+                                        expression(10^-9), expression(10^-8))) +
+          theme_bw() +
+          labs(x = "Initial multiplicity of infection (MOI)",
+               y = "log10(Area under the curve)\n(hr cfu/mL)") +
+          NULL)
+  dev.off()
+  
+  png("./statplots/run10_auc_a_moi_allpoints.png", width = 5, height = 3,
+      units = "in", res = 300)
+  print(ggplot(data = ysum10,
+               aes(x = init_moi, y = log10(auc/60), color = as.factor(a_S1))) +
+          geom_point(size = 1, alpha = 0.5) +
+          geom_line(aes(group = paste(bact, a_S1)), lwd = 0.05) +
+          scale_x_log10() +
+          scale_color_manual(name = "Infection rate\n(/min)",
+                             breaks = c(0, 10**(-12:-8)),
+                             values = mycolors[1:6],
+                             labels = c("NA", expression(10^-12),
+                                        expression(10^-11), expression(10^-10),
+                                        expression(10^-9), expression(10^-8))) +
+          theme_bw() +
+          labs(x = "Initial multiplicity of infection (MOI)",
+               y = "log10(Area under the curve)\n(hr cfu/mL)") +
+          NULL)
+  dev.off()
+  
+  png("./statplots/run10_relauc_a_moi_allpoints.png", width = 5, height = 3,
+      units = "in", res = 300)
+  print(ggplot(data = filter(ysum10, a_S1 != 0),
+               aes(x = init_moi, y = rel_auc, color = as.factor(a_S1))) +
+          geom_point(size = 1, alpha = 0.5,
+                     aes(group = a_S1)) +
+          geom_line(aes(group = paste(bact, a_S1)), lwd = 0.05) +
+          scale_x_log10() +
+          scale_y_log10() +
+          scale_color_manual(name = "Infection rate\n(/min)",
+                             breaks = 10**(-12:-8),
+                             values = mycolors[2:6],
+                             labels = c(expression(10^-12),
+                                        expression(10^-11), expression(10^-10),
+                                        expression(10^-9), expression(10^-8))) +
+          theme_bw() +
+          labs(x = "Initial multiplicity of infection (MOI)",
+               y = "Area under the curve\nrelative to phage-less control") +
+          NULL)
   dev.off()
   
   png("./statplots/run10_auc_faceted.png", width = 6, height = 6,
@@ -3067,10 +3095,12 @@ if(glob_make_statplots) {
                                 k = function(x) paste("k =", x),
                                 h = function(x) paste("h =", x),
                                 u_S1 = function(x) paste("u_S1 =", x))) +
-          scale_color_viridis_d(name = "Infection rate\n(/min)", end = 0.85,
-                                labels = c("NA", expression(10^-12),
-                                           expression(10^-11), expression(10^-10),
-                                           expression(10^-9), expression(10^-8))) +
+          scale_color_manual(name = "Infection rate\n(/min)",
+                             breaks = c(0, 10**(-12:-8)),
+                             values = mycolors[1:6],
+                             labels = c("NA", expression(10^-12),
+                                        expression(10^-11), expression(10^-10),
+                                        expression(10^-9), expression(10^-8))) +
           theme_bw() +
           theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
           labs(x = "Initial multiplicity of infection (MOI)",
@@ -3109,29 +3139,30 @@ ybig10_B_wide <- cbind(ybig10_B_wide,
 if(glob_make_statplots) {
   png("./statplots/run10_pca.png", width = 5, height = 4,
       units = "in", res = 300)
-  ggplot(data = ybig10_B_wide,
-         aes(x = PC1, y = PC2)) +
-    geom_point(aes(color = as.factor(a_S1))) +
-    scale_color_viridis_d(name = "Infection rate\n(/min)", end = 0.85,
-                          labels = c("NA", expression(10^-12),
-                                     expression(10^-11), expression(10^-10),
-                                     expression(10^-9), expression(10^-8))) +
-    labs(x = paste("PC1 (",
-                   round((100*((mypca$sdev)**2)/
-                            sum((mypca$sdev)**2))[1], 1),
-                   "%)", sep = ""),
-         y = paste("PC2 (",
-                   round((100*((mypca$sdev)**2)/
-                            sum((mypca$sdev)**2))[2], 1),
-                   "%)", sep = "")) +
-    theme_bw()
+  print(ggplot(data = ybig10_B_wide,
+               aes(x = PC1, y = PC2)) +
+          geom_point(aes(color = as.factor(a_S1)), alpha = 0.7) +
+          scale_color_viridis_d(name = "Infection rate\n(/min)", end = 0.85,
+                                labels = c("NA", expression(10^-12),
+                                           expression(10^-11), expression(10^-10),
+                                           expression(10^-9), expression(10^-8))) +
+          labs(x = paste("PC1 (",
+                         round((100*((mypca$sdev)**2)/
+                                  sum((mypca$sdev)**2))[1], 1),
+                         "%)", sep = ""),
+               y = paste("PC2 (",
+                         round((100*((mypca$sdev)**2)/
+                                  sum((mypca$sdev)**2))[2], 1),
+                         "%)", sep = "")) +
+          theme_bw() +
+          NULL)
   dev.off()
   
   png("./statplots/run10_pca_norm.png", width = 5, height = 4,
       units = "in", res = 300)
-  ggplot(data = ybig10_B_wide,
+  print(ggplot(data = ybig10_B_wide,
          aes(x = norm_PC1, y = norm_PC2)) +
-    geom_point(aes(color = as.factor(a_S1))) +
+    geom_point(aes(color = as.factor(a_S1)), alpha = 0.7) +
     scale_color_viridis_d(name = "Infection rate\n(/min)", end = 0.85,
                           labels = c("NA", expression(10^-12),
                                      expression(10^-11), expression(10^-10),
@@ -3144,6 +3175,7 @@ if(glob_make_statplots) {
                    round((100*((mypcanorm$sdev)**2)/
                             sum((mypcanorm$sdev)**2))[2], 1),
                    "%)", sep = "")) +
-    theme_bw()
+    theme_bw() +
+      NULL)
   dev.off()
 }
