@@ -2923,6 +2923,18 @@ if (glob_make_statplots) {
 
 
 ## Run 10: test of metrics across dift bact ----
+## 
+## 
+## TODO
+##  do variance decomposition of each phage (variance of that phage
+##  across dift bact divided by total variance of all phages across
+##  dift bact) (do at each moi)
+##  then use F test on decomposed variance to test whether the
+##  decomposed variance of each phage is smaller after normalization
+##  than it was before normalization
+##  Maybe add a plot of the expectation of auc linearly scaling
+##  so that people can see how we expected relative auc to be
+##  constant but in fact it's not
 run10 <- run_sims_filewrapper(
   name = "run10",
   read_file = glob_read_files,
