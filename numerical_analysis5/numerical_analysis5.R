@@ -2935,6 +2935,7 @@ if (glob_make_statplots) {
 ##  Maybe add a plot of the expectation of auc linearly scaling
 ##  so that people can see how we expected relative auc to be
 ##  constant but in fact it's not
+##  What if we use bootstrapping to test
 run10 <- run_sims_filewrapper(
   name = "run10",
   read_file = glob_read_files,
@@ -3002,18 +3003,191 @@ ysum10 <- mutate(
   extin_time_4 = ifelse(is.na(extin_time_4), run_time, extin_time_4),
   bact = paste(u_S1, k, h))
 
+#Change/duplicate rows where a_S1 == 0 to be the 5 a_S1 vals
+add_rows <- NULL
+ysum10$uniq_run <- as.character(ysum10$uniq_run)
+for (i in which(ysum10$a_S1 == 0)) {
+  if(is.null(add_rows)) {
+    add_rows <- rbind(ysum10[i, ], ysum10[i, ], ysum10[i, ], 
+                      ysum10[i, ], ysum10[i, ])
+  } else {
+    add_rows <- rbind(add_rows,
+                      ysum10[i, ], ysum10[i, ], ysum10[i, ], 
+                      ysum10[i, ], ysum10[i, ])
+  }
+  add_rows$a_S1[(nrow(add_rows)-4):nrow(add_rows)] <- 
+    unique(ysum10$a_S1)[unique(ysum10$a_S1) != 0]
+  add_rows$uniq_run[(nrow(add_rows)-4):nrow(add_rows)] <- 
+    paste0(add_rows$uniq_run[(nrow(add_rows)-4):nrow(add_rows)], letters[1:5])
+}
+ysum10 <- rbind(ysum10, add_rows)
+ysum10 <- filter(ysum10, a_S1 != 0)
+
 #Relative auc
-ysum10 <- mutate(group_by(ysum10, u_S1, u_S2, k, z, d,
+ysum10 <- mutate(group_by(ysum10, u_S1, u_S2, k, z, d, h,
                          init_S1, init_S2, init_N),
-                rel_auc = auc/auc[init_moi == 0])
+                rel_auc = auc/(auc[init_moi == 0][1]),
+                ref_auc = auc[init_moi == 0][1])
 
 ysum10_sum <- summarize(group_by(ysum10, init_moi, a_S1),
                         auc_avg = 10**mean(log10(auc/60)),
                         rel_auc_avg = 10**mean(log10(rel_auc)))
 
+#Calculate variance explained by infectivity
+auc_lm <- lm(data = filter(ysum10, init_moi != 0), 
+             formula = log10(auc) ~ as.factor(a_S1):as.factor(init_moi))
+relauc_lm <- lm(data = filter(ysum10, init_moi != 0), 
+                formula = log10(rel_auc) ~ as.factor(a_S1):as.factor(init_moi))
+
+real_diff <- summary(relauc_lm)$r.squared - summary(auc_lm)$r.squared
+
+#Bootstrap to see if that difference in proportion of variance
+# explained is significant by randomizing a_S1
+boot_out1 <- data.frame("auc_r2" = rep(NA, 10000),
+                       "relauc_r2" = NA)
+temp <- filter(ysum10, init_moi != 0)
+for (i in 1:nrow(boot_out1)) {
+  temp1 <- temp
+  temp1$a_S1 <- sample(temp1$a_S1)
+  boot_out1[i, ] <- 
+    data.frame(
+      "auc_r2" = summary(lm(
+        data = temp1, 
+        formula = log10(auc) ~ as.factor(a_S1):as.factor(init_moi)))$r.squared,
+      "relauc_r2" = summary(lm(
+        data = temp1, 
+        formula = log10(rel_auc) ~ as.factor(a_S1):as.factor(init_moi)))$r.squared)
+}
+boot_out1 <- mutate(boot_out1, r2_diff = relauc_r2 - auc_r2)
+hist(boot_out1$auc_r2)
+hist(boot_out1$relauc_r2)
+hist(boot_out1$r2_diff)
+abline(v = real_diff, col = "red")
+mean(boot_out1$r2_diff > abs(real_diff) | boot_out1$r2_diff < -abs(real_diff))
+
+#Plots
 if(glob_make_statplots) {
   mycolors <- c("black", scales::viridis_pal(end = 0.9)(5))
   
+  # Plot relauc vs auc. Normalizing expects that rel auc holds constant 
+  # within a, so we can see how true that is
+  png("./statplots/run10_auc_a_subset.png", width = 5, height = 4,
+      units = "in", res = 300)
+  ggplot(data = filter(ysum10, init_moi %in% c(0, 0.01)), 
+         aes(x = a_S1, y = auc)) +
+    geom_point() +
+    scale_x_log10() +
+    scale_y_log10() +
+    facet_grid(~init_moi) +
+    labs(x = "Infection rate (/min)", y = "Area under the curve (hr cfu/mL)",
+         subtitle = "Initial MOI")
+  dev.off()
+  
+  png("./statplots/run10_relauc_a_subset.png", width = 5, height = 4,
+      units = "in", res = 300)
+  ggplot(data = filter(ysum10, init_moi %in% c(0, 0.01)), 
+         aes(x = a_S1, y = rel_auc)) +
+    geom_point() +
+    scale_x_log10() +
+    scale_y_log10() +
+    facet_grid(~init_moi) +
+    labs(x = "Infection rate (/min)", 
+         y = "Area under the curve\nrelative to phage-less control",
+         subtitle = "Initial MOI")
+  dev.off()
+  
+  png("./statplots/run10_auc_a.png", width = 5, height = 4,
+      units = "in", res = 300)
+  ggplot(data = ysum10, aes(x = a_S1, y = auc)) +
+    geom_point() +
+    scale_x_log10() +
+    scale_y_log10() +
+    facet_grid(~init_moi) +
+    labs(x = "Infection rate (/min)", y = "Area under the curve (hr cfu/mL)",
+         subtitle = "Initial MOI") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  dev.off()
+  
+  png("./statplots/run10_relauc_a.png", width = 5, height = 4,
+      units = "in", res = 300)
+  ggplot(data = ysum10, aes(x = a_S1, y = rel_auc)) +
+    geom_point() +
+    scale_x_log10() +
+    scale_y_log10() +
+    facet_grid(~init_moi) +
+    labs(x = "Infection rate (/min)", 
+         y = "Area under the curve\nrelative to phage-less control",
+         subtitle = "Initial MOI") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  dev.off()
+  
+  png("./statplots/run10_auc_refauc.png", width = 5, height = 4,
+      units = "in", res = 300)
+  ggplot(data = filter(ysum10, init_moi != 0),
+         aes(x = log10(ref_auc), y = log10(auc), color = as.factor(a_S1))) +
+    geom_point() +
+    facet_grid(~init_moi) +
+    geom_smooth(method = "lm", se = FALSE) +
+    scale_color_manual(name = "Infection rate\n(/min)",
+                       breaks = 10**(-12:-8),
+                       values = mycolors[1:6],
+                       labels = c(expression(10^-12),
+                                  expression(10^-11), expression(10^-10),
+                                  expression(10^-9), expression(10^-8))) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(x = "log10(Area under the curve in the absence of phage) (hr cfu/mL)", 
+         y = "log10(Area under the curve) (hr cfu/mL)",
+         subtitle = "Initial MOI")
+  dev.off()
+  
+  png("./statplots/run10_relauc_refauc.png", width = 5, height = 4,
+      units = "in", res = 300)
+  ggplot(data = filter(ysum10, init_moi != 0),
+         aes(x = log10(ref_auc), y = log10(rel_auc), color = as.factor(a_S1))) +
+    geom_point() +
+    facet_grid(~init_moi) +
+    geom_smooth(method = "lm", se = FALSE) +
+    scale_color_manual(name = "Infection rate\n(/min)",
+                       breaks = 10**(-12:-8),
+                       values = mycolors[1:6],
+                       labels = c(expression(10^-12),
+                                  expression(10^-11), expression(10^-10),
+                                  expression(10^-9), expression(10^-8))) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  dev.off()
+  
+  #More plots here?
+  
+  
+  png("./statplots/run10_auc_faceted.png", width = 6, height = 6,
+      units = "in", res = 300)
+  print(ggplot(data = ysum10,
+               aes(x = as.factor(init_moi), y = log10(auc/60), 
+                   color = as.factor(a_S1))) +
+          geom_point() +
+          ggh4x::facet_nested(h*k ~ u_S1,
+                              labeller = labeller(
+                                k = function(x) paste("k =", x),
+                                h = function(x) paste("h =", x),
+                                u_S1 = function(x) paste("u_S1 =", x))) +
+          scale_color_manual(name = "Infection rate\n(/min)",
+                             breaks = c(0, 10**(-12:-8)),
+                             values = mycolors[1:6],
+                             labels = c("NA", expression(10^-12),
+                                        expression(10^-11), expression(10^-10),
+                                        expression(10^-9), expression(10^-8))) +
+          theme_bw() +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+          labs(x = "Initial multiplicity of infection (MOI)",
+               y = "log10(Area under the curve) (hr cfu/mL)") +
+          NULL)
+  dev.off()
+  
+  
+  
+  
+  
+  ##Old plots:
   png("./statplots/run10_relauc_a_moi_sum.png", width = 5, height = 3,
       units = "in", res = 300)
   print(ggplot(data = filter(ysum10, a_S1 != 0),
@@ -3093,30 +3267,6 @@ if(glob_make_statplots) {
           theme_bw() +
           labs(x = "Initial multiplicity of infection (MOI)",
                y = "Area under the curve\nrelative to phage-less control") +
-          NULL)
-  dev.off()
-  
-  png("./statplots/run10_auc_faceted.png", width = 6, height = 6,
-      units = "in", res = 300)
-  print(ggplot(data = ysum10,
-               aes(x = as.factor(init_moi), y = log10(auc/60), 
-                   color = as.factor(a_S1))) +
-          geom_point() +
-          ggh4x::facet_nested(h*k ~ u_S1,
-                              labeller = labeller(
-                                k = function(x) paste("k =", x),
-                                h = function(x) paste("h =", x),
-                                u_S1 = function(x) paste("u_S1 =", x))) +
-          scale_color_manual(name = "Infection rate\n(/min)",
-                             breaks = c(0, 10**(-12:-8)),
-                             values = mycolors[1:6],
-                             labels = c("NA", expression(10^-12),
-                                        expression(10^-11), expression(10^-10),
-                                        expression(10^-9), expression(10^-8))) +
-          theme_bw() +
-          theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-          labs(x = "Initial multiplicity of infection (MOI)",
-               y = "log10(Area under the curve) (hr cfu/mL)") +
           NULL)
   dev.off()
 }
