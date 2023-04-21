@@ -3081,6 +3081,7 @@ if(glob_make_statplots) {
     facet_grid(~init_moi) +
     labs(x = "Infection rate (/min)", y = "Area under the curve (hr cfu/mL)",
          subtitle = "Initial MOI") +
+    theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
   dev.off()
   
@@ -3095,6 +3096,7 @@ if(glob_make_statplots) {
     labs(x = "Infection rate (/min)", 
          y = "Area under the curve\nrelative to phage-less control",
          subtitle = "Initial MOI") +
+    theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
   dev.off()
   
@@ -3107,6 +3109,7 @@ if(glob_make_statplots) {
     facet_grid(~init_moi) +
     labs(x = "Infection rate (/min)", y = "Area under the curve (hr cfu/mL)",
          subtitle = "Initial MOI") +
+    theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
   dev.off()
   
@@ -3120,6 +3123,7 @@ if(glob_make_statplots) {
     labs(x = "Infection rate (/min)", 
          y = "Area under the curve\nrelative to phage-less control",
          subtitle = "Initial MOI") +
+    theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
   dev.off()
   
@@ -3136,6 +3140,7 @@ if(glob_make_statplots) {
                        labels = c(expression(10^-12),
                                   expression(10^-11), expression(10^-10),
                                   expression(10^-9), expression(10^-8))) +
+    theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
     labs(x = "log10(Area under the curve of phage-less control)\n(hr cfu/mL)", 
          y = "log10(Area under the curve) (hr cfu/mL)",
@@ -3155,6 +3160,7 @@ if(glob_make_statplots) {
                        labels = c(expression(10^-12),
                                   expression(10^-11), expression(10^-10),
                                   expression(10^-9), expression(10^-8))) +
+    theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
     labs(x = "log10(Area under the curve of phage-less control)\n(hr cfu/mL)", 
          y = "log10(Area under the curve\nrelative to phage-less control)",
