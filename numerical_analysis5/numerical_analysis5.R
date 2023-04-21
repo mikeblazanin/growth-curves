@@ -3080,7 +3080,8 @@ if(glob_make_statplots) {
     scale_y_log10() +
     facet_grid(~init_moi) +
     labs(x = "Infection rate (/min)", y = "Area under the curve (hr cfu/mL)",
-         subtitle = "Initial MOI")
+         subtitle = "Initial MOI") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
   dev.off()
   
   png("./statplots/run10_relauc_a_subset.png", width = 5, height = 4,
@@ -3093,7 +3094,8 @@ if(glob_make_statplots) {
     facet_grid(~init_moi) +
     labs(x = "Infection rate (/min)", 
          y = "Area under the curve\nrelative to phage-less control",
-         subtitle = "Initial MOI")
+         subtitle = "Initial MOI") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
   dev.off()
   
   png("./statplots/run10_auc_a.png", width = 5, height = 4,
@@ -3135,7 +3137,7 @@ if(glob_make_statplots) {
                                   expression(10^-11), expression(10^-10),
                                   expression(10^-9), expression(10^-8))) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-    labs(x = "log10(Area under the curve in the absence of phage) (hr cfu/mL)", 
+    labs(x = "log10(Area under the curve of phage-less control)\n(hr cfu/mL)", 
          y = "log10(Area under the curve) (hr cfu/mL)",
          subtitle = "Initial MOI")
   dev.off()
@@ -3153,11 +3155,11 @@ if(glob_make_statplots) {
                        labels = c(expression(10^-12),
                                   expression(10^-11), expression(10^-10),
                                   expression(10^-9), expression(10^-8))) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(x = "log10(Area under the curve of phage-less control)\n(hr cfu/mL)", 
+         y = "log10(Area under the curve\nrelative to phage-less control)",
+         subtitle = "Initial MOI")
   dev.off()
-  
-  #More plots here?
-  
   
   png("./statplots/run10_auc_faceted.png", width = 6, height = 6,
       units = "in", res = 300)
@@ -3180,93 +3182,6 @@ if(glob_make_statplots) {
           theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
           labs(x = "Initial multiplicity of infection (MOI)",
                y = "log10(Area under the curve) (hr cfu/mL)") +
-          NULL)
-  dev.off()
-  
-  
-  
-  
-  
-  ##Old plots:
-  png("./statplots/run10_relauc_a_moi_sum.png", width = 5, height = 3,
-      units = "in", res = 300)
-  print(ggplot(data = filter(ysum10, a_S1 != 0),
-               aes(x = init_moi, y = rel_auc, color = as.factor(a_S1))) +
-          geom_point(position = position_dodge(width = 0.3),
-                     size = 1, alpha = 0.5) +
-          geom_line(data = filter(ysum10_sum, a_S1 != 0),
-                    aes(y = rel_auc_avg), lwd = 1.5) +
-          scale_x_log10() +
-          scale_y_log10() +
-          scale_color_manual(name = "Infection rate\n(/min)",
-                             breaks = 10**(-12:-8),
-                             values = mycolors[2:6],
-                             labels = c(expression(10^-12),
-                                        expression(10^-11), expression(10^-10),
-                                        expression(10^-9), expression(10^-8))) +
-          theme_bw() +
-          labs(x = "Initial multiplicity of infection (MOI)",
-               y = "Area under the curve\nrelative to phage-less control") +
-          NULL)
-  dev.off()
-  
-  png("./statplots/run10_auc_a_moi_sum.png", width = 5, height = 3,
-      units = "in", res = 300)
-  print(ggplot(data = ysum10,
-               aes(x = as.factor(init_moi), y = log10(auc/60), 
-                   color = as.factor(a_S1))) +
-          geom_point(position = position_dodge(width = 0.3),
-                     size = 1, alpha = 0.5) +
-          geom_line(data = ysum10_sum, aes(y = log10(auc_avg), group = a_S1), lwd = 1.5) +
-          scale_color_manual(name = "Infection rate\n(/min)",
-                             breaks = c(0, 10**(-12:-8)),
-                             values = mycolors[1:6],
-                             labels = c("NA", expression(10^-12),
-                                        expression(10^-11), expression(10^-10),
-                                        expression(10^-9), expression(10^-8))) +
-          theme_bw() +
-          labs(x = "Initial multiplicity of infection (MOI)",
-               y = "log10(Area under the curve)\n(hr cfu/mL)") +
-          NULL)
-  dev.off()
-  
-  png("./statplots/run10_auc_a_moi_allpoints.png", width = 5, height = 3,
-      units = "in", res = 300)
-  print(ggplot(data = ysum10,
-               aes(x = init_moi, y = log10(auc/60), color = as.factor(a_S1))) +
-          geom_point(size = 1, alpha = 0.5) +
-          geom_line(aes(group = paste(bact, a_S1)), lwd = 0.05) +
-          scale_x_log10() +
-          scale_color_manual(name = "Infection rate\n(/min)",
-                             breaks = c(0, 10**(-12:-8)),
-                             values = mycolors[1:6],
-                             labels = c("NA", expression(10^-12),
-                                        expression(10^-11), expression(10^-10),
-                                        expression(10^-9), expression(10^-8))) +
-          theme_bw() +
-          labs(x = "Initial multiplicity of infection (MOI)",
-               y = "log10(Area under the curve)\n(hr cfu/mL)") +
-          NULL)
-  dev.off()
-  
-  png("./statplots/run10_relauc_a_moi_allpoints.png", width = 5, height = 3,
-      units = "in", res = 300)
-  print(ggplot(data = filter(ysum10, a_S1 != 0),
-               aes(x = init_moi, y = rel_auc, color = as.factor(a_S1))) +
-          geom_point(size = 1, alpha = 0.5,
-                     aes(group = a_S1)) +
-          geom_line(aes(group = paste(bact, a_S1)), lwd = 0.05) +
-          scale_x_log10() +
-          scale_y_log10() +
-          scale_color_manual(name = "Infection rate\n(/min)",
-                             breaks = 10**(-12:-8),
-                             values = mycolors[2:6],
-                             labels = c(expression(10^-12),
-                                        expression(10^-11), expression(10^-10),
-                                        expression(10^-9), expression(10^-8))) +
-          theme_bw() +
-          labs(x = "Initial multiplicity of infection (MOI)",
-               y = "Area under the curve\nrelative to phage-less control") +
           NULL)
   dev.off()
 }
