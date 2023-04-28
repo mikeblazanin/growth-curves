@@ -3,6 +3,7 @@ library(deSolve)
 library(ggplot2)
 library(dplyr)
 library(gcplyr)
+library(cowplot)
 
 #Setwd
 mywd_split <- strsplit(getwd(), split = "/")
@@ -1244,8 +1245,7 @@ if(glob_make_statplots) {
   
   png("./statplots/run1_peakdens_peaktime_subset.png",
       width = 5, height = 5, units = "in", res = 150)
-  print(
-    ggplot(data = filter(ysum1, extin_flag == "none"),
+  f2a <- ggplot(data = filter(ysum1, extin_flag == "none"),
            aes(x = peak_time/60, y = peak_dens)) +
       geom_point() +
       theme_bw() +
@@ -1255,36 +1255,8 @@ if(glob_make_statplots) {
                                                  k = 10**9, times = 0:900)),
                 aes(x = x/60, y = y), lty = 2) +
       theme(axis.title = element_text(size = 20)) +
-    NULL)
-  dev.off()
-  
-  png("./statplots/run1_extintime_peaktime.png",
-      width = 5, height = 5, units = "in", res = 150)
-  print(
-    ggplot(data = ysum1,
-           aes(x = peak_time/60, y = extin_time_4/60)) +
-      geom_point(aes(shape = extin_flag)) +
-      scale_shape_manual(breaks = c("none", "neark", "noextin"),
-                         values = c(16, 4, 3)) +
-      guides(shape = "none") +
-      theme_bw() +
-      geom_abline(slope = 1, intercept = 0, alpha = 0.5) +
-      labs(x = "Peak Time (hr)", y = "Extinction Time (hr)") +
-      theme(axis.title = element_text(size = 20)) +
-      NULL)
-  dev.off()
-  
-  png("./statplots/run1_extintime_peaktime_subset.png",
-      width = 5, height = 5, units = "in", res = 150)
-  print(
-    ggplot(data = filter(ysum1, extin_flag == "none"),
-           aes(x = peak_time/60, y = extin_time_4/60)) +
-      geom_point() +
-      theme_bw() +
-      geom_abline(slope = 1, intercept = 0, alpha = 0.5) +
-      labs(x = "Peak Time (hr)", y = "Extinction Time (hr)") +
-      theme(axis.title = element_text(size = 20)) +
-      NULL)
+    NULL
+  print(f2a)
   dev.off()
   
   png("./statplots/run1_auc_peaktime.png",
@@ -1310,8 +1282,7 @@ if(glob_make_statplots) {
   
   png("./statplots/run1_auc_peaktime_subset.png",
       width = 5, height = 5, units = "in", res = 150)
-  print(
-    ggplot(data = filter(ysum1, extin_flag == "none"),
+  f2b <- ggplot(data = filter(ysum1, extin_flag == "none"),
            aes(x = peak_time/60, y = auc/60)) +
       geom_point() +
       theme_bw() +
@@ -1321,19 +1292,54 @@ if(glob_make_statplots) {
                                k = 10**9, times = 0:540)),
         aes(x = x/60, y = y/60), lty = 2) +
       scale_y_log10() +
-      labs(x = "Peak Time (hr)", y = "Area Under the Curve (hr cfu/mL)") +
+      labs(x = "Peak Time (hr)", y = "Area Under the Curve\n(hr cfu/mL)") +
+      theme(axis.title = element_text(size = 20)) +
+      NULL
+  print(f2b)
+  dev.off()
+  
+  png("./statplots/run1_extintime_peaktime.png",
+      width = 5, height = 5, units = "in", res = 150)
+  print(
+    ggplot(data = ysum1,
+           aes(x = peak_time/60, y = extin_time_4/60)) +
+      geom_point(aes(shape = extin_flag)) +
+      scale_shape_manual(breaks = c("none", "neark", "noextin"),
+                         values = c(16, 4, 3)) +
+      guides(shape = "none") +
+      theme_bw() +
+      geom_abline(slope = 1, intercept = 0, alpha = 0.5) +
+      labs(x = "Peak Time (hr)", y = "Extinction Time (hr)") +
       theme(axis.title = element_text(size = 20)) +
       NULL)
   dev.off()
   
+  png("./statplots/run1_extintime_peaktime_subset.png",
+      width = 5, height = 5, units = "in", res = 150)
+  f2c <- ggplot(data = filter(ysum1, extin_flag == "none"),
+           aes(x = peak_time/60, y = extin_time_4/60)) +
+      geom_point() +
+      theme_bw() +
+      geom_abline(slope = 1, intercept = 0, alpha = 0.5) +
+      labs(x = "Peak Time (hr)", y = "Extinction Time (hr)") +
+      theme(axis.title = element_text(size = 20)) +
+      NULL
+  print(f2c)
+  dev.off()
+  
+  png("./statplots/fig2_run1.png",
+      width = 15, height = 5, units = "in", res = 150)
+  print(plot_grid(f2a, f2b, f2c, nrow = 1, align = "hv", axis = "tb",
+                  labels = "AUTO", label_size = 20))
+  dev.off()
+  
   png("./statplots/run1_Bcurves_a.png",
       width = 5, height = 4, units = "in", res = 150)
-  print(
+  f3a <-
     ggplot(data = filter(ybig1, Pop == "B", b == 50, tau == 31.6),
            aes(x = time/60, y = Density)) +
       geom_line(aes(color = as.factor(a_S1), group = interaction(a_S1, b, tau)),
                 lwd = 1.5) +
-      theme_bw() +
       labs(x = "Time (hr)", y = "Density (cfu/mL)") +
       scale_x_continuous(limits = c(NA, 24)) +
       geom_line(data = data.frame(x = 0:1440,
@@ -1341,8 +1347,11 @@ if(glob_make_statplots) {
                                                  k = 10**9, times = 0:1440)),
                 aes(x = x/60, y = y), lty = 2) +
       scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
-                         name = "Infection rate\n(/cfu/pfu/min)")
-    + NULL)
+                         name = "Infection rate\n(/cfu/pfu/min)") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 20)) +
+    NULL
+  print(f3a)
   dev.off()
   
   png("./statplots/run1_Bcurves_b.png",
@@ -1352,7 +1361,6 @@ if(glob_make_statplots) {
            aes(x = time/60, y = Density)) +
       geom_line(aes(color = as.factor(b), group = interaction(a_S1, b, tau)),
                 lwd = 1.5) +
-      theme_bw() +
       labs(x = "Time (hr)", y = "Density (cfu/mL)") +
       scale_x_continuous(limits = c(NA, 24)) +
       geom_line(data = data.frame(x = 0:1440,
@@ -1360,8 +1368,10 @@ if(glob_make_statplots) {
                                                  k = 10**9, times = 0:1440)),
                 aes(x = x/60, y = y), lty = 2) +
       scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
-                         name = "Burst size")
-    + NULL)
+                         name = "Burst size") +
+      theme_bw() +
+      theme(axis.title = element_text(size = 20)) +
+      NULL)
   dev.off()
   
   png("./statplots/run1_Bcurves_tau.png",
@@ -1379,13 +1389,16 @@ if(glob_make_statplots) {
                                                  k = 10**9, times = 0:1440)),
                 aes(x = x/60, y = y), lty = 2) +
       scale_color_manual(values = colorRampPalette(c("darkblue", "gray70"))(5),
-                         name = "Lag time (min)")
-    + NULL)
+                         name = "Lag time (min)") +
+    theme_bw() +
+      theme(axis.title = element_text(size = 20)) +
+    NULL)
   dev.off()
   
   png("./statplots/run1_deathslope_peakdens_subset.png",
       width = 5, height = 4, units = "in", res = 150)
-  print(ggplot(data = filter(ysum1, extin_flag == "none"),
+  f3b <- 
+    ggplot(data = filter(ysum1, extin_flag == "none"),
          aes(x = peak_dens, y = -death_slope)) +
     geom_point() +
     scale_y_log10() +
@@ -1394,7 +1407,8 @@ if(glob_make_statplots) {
          y = "Maximum death rate\n(cfu/mL/hr)") +
     theme_bw() +
     theme(axis.title = element_text(size = 20)) +
-    NULL)
+    NULL
+  print(f3b)
   dev.off()
   
   png("./statplots/run1_deathslope_peakdens.png",
@@ -1412,6 +1426,12 @@ if(glob_make_statplots) {
           theme_bw() +
           theme(axis.title = element_text(size = 20)) +
           NULL)
+  dev.off()
+  
+  png("./statplots/fig3_run1.png",
+      width = 10, height = 4, units = "in", res = 150)
+  print(plot_grid(f3a, f3b, nrow = 1, labels = "AUTO",
+                  label_size = 20, align = "hv", axis = "tb"))
   dev.off()
 }
 
@@ -1784,9 +1804,9 @@ if (glob_make_statplots) {
 
 # Run 1: phage growth plots ----
 if (glob_make_statplots) {
-  png("./statplots/phager_extintime_subset.png", width = 5, height = 4,
+  png("./statplots/run1_phager_extintime_subset.png", width = 5, height = 4,
       units = "in", res = 300)
-  print(
+  f5a <-
     ggplot(data = filter(ysum1, extin_flag == "none"),
            aes(x = extin_time_4/60, y = phage_r*60, color = as.factor(b))) +
       geom_point() +
@@ -1797,10 +1817,11 @@ if (glob_make_statplots) {
            y = "Average phage growth\nrate (e-fold/hour)") +
       theme_bw() +
       theme(axis.title = element_text(size = 20)) +
-      NULL)
+      NULL
+  print(f5a)
   dev.off()
   
-  png("./statplots/phager_extintime.png", width = 5, height = 4,
+  png("./statplots/run1_phager_extintime.png", width = 5, height = 4,
       units = "in", res = 300)
   print(
     ggplot(data = ysum1,
@@ -1820,7 +1841,30 @@ if (glob_make_statplots) {
       NULL)
   dev.off()
   
-  png("./statplots/phagefinal_peakdens.png", width = 5, height = 4,
+  png("./statplots/run1_phagefinal_peakdens_subset.png", width = 5, height = 4,
+      units = "in", res = 300)
+  f5b <-
+    ggplot(data = filter(ysum1, extin_flag == "none"),
+           aes(x = peak_dens, y = phage_final, color = as.factor(b))) +
+      geom_point(size = 2) +
+      scale_y_log10() + scale_x_log10() +
+      scale_color_viridis_d(end = 0.95, name = "Burst size") +
+      labs(x = "Peak bacterial density (cfu/mL)", 
+           y = "Final phage density\n(pfu/mL)") +
+      geom_line(aes(y = peak_dens*b)) +
+      theme_bw() +
+      theme(axis.title = element_text(size = 20)) +
+      NULL
+  print(f5b)
+  dev.off()
+  
+  png("./statplots/fig5_run1.png", width = 10, height = 4,
+      units = "in", res = 300)
+  print(plot_grid(f5a, f5b, nrow = 1, labels = "AUTO",
+                  align = "hv", axis = "tb", label_size = 20))
+  dev.off()
+  
+  png("./statplots/run1_phagefinal_peakdens.png", width = 5, height = 4,
       units = "in", res = 300)
   print(
     ggplot(data = ysum1,
@@ -1834,22 +1878,6 @@ if (glob_make_statplots) {
       labs(x = "Peak bacterial density (cfu/mL)", 
            y = "Final phage density (pfu/mL)") +
       guides(shape = "none") +
-      geom_line(aes(y = peak_dens*b)) +
-      theme_bw() +
-      theme(axis.title = element_text(size = 20)) +
-      NULL)
-  dev.off()
-  
-  png("./statplots/phagefinal_peakdens_subset.png", width = 5, height = 4,
-      units = "in", res = 300)
-  print(
-    ggplot(data = filter(ysum1, extin_flag == "none"),
-           aes(x = peak_dens, y = phage_final, color = as.factor(b))) +
-      geom_point(size = 2) +
-      scale_y_log10() + scale_x_log10() +
-      scale_color_viridis_d(end = 0.95, name = "Burst size") +
-      labs(x = "Peak bacterial density (cfu/mL)", 
-           y = "Final phage density (pfu/mL)") +
       geom_line(aes(y = peak_dens*b)) +
       theme_bw() +
       theme(axis.title = element_text(size = 20)) +
@@ -2940,9 +2968,9 @@ run10 <- run_sims_filewrapper(
   name = "run10",
   read_file = glob_read_files,
   a = list(
-    u_S1 = signif(0.04*10**seq(from = 0, to = -0.7, length.out = 3), 3),
+    u_S1 = signif(0.04*10**seq(from = 0, to = -0.7, length.out = 5), 3),
     u_S2 = 0,
-    k = 10**(8:10),
+    k = signif(10**seq(from = 8, to = 10, length.out = 5)),
     a_S1 = signif(10**seq(from = -12, to = -8, length.out = 5), 3),
     a_S2 = 0,
     tau = 31.6,
@@ -2958,9 +2986,9 @@ run10 <- run_sims_filewrapper(
     init_stepsize = 5,
     print_info = TRUE),
   b = list(
-    u_S1 = signif(0.04*10**seq(from = 0, to = -0.7, length.out = 3), 3),
+    u_S1 = signif(0.04*10**seq(from = 0, to = -0.7, length.out = 5), 3),
     u_S2 = 0,
-    k = 10**(8:10),
+    k = signif(10**seq(from = 8, to = 10, length.out = 5)),
     a_S1 = 0,
     a_S2 = 0,
     tau = 31.6,
@@ -3039,13 +3067,35 @@ auc_lm <- lm(data = filter(ysum10, init_moi != 0),
 relauc_lm <- lm(data = filter(ysum10, init_moi != 0), 
                 formula = log10(rel_auc) ~ as.factor(a_S1):as.factor(init_moi))
 
-real_diff <- summary(relauc_lm)$r.squared - summary(auc_lm)$r.squared
+auc_lm2 <- lm(data = filter(ysum10, init_moi != 0), 
+             formula = log10(auc) ~ as.factor(h):as.factor(a_S1):as.factor(init_moi) + 
+               log10(ref_auc):as.factor(h):as.factor(a_S1):as.factor(init_moi))
+relauc_lm2 <- lm(data = filter(ysum10, init_moi != 0), 
+                formula = log10(rel_auc) ~ as.factor(h):as.factor(a_S1):as.factor(init_moi) +
+                  log10(ref_auc):as.factor(h):as.factor(a_S1):as.factor(init_moi))
+
+summary(auc_lm2)
+summary(relauc_lm2)
+
+real_diff_all <- summary(relauc_lm)$r.squared - summary(auc_lm)$r.squared
+real_diff_subset <- c()
+for (myk in unique(ysum10$k)) {
+  sub_auc_lm <- lm(data = filter(ysum10, init_moi != 0, k == myk), 
+               formula = log10(auc) ~ as.factor(a_S1):as.factor(init_moi))
+  sub_relauc_lm <- lm(data = filter(ysum10, init_moi != 0, k == myk), 
+                  formula = log10(rel_auc) ~ as.factor(a_S1):as.factor(init_moi))
+  real_diff_subset <- 
+    c(real_diff_subset,
+      summary(sub_relauc_lm)$r.squared - summary(sub_auc_lm)$r.squared)
+}
+names(real_diff_subset) <- unique(ysum10$k)
 
 #Bootstrap to see if that difference in proportion of variance
 # explained is significant by randomizing a_S1
 boot_out1 <- data.frame("auc_r2" = rep(NA, 10000),
                        "relauc_r2" = NA)
 temp <- filter(ysum10, init_moi != 0)
+set.seed(123)
 for (i in 1:nrow(boot_out1)) {
   temp1 <- temp
   temp1$a_S1 <- sample(temp1$a_S1)
@@ -3063,18 +3113,227 @@ hist(boot_out1$auc_r2)
 hist(boot_out1$relauc_r2)
 hist(boot_out1$r2_diff)
 abline(v = real_diff, col = "red")
-mean(boot_out1$r2_diff > abs(real_diff) | boot_out1$r2_diff < -abs(real_diff))
+mean(boot_out1$r2_diff > abs(real_diff_all) | boot_out1$r2_diff < -abs(real_diff_all))
+sapply(X = real_diff_subset,
+       FUN = function(x, dist) {mean(dist > abs(x) | dist < -abs(x))},
+       dist = boot_out1$r2_diff)
+
 
 #Plots
 if(glob_make_statplots) {
   mycolors <- c("black", scales::viridis_pal(end = 0.9)(5))
   
+  png("./statplots/run10_auc_refauc_k.png", width = 5, height = 4,
+      units = "in", res = 300)
+  ggplot(data = filter(ysum10, init_moi != 0, h == 0, init_moi == 0.01,
+                       u_S1 == 0.0179),
+         aes(x = log10(ref_auc), y = log10(auc), 
+             fill = as.factor(a_S1), color = as.factor(a_S1))) +
+    geom_point(size = 2) +
+    geom_abline(slope = 1) +
+    geom_abline(lty = 3, lwd = 0.5, color = "gray80",
+                slope = 0.5, intercept = seq(1, 9, 0.5)) +
+    lims(y = log10(c(min(ysum10$auc, ysum10$ref_auc), max(ysum10$auc, ysum10$ref_auc)))) +
+    #geom_smooth(method = "lm", se = FALSE) +
+    scale_fill_manual(name = "Infection rate\n(/min)",
+                      breaks = 10**(-12:-8),
+                      values = mycolors[1:6],
+                      labels = c(expression(10^-12),
+                                 expression(10^-11), expression(10^-10),
+                                 expression(10^-9), expression(10^-8))) +
+    scale_color_manual(name = "Infection rate\n(/min)",
+                       breaks = 10**(-12:-8),
+                       values = mycolors[1:6],
+                       labels = c(expression(10^-12),
+                                  expression(10^-11), expression(10^-10),
+                                  expression(10^-9), expression(10^-8))) +
+    guides(shape = guide_legend(override.aes = list(fill = "black"))) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          panel.grid = element_blank()) +
+    labs(x = "log10(Area under the curve of phage-less control)\n(hr cfu/mL)", 
+         y = "log10(Area under the curve) (hr cfu/mL)")
+  dev.off()
+  
+  png("./statplots/run10_auc_refauc_uS1.png", width = 5, height = 4,
+      units = "in", res = 300)
+  ggplot(data = filter(ysum10, init_moi != 0, h == 0, init_moi == 0.01,
+                       k == 10**9),
+         aes(x = log10(ref_auc), y = log10(auc), 
+             fill = as.factor(a_S1), color = as.factor(a_S1))) +
+    geom_point(size = 2) +
+    geom_abline(slope = 1) +
+    geom_abline(lty = 3, lwd = 0.5, color = "gray80",
+                slope = 0.5, intercept = seq(1, 9, 0.5)) +
+    lims(y = log10(c(min(ysum10$auc, ysum10$ref_auc), max(ysum10$auc, ysum10$ref_auc))),
+         x = c(12, 13)) +
+    #geom_smooth(method = "lm", se = FALSE) +
+    scale_fill_manual(name = "Infection rate\n(/min)",
+                      breaks = 10**(-12:-8),
+                      values = mycolors[1:6],
+                      labels = c(expression(10^-12),
+                                 expression(10^-11), expression(10^-10),
+                                 expression(10^-9), expression(10^-8))) +
+    scale_color_manual(name = "Infection rate\n(/min)",
+                       breaks = 10**(-12:-8),
+                       values = mycolors[1:6],
+                       labels = c(expression(10^-12),
+                                  expression(10^-11), expression(10^-10),
+                                  expression(10^-9), expression(10^-8))) +
+    guides(shape = guide_legend(override.aes = list(fill = "black"))) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          panel.grid = element_blank()) +
+    labs(x = "log10(Area under the curve of phage-less control)\n(hr cfu/mL)", 
+         y = "log10(Area under the curve) (hr cfu/mL)")
+  dev.off()
+  
+  png("./statplots/run10_auc_refauc_all.png", width = 5, height = 4,
+      units = "in", res = 300)
+  ggplot(data = filter(ysum10, h == 0, init_moi == 0.01),
+         aes(x = log10(ref_auc), y = log10(auc), 
+             fill = as.factor(a_S1), color = as.factor(a_S1))) +
+    geom_point(size = 2, aes(shape = as.factor(k))) +
+    geom_abline(slope = 1) +
+    geom_abline(lty = 3, lwd = 0.5, color = "gray80",
+                slope = 0.5, intercept = seq(1, 9, 0.5)) +
+    lims(y = log10(c(min(ysum10$auc, ysum10$ref_auc), 
+                     max(ysum10$auc, ysum10$ref_auc)))) +
+    #geom_smooth(method = "lm", se = FALSE) +
+    scale_fill_manual(name = "Infection rate\n(/min)",
+                      breaks = 10**(-12:-8),
+                      values = mycolors[1:6],
+                      labels = c(expression(10^-12),
+                                 expression(10^-11), expression(10^-10),
+                                 expression(10^-9), expression(10^-8))) +
+    scale_color_manual(name = "Infection rate\n(/min)",
+                       breaks = 10**(-12:-8),
+                       values = mycolors[1:6],
+                       labels = c(expression(10^-12),
+                                  expression(10^-11), expression(10^-10),
+                                  expression(10^-9), expression(10^-8))) +
+    scale_shape_manual(name = "Carrying\ncapacity\n(cfu/mL)",
+                       values = 21:25) +
+    guides(shape = guide_legend(override.aes = list(fill = "black"))) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          panel.grid = element_blank()) +
+    labs(x = "log10(Area under the curve of phage-less control)\n(hr cfu/mL)", 
+         y = "log10(Area under the curve) (hr cfu/mL)")
+  dev.off()
+  
+  png("./statplots/run10_relauc_refauc_k.png", width = 5, height = 4,
+      units = "in", res = 300)
+  ggplot(data = filter(ysum10, init_moi != 0, h == 0, init_moi == 0.01,
+                       u_S1 == 0.0179),
+         aes(x = log10(ref_auc), y = log10(rel_auc), 
+             color = as.factor(a_S1), fill = as.factor(a_S1))) +
+    geom_point(size = 2) +
+    geom_abline(slope = 0) +
+    geom_abline(lty = 3, lwd = 0.5, color = "gray80",
+                slope = -0.5, intercept = seq(0, 8, 0.5)) +
+    #geom_smooth(method = "lm", se = FALSE) +
+    scale_fill_manual(name = "Infection rate\n(/min)",
+                      breaks = 10**(-12:-8),
+                      values = mycolors[1:6],
+                      labels = c(expression(10^-12),
+                                 expression(10^-11), expression(10^-10),
+                                 expression(10^-9), expression(10^-8))) +
+    scale_color_manual(name = "Infection rate\n(/min)",
+                       breaks = 10**(-12:-8),
+                       values = mycolors[1:6],
+                       labels = c(expression(10^-12),
+                                  expression(10^-11), expression(10^-10),
+                                  expression(10^-9), expression(10^-8))) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          panel.grid = element_blank()) +
+    labs(x = "log10(Area under the curve of phage-less control)\n(hr cfu/mL)", 
+         y = "log10(Area under the curve\nrelative to phage-less control)",
+         subtitle = "Initial MOI")
+  dev.off()
+  
+  png("./statplots/run10_relauc_refauc_uS1.png", width = 5, height = 4,
+      units = "in", res = 300)
+  ggplot(data = filter(ysum10, init_moi != 0, h == 0, init_moi == 0.01,
+                       k == 10**9),
+         aes(x = log10(ref_auc), y = log10(rel_auc), 
+             color = as.factor(a_S1), fill = as.factor(a_S1))) +
+    geom_point(size = 2) +
+    geom_abline(slope = 0) +
+    geom_abline(lty = 3, lwd = 0.5, color = "gray80",
+                slope = -0.5, intercept = seq(0, 8, 0.5)) +
+    lims(y = c(NA, 0), x = c(12, 13)) +
+    #geom_smooth(method = "lm", se = FALSE) +
+    scale_fill_manual(name = "Infection rate\n(/min)",
+                      breaks = 10**(-12:-8),
+                      values = mycolors[1:6],
+                      labels = c(expression(10^-12),
+                                 expression(10^-11), expression(10^-10),
+                                 expression(10^-9), expression(10^-8))) +
+    scale_color_manual(name = "Infection rate\n(/min)",
+                       breaks = 10**(-12:-8),
+                       values = mycolors[1:6],
+                       labels = c(expression(10^-12),
+                                  expression(10^-11), expression(10^-10),
+                                  expression(10^-9), expression(10^-8))) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          panel.grid = element_blank()) +
+    labs(x = "log10(Area under the curve of phage-less control)\n(hr cfu/mL)", 
+         y = "log10(Area under the curve\nrelative to phage-less control)",
+         subtitle = "Initial MOI")
+  dev.off()
+  
+  png("./statplots/run10_relauc_refauc_all.png", width = 5, height = 4,
+      units = "in", res = 300)
+  ggplot(data = filter(ysum10, h == 0, init_moi == 0.01),
+         aes(x = log10(ref_auc), y = log10(rel_auc), 
+             color = as.factor(a_S1), fill = as.factor(a_S1))) +
+    geom_point(aes(shape = as.factor(k))) +
+    geom_abline(slope = 0) +
+    geom_abline(lty = 3, lwd = 0.5, color = "gray80",
+                slope = -0.5, intercept = seq(0, 8, 0.5)) +
+    #geom_smooth(method = "lm", se = FALSE) +
+    scale_fill_manual(name = "Infection rate\n(/min)",
+                      breaks = 10**(-12:-8),
+                      values = mycolors[1:6],
+                      labels = c(expression(10^-12),
+                                 expression(10^-11), expression(10^-10),
+                                 expression(10^-9), expression(10^-8))) +
+    scale_color_manual(name = "Infection rate\n(/min)",
+                       breaks = 10**(-12:-8),
+                       values = mycolors[1:6],
+                       labels = c(expression(10^-12),
+                                  expression(10^-11), expression(10^-10),
+                                  expression(10^-9), expression(10^-8))) +
+    scale_shape_manual(name = "Carrying\ncapacity\n(cfu/mL)",
+                       values = 21:25) +
+    guides(shape = guide_legend(override.aes = list(fill = "black"))) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          panel.grid = element_blank()) +
+    labs(x = "log10(Area under the curve of phage-less control)\n(hr cfu/mL)", 
+         y = "log10(Area under the curve\nrelative to phage-less control)",
+         subtitle = "Initial MOI")
+  dev.off()
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   # Plot relauc vs auc. Normalizing expects that rel auc holds constant 
   # within a, so we can see how true that is
   png("./statplots/run10_auc_a_subset.png", width = 5, height = 4,
       units = "in", res = 300)
-  ggplot(data = filter(ysum10, init_moi %in% c(0, 0.01)), 
-         aes(x = a_S1, y = auc)) +
+  ggplot(data = filter(ysum10, init_moi %in% c(0, 0.01), k == 10**9), 
+         aes(x = a_S1, y = auc, shape = as.factor(k))) +
     geom_point() +
     scale_x_log10() +
     scale_y_log10() +
@@ -3087,7 +3346,7 @@ if(glob_make_statplots) {
   
   png("./statplots/run10_relauc_a_subset.png", width = 5, height = 4,
       units = "in", res = 300)
-  ggplot(data = filter(ysum10, init_moi %in% c(0, 0.01)), 
+  ggplot(data = filter(ysum10, init_moi %in% c(0, 0.01), k == 10**9), 
          aes(x = a_S1, y = rel_auc)) +
     geom_point() +
     scale_x_log10() +
@@ -3127,13 +3386,17 @@ if(glob_make_statplots) {
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
   dev.off()
   
+  temp <- filter(ysum10, init_moi != 0, k == 10**10, h == 0, init_moi == 0.01)
   png("./statplots/run10_auc_refauc.png", width = 5, height = 4,
       units = "in", res = 300)
-  ggplot(data = filter(ysum10, init_moi != 0),
+  ggplot(data = temp,
          aes(x = log10(ref_auc), y = log10(auc), color = as.factor(a_S1))) +
-    geom_point() +
-    facet_grid(~init_moi) +
-    geom_smooth(method = "lm", se = FALSE) +
+    geom_point(aes(shape = extin_flag)) +
+    geom_abline(slope = 1, intercept = 0, lty = 2) +
+    lims(x = log10(c(min(temp$auc, temp$ref_auc), max(temp$auc, temp$ref_auc))),
+         y = log10(c(min(temp$auc, temp$ref_auc), max(temp$auc, temp$ref_auc)))) +
+    facet_grid(.~init_moi) +
+    #geom_smooth(method = "lm", se = FALSE) +
     scale_color_manual(name = "Infection rate\n(/min)",
                        breaks = 10**(-12:-8),
                        values = mycolors[1:6],
@@ -3147,24 +3410,38 @@ if(glob_make_statplots) {
          subtitle = "Initial MOI")
   dev.off()
   
-  png("./statplots/run10_relauc_refauc.png", width = 5, height = 4,
+  temp <- filter(ysum10, init_moi != 0, h == 0, init_moi == 0.01)
+  png("./statplots/run10_auc_refauc.png", width = 5, height = 4,
       units = "in", res = 300)
-  ggplot(data = filter(ysum10, init_moi != 0),
-         aes(x = log10(ref_auc), y = log10(rel_auc), color = as.factor(a_S1))) +
-    geom_point() +
-    facet_grid(~init_moi) +
-    geom_smooth(method = "lm", se = FALSE) +
+  ggplot(data = temp,
+         aes(x = log10(ref_auc), y = log10(auc), 
+             fill = as.factor(a_S1), color = as.factor(a_S1))) +
+    geom_point(aes(shape = as.factor(k))) +
+    geom_abline(slope = 1) +
+    geom_abline(lty = 3, lwd = 0.5, color = "gray80",
+                slope = 0.5, intercept = seq(1, 9, 0.5)) +
+    lims(y = log10(c(min(ysum10$auc, ysum10$ref_auc), max(ysum10$auc, ysum10$ref_auc)))) +
+    #geom_smooth(method = "lm", se = FALSE) +
+    scale_fill_manual(name = "Infection rate\n(/min)",
+                      breaks = 10**(-12:-8),
+                      values = mycolors[1:6],
+                      labels = c(expression(10^-12),
+                                 expression(10^-11), expression(10^-10),
+                                 expression(10^-9), expression(10^-8))) +
     scale_color_manual(name = "Infection rate\n(/min)",
                        breaks = 10**(-12:-8),
                        values = mycolors[1:6],
                        labels = c(expression(10^-12),
                                   expression(10^-11), expression(10^-10),
                                   expression(10^-9), expression(10^-8))) +
+    scale_shape_manual(name = "Carrying\ncapacity\n(cfu/mL)",
+                       values = 21:25) +
+    guides(shape = guide_legend(override.aes = list(fill = "black"))) +
     theme_bw() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          panel.grid = element_blank()) +
     labs(x = "log10(Area under the curve of phage-less control)\n(hr cfu/mL)", 
-         y = "log10(Area under the curve\nrelative to phage-less control)",
-         subtitle = "Initial MOI")
+         y = "log10(Area under the curve) (hr cfu/mL)")
   dev.off()
   
   png("./statplots/run10_auc_faceted.png", width = 6, height = 6,
