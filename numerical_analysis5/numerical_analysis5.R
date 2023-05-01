@@ -3067,13 +3067,13 @@ if(glob_make_statplots) {
   
   png("./statplots/run10_auc_refauc_k.png", width = 5, height = 4,
       units = "in", res = 300)
-  ggplot(data = filter(ysum10, init_moi != 0, h == 0, init_moi == 0.01,
+  p1a <- ggplot(data = filter(ysum10, init_moi != 0, h == 0, init_moi == 0.01,
                        u_S1 == 0.0179),
          aes(x = log10(ref_auc), y = log10(auc), 
              fill = as.factor(a_S1), color = as.factor(a_S1))) +
     geom_point(size = 2) +
     geom_abline(slope = 1) +
-    geom_abline(lty = 3, lwd = 0.5, color = "gray80",
+    geom_abline(lty = 3, lwd = 0.5, color = "gray50",
                 slope = 0.5, intercept = seq(1, 9, 0.5)) +
     lims(y = log10(c(min(ysum10$auc, ysum10$ref_auc), max(ysum10$auc, ysum10$ref_auc)))) +
     #geom_smooth(method = "lm", se = FALSE) +
@@ -3093,19 +3093,20 @@ if(glob_make_statplots) {
     theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1),
           panel.grid = element_blank()) +
-    labs(x = "log10(Area under the curve of phage-less control)\n(hr cfu/mL)", 
-         y = "log10(Area under the curve) (hr cfu/mL)")
+    labs(x = "log10(Control AUC)\n(hr cfu/mL)", 
+         y = "log10(AUC)\n(hr cfu/mL)")
+  print(p1a)
   dev.off()
   
   png("./statplots/run10_auc_refauc_uS1.png", width = 5, height = 4,
       units = "in", res = 300)
-  ggplot(data = filter(ysum10, init_moi != 0, h == 0, init_moi == 0.01,
+  p1b <- ggplot(data = filter(ysum10, init_moi != 0, h == 0, init_moi == 0.01,
                        k == 10**9),
          aes(x = log10(ref_auc), y = log10(auc), 
              fill = as.factor(a_S1), color = as.factor(a_S1))) +
     geom_point(size = 2) +
     geom_abline(slope = 1) +
-    geom_abline(lty = 3, lwd = 0.5, color = "gray80",
+    geom_abline(lty = 3, lwd = 0.5, color = "gray50",
                 slope = 0.5, intercept = seq(1, 9, 0.5)) +
     lims(y = log10(c(min(ysum10$auc, ysum10$ref_auc), max(ysum10$auc, ysum10$ref_auc))),
          x = c(12, 13)) +
@@ -3126,54 +3127,56 @@ if(glob_make_statplots) {
     theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1),
           panel.grid = element_blank()) +
-    labs(x = "log10(Area under the curve of phage-less control)\n(hr cfu/mL)", 
-         y = "log10(Area under the curve) (hr cfu/mL)")
+    labs(x = "log10(Control AUC)\n(hr cfu/mL)", 
+         y = "log10(AUC)\n(hr cfu/mL)")
+  print(p1b)
   dev.off()
   
   png("./statplots/run10_auc_refauc_all.png", width = 5, height = 4,
       units = "in", res = 300)
-  ggplot(data = filter(ysum10, h == 0, init_moi == 0.01),
+  print(ggplot(data = filter(ysum10, h == 0, init_moi == 0.01),
          aes(x = log10(ref_auc), y = log10(auc), 
              fill = as.factor(a_S1), color = as.factor(a_S1))) +
     geom_point(size = 2, aes(shape = as.factor(k))) +
     geom_abline(slope = 1) +
-    geom_abline(lty = 3, lwd = 0.5, color = "gray80",
+    geom_abline(lty = 3, lwd = 0.5, color = "gray50",
                 slope = 0.5, intercept = seq(1, 9, 0.5)) +
     lims(y = log10(c(min(ysum10$auc, ysum10$ref_auc), 
                      max(ysum10$auc, ysum10$ref_auc)))) +
     #geom_smooth(method = "lm", se = FALSE) +
-    scale_fill_manual(name = "Infection rate\n(/min)",
+    scale_fill_manual(name = "Infection rate (/min)",
                       breaks = 10**(-12:-8),
                       values = mycolors[1:6],
                       labels = c(expression(10^-12),
                                  expression(10^-11), expression(10^-10),
                                  expression(10^-9), expression(10^-8))) +
-    scale_color_manual(name = "Infection rate\n(/min)",
+    scale_color_manual(name = "Infection rate (/min)",
                        breaks = 10**(-12:-8),
                        values = mycolors[1:6],
                        labels = c(expression(10^-12),
                                   expression(10^-11), expression(10^-10),
                                   expression(10^-9), expression(10^-8))) +
-    scale_shape_manual(name = "Carrying\ncapacity\n(cfu/mL)",
+    scale_shape_manual(name = "Carrying capacity\n(cfu/mL)",
                        values = 21:25) +
     guides(shape = guide_legend(override.aes = list(fill = "black"))) +
     theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1),
           panel.grid = element_blank()) +
-    labs(x = "log10(Area under the curve of phage-less control)\n(hr cfu/mL)", 
-         y = "log10(Area under the curve) (hr cfu/mL)")
+      labs(x = "log10(Control AUC)\n(hr cfu/mL)", 
+           y = "log10(AUC)\n(hr cfu/mL)"))
   dev.off()
   
   png("./statplots/run10_relauc_refauc_k.png", width = 5, height = 4,
       units = "in", res = 300)
-  ggplot(data = filter(ysum10, init_moi != 0, h == 0, init_moi == 0.01,
+  p1c <- ggplot(data = filter(ysum10, init_moi != 0, h == 0, init_moi == 0.01,
                        u_S1 == 0.0179),
          aes(x = log10(ref_auc), y = log10(rel_auc), 
              color = as.factor(a_S1), fill = as.factor(a_S1))) +
     geom_point(size = 2) +
     geom_abline(slope = 0) +
-    geom_abline(lty = 3, lwd = 0.5, color = "gray80",
+    geom_abline(lty = 3, lwd = 0.5, color = "gray50",
                 slope = -0.5, intercept = seq(0, 8, 0.5)) +
+    lims(y = log10(c(min(ysum10$rel_auc), max(ysum10$rel_auc)))) +
     #geom_smooth(method = "lm", se = FALSE) +
     scale_fill_manual(name = "Infection rate\n(/min)",
                       breaks = 10**(-12:-8),
@@ -3190,22 +3193,23 @@ if(glob_make_statplots) {
     theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1),
           panel.grid = element_blank()) +
-    labs(x = "log10(Area under the curve of phage-less control)\n(hr cfu/mL)", 
-         y = "log10(Area under the curve\nrelative to phage-less control)",
-         subtitle = "Initial MOI")
+    labs(x = "log10(Control AUC)\n(hr cfu/mL)", 
+         y = "log10(Relative AUC)")
+  print(p1c)
   dev.off()
   
   png("./statplots/run10_relauc_refauc_uS1.png", width = 5, height = 4,
       units = "in", res = 300)
-  ggplot(data = filter(ysum10, init_moi != 0, h == 0, init_moi == 0.01,
+  p1d <- ggplot(data = filter(ysum10, init_moi != 0, h == 0, init_moi == 0.01,
                        k == 10**9),
          aes(x = log10(ref_auc), y = log10(rel_auc), 
              color = as.factor(a_S1), fill = as.factor(a_S1))) +
     geom_point(size = 2) +
     geom_abline(slope = 0) +
-    geom_abline(lty = 3, lwd = 0.5, color = "gray80",
+    geom_abline(lty = 3, lwd = 0.5, color = "gray50",
                 slope = -0.5, intercept = seq(0, 8, 0.5)) +
-    lims(y = c(NA, 0), x = c(12, 13)) +
+    lims(y = log10(c(min(ysum10$rel_auc), max(ysum10$rel_auc))),
+         x = c(12, 13)) +
     #geom_smooth(method = "lm", se = FALSE) +
     scale_fill_manual(name = "Infection rate\n(/min)",
                       breaks = 10**(-12:-8),
@@ -3222,42 +3226,58 @@ if(glob_make_statplots) {
     theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1),
           panel.grid = element_blank()) +
-    labs(x = "log10(Area under the curve of phage-less control)\n(hr cfu/mL)", 
-         y = "log10(Area under the curve\nrelative to phage-less control)",
-         subtitle = "Initial MOI")
+    labs(x = "log10(Control AUC)\n(hr cfu/mL)", 
+         y = "log10(Relative AUC)")
+  print(p1d)
   dev.off()
   
   png("./statplots/run10_relauc_refauc_all.png", width = 5, height = 4,
       units = "in", res = 300)
-  ggplot(data = filter(ysum10, h == 0, init_moi == 0.01),
+  print(ggplot(data = filter(ysum10, h == 0, init_moi == 0.01),
          aes(x = log10(ref_auc), y = log10(rel_auc), 
              color = as.factor(a_S1), fill = as.factor(a_S1))) +
     geom_point(aes(shape = as.factor(k))) +
     geom_abline(slope = 0) +
-    geom_abline(lty = 3, lwd = 0.5, color = "gray80",
+    geom_abline(lty = 3, lwd = 0.5, color = "gray50",
                 slope = -0.5, intercept = seq(0, 8, 0.5)) +
     #geom_smooth(method = "lm", se = FALSE) +
-    scale_fill_manual(name = "Infection rate\n(/min)",
+    scale_fill_manual(name = "Infection rate (/min)",
                       breaks = 10**(-12:-8),
                       values = mycolors[1:6],
                       labels = c(expression(10^-12),
                                  expression(10^-11), expression(10^-10),
                                  expression(10^-9), expression(10^-8))) +
-    scale_color_manual(name = "Infection rate\n(/min)",
+    scale_color_manual(name = "Infection rate (/min)",
                        breaks = 10**(-12:-8),
                        values = mycolors[1:6],
                        labels = c(expression(10^-12),
                                   expression(10^-11), expression(10^-10),
                                   expression(10^-9), expression(10^-8))) +
-    scale_shape_manual(name = "Carrying\ncapacity\n(cfu/mL)",
+    scale_shape_manual(name = "Carrying capacity\n(cfu/mL)",
                        values = 21:25) +
     guides(shape = guide_legend(override.aes = list(fill = "black"))) +
     theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1),
           panel.grid = element_blank()) +
-    labs(x = "log10(Area under the curve of phage-less control)\n(hr cfu/mL)", 
-         y = "log10(Area under the curve\nrelative to phage-less control)",
-         subtitle = "Initial MOI")
+    labs(x = "log10(Control AUC)\n(hr cfu/mL)", 
+         y = "log10(Relative AUC)"))
+  dev.off()
+  
+  png("./statplots/fig8_run10.png", width = 6, height = 5,
+      units = "in", res = 300)
+  print(
+    plot_grid(ncol = 2, rel_widths = c(0.8, 0.2),
+              plot_grid(nrow = 2, align = "hv", axis = "tblr", labels = "AUTO",
+                        p1a + guides(color = "none", fill = "none") +
+                          theme(axis.title.x = element_blank()), 
+                        p1b + guides(color = "none", fill = "none") +
+                          theme(axis.title = element_blank()),
+                        p1c + guides(color = "none", fill = "none"), 
+                        p1d + guides(color = "none", fill = "none") +
+                          theme(axis.title.y = element_blank())
+              ),
+              get_legend(p1a))
+  )
   dev.off()
 }
 
