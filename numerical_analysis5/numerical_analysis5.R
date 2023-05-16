@@ -2424,9 +2424,64 @@ ysum7 <- mutate(
   extin_time_4 = ifelse(is.na(extin_time_4), run_time, extin_time_4))
 
 if (glob_make_statplots) {
-  png("./statplots/run7_maxtime_a_initSconst_contour.png", width = 5, height = 3.8,
+  png("./statplots/run7_maxtime_a_initSconst_contour_nobars.png", width = 5, height = 3.8,
       units = "in", res = 300)
   print(ggplot(data = filter(ysum7, init_S1 == 10**6), 
+               aes(x = a_S1, y = init_P)) +
+          geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
+          geom_point(aes(color = peak_time/60, shape = extin_flag),
+                     size = 3) +
+          scale_color_viridis_c(name = "Peak time (hr)",
+                                breaks = c(3, 6, 9, 12)) +
+          scale_shape_manual(breaks = c("neark", "noextin", "none"), 
+                             values = c(4, 4, 16)) +
+          scale_y_continuous(trans = "log10") +
+          scale_x_continuous(trans = "log10") +
+          labs(x = "Infection rate (/min)",
+               y = "Initial phage density (pfu/mL)") +
+          guides(fill = "none", shape = "none") +
+          NULL)
+  dev.off()
+  
+  png("./statplots/run7_maxtime_a_initPconst_contour_nobars.png", width = 5, height = 3.8,
+      units = "in", res = 300)
+  print(ggplot(data = filter(ysum7, init_P == 10**4), 
+               aes(x = a_S1, y = init_S1)) +
+          geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
+          geom_point(aes(color = peak_time/60, shape = extin_flag),
+                     size = 3) +
+          scale_color_viridis_c(name = "Peak time (hr)",
+                                breaks = c(4, 8, 12, 16)) +
+          scale_shape_manual(breaks = c("neark", "noextin", "none"), 
+                             values = c(4, 4, 16)) +
+          scale_y_continuous(trans = "log10") +
+          scale_x_continuous(trans = "log10") +
+          labs(x = "Infection rate (/min)",
+               y = "Initial bacterial density (cfu/mL)") +
+          guides(fill = "none", shape = "none") +
+          NULL)
+  dev.off()
+  
+  png("./statplots/run7_maxtime_a_moiconst_contour_nobars.png", width = 5, height = 3.8,
+      units = "in", res = 300)
+  print(ggplot(data = filter(ysum7, init_moi == 0.01), 
+               aes(x = a_S1, y = init_S1)) +
+          geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
+          geom_point(aes(color = peak_time/60, shape = extin_flag),
+                     size = 3) +
+          scale_color_viridis_c(name = "Peak time (hr)",
+                                breaks = c(6, 12, 18, 24)) +
+          scale_shape_manual(breaks = c("neark", "noextin", "none"), 
+                             values = c(4, 4, 16)) +
+          scale_y_continuous(trans = "log10") +
+          scale_x_continuous(trans = "log10") +
+          labs(x = "Infection rate (/min)",
+               y = "Initial bacterial density (cfu/mL)") +
+          guides(fill = "none", shape = "none") +
+          NULL)
+  dev.off()
+  
+  p1 <- ggplot(data = filter(ysum7, init_S1 == 10**6), 
                aes(x = a_S1, y = init_P)) +
           geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
           geom_segment(aes(x = a_S1, xend = a_S1,
@@ -2447,12 +2502,9 @@ if (glob_make_statplots) {
           labs(x = "Infection rate (/min)",
                y = "Initial phage density (pfu/mL)") +
           guides(fill = "none", shape = "none") +
-          NULL)
-  dev.off()
+          NULL
   
-  png("./statplots/run7_maxtime_a_initPconst_contour.png", width = 5, height = 3.8,
-      units = "in", res = 300)
-  print(ggplot(data = filter(ysum7, init_P == 10**4), 
+  p2 <- ggplot(data = filter(ysum7, init_P == 10**4), 
                aes(x = a_S1, y = init_S1)) +
           geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
           geom_segment(aes(x = a_S1, xend = a_S1,
@@ -2473,31 +2525,14 @@ if (glob_make_statplots) {
           labs(x = "Infection rate (/min)",
                y = "Initial bacterial density (cfu/mL)") +
           guides(fill = "none", shape = "none") +
-          NULL)
+          NULL
+  
+  png("./statplots/run7_peaktime_a_estimatebars_contour.png", 
+      width = 10, height = 4, units = "in", res = 300)
+  print(cowplot::plot_grid(p1, p2, ncol = 2))
   dev.off()
   
-  png("./statplots/run7_maxtime_a_moiconst_contour.png", width = 5, height = 3.8,
-      units = "in", res = 300)
-  print(ggplot(data = filter(ysum7, init_moi == 0.01), 
-               aes(x = a_S1, y = init_S1)) +
-          geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
-          geom_point(aes(color = peak_time/60, shape = extin_flag),
-                     size = 3) +
-          scale_color_viridis_c(name = "Peak time (hr)",
-                                breaks = c(6, 12, 18, 24)) +
-          scale_shape_manual(breaks = c("neark", "noextin", "none"), 
-                             values = c(4, 4, 16)) +
-          scale_y_continuous(trans = "log10") +
-          scale_x_continuous(trans = "log10") +
-          labs(x = "Infection rate (/min)",
-               y = "Initial bacterial density (cfu/mL)") +
-          guides(fill = "none", shape = "none") +
-          NULL)
-  dev.off()
-  
-  png("./statplots/run7_maxtime_a_initPconst_pois_contour.png", width = 5, height = 3.8,
-      units = "in", res = 300)
-  print(ggplot(data = filter(ysum7, init_P == 10**4), 
+  p1 <- ggplot(data = filter(ysum7, init_P == 10**4), 
                aes(x = a_S1, y = init_S1)) +
           geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
           geom_point(aes(color = peak_time/60, shape = extin_flag),
@@ -2515,12 +2550,9 @@ if (glob_make_statplots) {
           labs(x = "Infection rate (/min)",
                y = "Initial bacterial density (cfu/mL)") +
           guides(fill = "none", shape = "none") +
-          NULL)
-  dev.off()
-  
-  png("./statplots/run7_maxtime_a_initSconst_pois_contour.png", width = 5, height = 3.8,
-      units = "in", res = 300)
-  print(ggplot(data = filter(ysum7, init_S1 == 10**6), 
+          NULL
+        
+  p2 <- ggplot(data = filter(ysum7, init_S1 == 10**6), 
                aes(x = a_S1, y = init_P)) +
           geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
           geom_point(aes(color = peak_time/60, shape = extin_flag),
@@ -2538,7 +2570,11 @@ if (glob_make_statplots) {
           labs(x = "Infection rate (/min)",
                y = "Initial phage density (pfu/mL)") +
           guides(fill = "none", shape = "none") +
-          NULL)
+          NULL
+
+  png("./statplots/run7_peaktime_a_samplebars_contour.png", 
+      width = 10, height = 4, units = "in", res = 300)
+  print(cowplot::plot_grid(p1, p2, ncol = 2))
   dev.off()
   
   p1 <- ggplot(data = filter(ysum7, init_P == 10**4), 
@@ -2603,13 +2639,13 @@ if (glob_make_statplots) {
   p1 <- print(ggplot(data = filter(ysum7, init_P == 10**4), 
                aes(x = a_S1, y = init_S1)) +
           geom_contour_filled(aes(z = log10(peak_dens)), alpha = 0.5) +
-          geom_segment(aes(x = a_S1, xend = a_S1,
-                           y = init_S1*qpois(0.025, 10)/10,
-                           yend = init_S1*qpois(0.975, 10)/10)) +
-          geom_segment(aes(x = a_S1, xend = a_S1,
-                           y = init_S1*qpois(0.025, 100)/100,
-                           yend = init_S1*qpois(0.975, 100)/100),
-                       lwd = 2) +
+          # geom_segment(aes(x = a_S1, xend = a_S1,
+          #                  y = init_S1*qpois(0.025, 10)/10,
+          #                  yend = init_S1*qpois(0.975, 10)/10)) +
+          # geom_segment(aes(x = a_S1, xend = a_S1,
+          #                  y = init_S1*qpois(0.025, 100)/100,
+          #                  yend = init_S1*qpois(0.975, 100)/100),
+          #              lwd = 2) +
           geom_point(aes(color = log10(peak_dens), shape = extin_flag),
                      size = 3) +
           scale_color_viridis_c(name = "Peak density\n[log10(cfu/mL)]",
@@ -2626,13 +2662,13 @@ if (glob_make_statplots) {
   p2 <- print(ggplot(data = filter(ysum7, init_S1 == 10**6), 
                aes(x = a_S1, y = init_P)) +
           geom_contour_filled(aes(z = log10(peak_dens)), alpha = 0.5) +
-          geom_segment(aes(x = a_S1, xend = a_S1,
-                           y = init_P*qpois(0.025, 10)/10,
-                           yend = init_P*qpois(0.975, 10)/10)) +
-          geom_segment(aes(x = a_S1, xend = a_S1,
-                           y = init_P*qpois(0.025, 100)/100,
-                           yend = init_P*qpois(0.975, 100)/100),
-                       lwd = 2) +
+          # geom_segment(aes(x = a_S1, xend = a_S1,
+          #                  y = init_P*qpois(0.025, 10)/10,
+          #                  yend = init_P*qpois(0.975, 10)/10)) +
+          # geom_segment(aes(x = a_S1, xend = a_S1,
+          #                  y = init_P*qpois(0.025, 100)/100,
+          #                  yend = init_P*qpois(0.975, 100)/100),
+          #              lwd = 2) +
           geom_point(aes(color = log10(peak_dens), shape = extin_flag),
                      size = 3) +
           scale_color_viridis_c(name = "Peak density\n[log10(cfu/mL)]",
@@ -2649,13 +2685,13 @@ if (glob_make_statplots) {
   p3 <- print(ggplot(data = filter(ysum7, init_P == 10**4), 
                      aes(x = a_S1, y = init_S1)) +
                 geom_contour_filled(aes(z = log10(extin_time_4/60)), alpha = 0.5) +
-                geom_segment(aes(x = a_S1, xend = a_S1,
-                                 y = init_S1*qpois(0.025, 10)/10,
-                                 yend = init_S1*qpois(0.975, 10)/10)) +
-                geom_segment(aes(x = a_S1, xend = a_S1,
-                                 y = init_S1*qpois(0.025, 100)/100,
-                                 yend = init_S1*qpois(0.975, 100)/100),
-                             lwd = 2) +
+                # geom_segment(aes(x = a_S1, xend = a_S1,
+                #                  y = init_S1*qpois(0.025, 10)/10,
+                #                  yend = init_S1*qpois(0.975, 10)/10)) +
+                # geom_segment(aes(x = a_S1, xend = a_S1,
+                #                  y = init_S1*qpois(0.025, 100)/100,
+                #                  yend = init_S1*qpois(0.975, 100)/100),
+                #              lwd = 2) +
                 geom_point(aes(color = log10(extin_time_4/60), shape = extin_flag),
                            size = 3) +
                 scale_color_viridis_c(name = "Extinction time (hr)",
@@ -2673,13 +2709,13 @@ if (glob_make_statplots) {
   p4 <- print(ggplot(data = filter(ysum7, init_S1 == 10**6), 
                      aes(x = a_S1, y = init_P)) +
                 geom_contour_filled(aes(z = log10(extin_time_4/60)), alpha = 0.5) +
-                geom_segment(aes(x = a_S1, xend = a_S1,
-                                 y = init_P*qpois(0.025, 10)/10,
-                                 yend = init_P*qpois(0.975, 10)/10)) +
-                geom_segment(aes(x = a_S1, xend = a_S1,
-                                 y = init_P*qpois(0.025, 100)/100,
-                                 yend = init_P*qpois(0.975, 100)/100),
-                             lwd = 2) +
+                # geom_segment(aes(x = a_S1, xend = a_S1,
+                #                  y = init_P*qpois(0.025, 10)/10,
+                #                  yend = init_P*qpois(0.975, 10)/10)) +
+                # geom_segment(aes(x = a_S1, xend = a_S1,
+                #                  y = init_P*qpois(0.025, 100)/100,
+                #                  yend = init_P*qpois(0.975, 100)/100),
+                #              lwd = 2) +
                 geom_point(aes(color = log10(extin_time_4/60), shape = extin_flag),
                            size = 3) +
                 scale_color_viridis_c(name = "Extinction time (hr)",
@@ -2697,13 +2733,13 @@ if (glob_make_statplots) {
   p5 <- print(ggplot(data = filter(ysum7, init_P == 10**4), 
                      aes(x = a_S1, y = init_S1)) +
                 geom_contour_filled(aes(z = log10(auc/60)), alpha = 0.5) +
-                geom_segment(aes(x = a_S1, xend = a_S1,
-                                 y = init_S1*qpois(0.025, 10)/10,
-                                 yend = init_S1*qpois(0.975, 10)/10)) +
-                geom_segment(aes(x = a_S1, xend = a_S1,
-                                 y = init_S1*qpois(0.025, 100)/100,
-                                 yend = init_S1*qpois(0.975, 100)/100),
-                             lwd = 2) +
+                # geom_segment(aes(x = a_S1, xend = a_S1,
+                #                  y = init_S1*qpois(0.025, 10)/10,
+                #                  yend = init_S1*qpois(0.975, 10)/10)) +
+                # geom_segment(aes(x = a_S1, xend = a_S1,
+                #                  y = init_S1*qpois(0.025, 100)/100,
+                #                  yend = init_S1*qpois(0.975, 100)/100),
+                #              lwd = 2) +
                 geom_point(aes(color = log10(auc/60), shape = extin_flag),
                            size = 3) +
                 scale_color_viridis_c(name = "Area under the curve\n(hr cfu/mL)",
@@ -2724,13 +2760,13 @@ if (glob_make_statplots) {
   p6 <- print(ggplot(data = filter(ysum7, init_S1 == 10**6), 
                      aes(x = a_S1, y = init_P)) +
                 geom_contour_filled(aes(z = log10(auc/60)), alpha = 0.5) +
-                geom_segment(aes(x = a_S1, xend = a_S1,
-                                 y = init_P*qpois(0.025, 10)/10,
-                                 yend = init_P*qpois(0.975, 10)/10)) +
-                geom_segment(aes(x = a_S1, xend = a_S1,
-                                 y = init_P*qpois(0.025, 100)/100,
-                                 yend = init_P*qpois(0.975, 100)/100),
-                             lwd = 2) +
+                # geom_segment(aes(x = a_S1, xend = a_S1,
+                #                  y = init_P*qpois(0.025, 10)/10,
+                #                  yend = init_P*qpois(0.975, 10)/10)) +
+                # geom_segment(aes(x = a_S1, xend = a_S1,
+                #                  y = init_P*qpois(0.025, 100)/100,
+                #                  yend = init_P*qpois(0.975, 100)/100),
+                #              lwd = 2) +
                 geom_point(aes(color = log10(auc/60), shape = extin_flag),
                            size = 3) +
                 scale_color_viridis_c(name = "Area under the curve\n(hr cfu/mL)",
@@ -2803,13 +2839,13 @@ if (glob_make_statplots) {
   p1 <- ggplot(data = filter(ysum8, init_P == 10**4), 
                aes(x = b, y = init_S1)) +
           geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
-          geom_segment(aes(x = b, xend = b,
-                           y = init_S1*qpois(0.025, 10)/10,
-                           yend = init_S1*qpois(0.975, 10)/10)) +
-          geom_segment(aes(x = b, xend = b,
-                           y = init_S1*qpois(0.025, 100)/100,
-                           yend = init_S1*qpois(0.975, 100)/100),
-                       lwd = 2) +
+          # geom_segment(aes(x = b, xend = b,
+          #                  y = init_S1*qpois(0.025, 10)/10,
+          #                  yend = init_S1*qpois(0.975, 10)/10)) +
+          # geom_segment(aes(x = b, xend = b,
+          #                  y = init_S1*qpois(0.025, 100)/100,
+          #                  yend = init_S1*qpois(0.975, 100)/100),
+          #              lwd = 2) +
           geom_point(aes(color = peak_time/60, shape = extin_flag),
                      size = 3) +
           scale_color_viridis_c(name = "Peak time (hr)",
@@ -2826,13 +2862,13 @@ if (glob_make_statplots) {
   p2 <- ggplot(data = filter(ysum8, init_S1 == 10**6), 
                aes(x = b, y = init_P)) +
           geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
-          geom_segment(aes(x = b, xend = b,
-                           y = init_P*qpois(0.025, 10)/10,
-                           yend = init_P*qpois(0.975, 10)/10)) +
-          geom_segment(aes(x = b, xend = b,
-                           y = init_P*qpois(0.025, 100)/100,
-                           yend = init_P*qpois(0.975, 100)/100),
-                       lwd = 2) +
+          # geom_segment(aes(x = b, xend = b,
+          #                  y = init_P*qpois(0.025, 10)/10,
+          #                  yend = init_P*qpois(0.975, 10)/10)) +
+          # geom_segment(aes(x = b, xend = b,
+          #                  y = init_P*qpois(0.025, 100)/100,
+          #                  yend = init_P*qpois(0.975, 100)/100),
+          #              lwd = 2) +
           geom_point(aes(color = peak_time/60, shape = extin_flag),
                      size = 3) +
           scale_color_viridis_c(name = "Peak time (hr)",
@@ -2900,13 +2936,13 @@ if (glob_make_statplots) {
   p1 <- ggplot(data = filter(ysum9, init_P == 10**4), 
                aes(x = tau, y = init_S1)) +
           geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
-          geom_segment(aes(x = tau, xend = tau,
-                           y = init_S1*qpois(0.025, 10)/10,
-                           yend = init_S1*qpois(0.975, 10)/10)) +
-          geom_segment(aes(x = tau, xend = tau,
-                           y = init_S1*qpois(0.025, 100)/100,
-                           yend = init_S1*qpois(0.975, 100)/100),
-                       lwd = 2) +
+          # geom_segment(aes(x = tau, xend = tau,
+          #                  y = init_S1*qpois(0.025, 10)/10,
+          #                  yend = init_S1*qpois(0.975, 10)/10)) +
+          # geom_segment(aes(x = tau, xend = tau,
+          #                  y = init_S1*qpois(0.025, 100)/100,
+          #                  yend = init_S1*qpois(0.975, 100)/100),
+          #              lwd = 2) +
           geom_point(aes(color = peak_time/60, shape = extin_flag),
                      size = 3) +
           scale_color_viridis_c(name = "Peak time (hr)",
@@ -2923,13 +2959,13 @@ if (glob_make_statplots) {
   p2 <- ggplot(data = filter(ysum9, init_S1 == 10**6), 
                aes(x = tau, y = init_P)) +
           geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
-          geom_segment(aes(x = tau, xend = tau,
-                           y = init_P*qpois(0.025, 10)/10,
-                           yend = init_P*qpois(0.975, 10)/10)) +
-          geom_segment(aes(x = tau, xend = tau,
-                           y = init_P*qpois(0.025, 100)/100,
-                           yend = init_P*qpois(0.975, 100)/100),
-                       lwd = 2) +
+          # geom_segment(aes(x = tau, xend = tau,
+          #                  y = init_P*qpois(0.025, 10)/10,
+          #                  yend = init_P*qpois(0.975, 10)/10)) +
+          # geom_segment(aes(x = tau, xend = tau,
+          #                  y = init_P*qpois(0.025, 100)/100,
+          #                  yend = init_P*qpois(0.975, 100)/100),
+          #              lwd = 2) +
           geom_point(aes(color = peak_time/60, shape = extin_flag),
                      size = 3) +
           scale_color_viridis_c(name = "Peak time (hr)",
