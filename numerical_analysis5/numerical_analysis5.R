@@ -3067,25 +3067,32 @@ ysum10 <- mutate(
   extin_time_4 = ifelse(is.na(extin_time_4), run_time, extin_time_4),
   bact = paste(u_S1, k, h))
 
-#Change/duplicate rows where a_S1 == 0 to be the 5 a_S1 vals
-add_rows <- NULL
-ysum10$uniq_run <- as.character(ysum10$uniq_run)
-for (i in which(ysum10$a_S1 == 0)) {
-  if(is.null(add_rows)) {
-    add_rows <- rbind(ysum10[i, ], ysum10[i, ], ysum10[i, ], 
-                      ysum10[i, ], ysum10[i, ])
-  } else {
-    add_rows <- rbind(add_rows,
-                      ysum10[i, ], ysum10[i, ], ysum10[i, ], 
-                      ysum10[i, ], ysum10[i, ])
-  }
-  add_rows$a_S1[(nrow(add_rows)-4):nrow(add_rows)] <- 
-    unique(ysum10$a_S1)[unique(ysum10$a_S1) != 0]
-  add_rows$uniq_run[(nrow(add_rows)-4):nrow(add_rows)] <- 
-    paste0(add_rows$uniq_run[(nrow(add_rows)-4):nrow(add_rows)], letters[1:5])
+dup_rows <- function(mydf, mut_col, from_vals, to_vals) {
+  #this function takes in a data.frame
+  #finds all rows where df[, mut_col] == from_vals
+  #deletes those rows
+  #and adds rows that replicate the original but with to_vals in the
+  # mut_col instead
+  
+  mydf <- as.data.frame(mydf)
+  
+  #Generate vector of rows to duplicate
+  rowsrep <- ifelse(mydf[, mut_col] %in% from_vals,
+                    length(to_vals), 1)
+  idx <- rep(1:nrow(mydf), rowsrep)
+  
+  #Duplicate rows
+  newdf <- mydf[idx, ]
+  
+  #replace from_vals with to_vals in duplicated rows
+  newdf[which(idx %in% which(rowsrep > 1)), mut_col] <- to_vals
+  
+  return(newdf)
 }
-ysum10 <- rbind(ysum10, add_rows)
-ysum10 <- filter(ysum10, a_S1 != 0)
+
+#Change/duplicate rows where a_S1 == 0 to be the 5 a_S1 vals
+ysum10 <- dup_rows(ysum10, mut_col = "a_S1", from_vals = 0, 
+                   to_vals = 10**c(-8:-12))
 
 #Relative auc
 ysum10 <- mutate(group_by(ysum10, u_S1, u_S2, k, z, d, h,
@@ -3093,80 +3100,108 @@ ysum10 <- mutate(group_by(ysum10, u_S1, u_S2, k, z, d, h,
                 rel_auc = auc/(auc[init_moi == 0][1]),
                 ref_auc = auc[init_moi == 0][1])
 
-ysum10_sum <- summarize(group_by(ysum10, init_moi, a_S1),
-                        auc_avg = 10**mean(log10(auc/60)),
-                        rel_auc_avg = 10**mean(log10(rel_auc)))
-
 #Plots
 if(glob_make_statplots) {
+  p1 <- ggplot(data = filter(ybig10, 
+                             a_S1 %in% c(0),
+                             u_S1 %in% c(0.0179),
+                             k %in% c(10**8, 10**9, 10**10),
+                             Pop == "B", h == 0,
+                             init_moi %in% c(0)),
+               aes(x = time/60, y = Density, 
+                   group = paste(u_S1, a_S1, k, init_moi))) +
+    geom_area(aes(color = as.factor(k), 
+                  fill = as.factor(k)),
+              position = "identity", alpha = 0.2) +
+    coord_cartesian(xlim = c(0, 24)) +
+    scale_x_continuous(breaks = c(0, 6, 12, 18, 24)) +
+    facet_grid( ~ a_S1, scales = "fixed",
+                labeller = labeller("a_S1" = c("0" = "Control"))) +
+    scale_color_viridis_d(name = "Bacterial\ncarrying\ncapacity\n(cfu/mL)",
+                          end = 0.9) +
+    scale_fill_viridis_d(name = "Bacterial\ncarrying\ncapacity\n(cfu/mL)",
+                         end = 0.9) +
+    theme_bw() +
+    labs(x = "Time (hr)", y = "Density (cfu/mL)") +
+    guides(color = "none", fill = "none")
+  
+  p2 <- ggplot(data = filter(ybig10, 
+                             a_S1 %in% c(10**-10, 10**-11, 10**-12),
+                             u_S1 %in% c(0.0179),
+                             k %in% c(10**8, 10**9, 10**10),
+                             Pop == "B", h == 0,
+                             init_moi %in% c(0.01)),
+               aes(x = time/60, y = Density, 
+                   group = paste(u_S1, a_S1, k, init_moi))) +
+    geom_area(aes(color = as.factor(k), 
+                  fill = as.factor(k)),
+              position = "identity", alpha = 0.2) +
+    coord_cartesian(xlim = c(0, 24)) +
+    scale_x_continuous(breaks = c(0, 6, 12, 18, 24)) +
+    facet_grid( ~ a_S1, scales = "fixed") +
+    scale_color_viridis_d(name = "Bacterial\ncarrying\ncapacity\n(cfu/mL)",
+                          end = 0.9) +
+    scale_fill_viridis_d(name = "Bacterial\ncarrying\ncapacity\n(cfu/mL)",
+                         end = 0.9) +
+    theme_bw() +
+    labs(x = "Time (hr)", y = "Density (cfu/mL)",
+         subtitle = "Infection rate (/cfu/pfu/min)") +
+    theme(axis.text.y = element_blank(),
+          axis.title.y = element_blank())
+  
+  p3 <- ggplot(data = filter(ybig10, 
+                             a_S1 %in% c(0),
+                             k %in% c(10**9),
+                             u_S1 %in% c(0.00798, 0.0179, 0.04),
+                             Pop == "B", h == 0,
+                             init_moi %in% c(0)),
+               aes(x = time/60, y = Density, 
+                   group = paste(u_S1, a_S1, k, init_moi))) +
+    geom_area(aes(color = as.factor(u_S1*60), 
+                  fill = as.factor(u_S1*60)),
+              position = "identity", alpha = 0.2) +
+    coord_cartesian(xlim = c(0, 24)) +
+    scale_x_continuous(breaks = c(0, 6, 12, 18, 24)) +
+    facet_grid( ~ a_S1, scales = "fixed",
+                labeller = labeller("a_S1" = c("0" = "Control"))) +
+    scale_color_viridis_d(name = "Bacterial\ngrowth\nrate (/hr)", end = 0.9) +
+    scale_fill_viridis_d(name = "Bacterial\ngrowth\nrate (/hr)", end = 0.9) +
+    theme_bw() +
+    labs(x = "Time (hr)", y = "Density (cfu/mL)") +
+    guides(color = "none", fill = "none")
+  
+  p4 <- ggplot(data = filter(ybig10, 
+                             a_S1 %in% c(10**-10, 10**-11, 10**-12),
+                             k %in% c(10**9),
+                             u_S1 %in% c(0.00798, 0.0179, 0.04),
+                             Pop == "B", h == 0,
+                             init_moi %in% c(0.01)),
+               aes(x = time/60, y = Density, 
+                   group = paste(u_S1, a_S1, k, init_moi))) +
+    geom_area(aes(color = as.factor(u_S1*60), 
+                  fill = as.factor(u_S1*60)),
+              position = "identity", alpha = 0.2) +
+    coord_cartesian(xlim = c(0, 24)) +
+    scale_x_continuous(breaks = c(0, 6, 12, 18, 24)) +
+    facet_grid( ~ a_S1, scales = "fixed") +
+    scale_color_viridis_d(name = "Bacterial\ngrowth\nrate (/hr)", end = 0.9) +
+    scale_fill_viridis_d(name = "Bacterial\ngrowth\nrate (/hr)", end = 0.9) +
+    theme_bw() +
+    labs(x = "Time (hr)", y = "Density (cfu/mL)") +
+    theme(axis.text.y = element_blank(),
+          axis.title.y = element_blank())
+  
+  png("./statplots/run10_auccurves.png", width = 6, height = 4,
+      units = "in", res = 300)
+  print(cowplot::plot_grid(
+    cowplot::plot_grid(p1, p2, rel_widths = c(0.45, 1), 
+                       align = "hv", axis = "tb"),
+    cowplot::plot_grid(p3, p4, rel_widths = c(0.45, 1), 
+                       align = "hv", axis = "tb"),
+    nrow = 2, labels = "AUTO"))
+  dev.off()
+  
   mycolors <- c("black", scales::viridis_pal(end = 0.9)(5))
-  
-  png("./statplots/run10_auc_refauc_k.png", width = 5, height = 4,
-      units = "in", res = 300)
-  p1a <- ggplot(data = filter(ysum10, init_moi != 0, h == 0, init_moi == 0.01,
-                       u_S1 == 0.0179),
-         aes(x = log10(ref_auc), y = log10(auc), 
-             fill = as.factor(a_S1), color = as.factor(a_S1))) +
-    geom_point(size = 2) +
-    geom_abline(slope = 1) +
-    geom_abline(lty = 3, lwd = 0.5, color = "gray50",
-                slope = 0.5, intercept = seq(1, 9, 0.5)) +
-    lims(y = log10(c(min(ysum10$auc, ysum10$ref_auc), max(ysum10$auc, ysum10$ref_auc)))) +
-    #geom_smooth(method = "lm", se = FALSE) +
-    scale_fill_manual(name = "Infection rate\n(/min)",
-                      breaks = 10**(-12:-8),
-                      values = mycolors[1:6],
-                      labels = c(expression(10^-12),
-                                 expression(10^-11), expression(10^-10),
-                                 expression(10^-9), expression(10^-8))) +
-    scale_color_manual(name = "Infection rate\n(/min)",
-                       breaks = 10**(-12:-8),
-                       values = mycolors[1:6],
-                       labels = c(expression(10^-12),
-                                  expression(10^-11), expression(10^-10),
-                                  expression(10^-9), expression(10^-8))) +
-    guides(shape = guide_legend(override.aes = list(fill = "black"))) +
-    theme_bw() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1),
-          panel.grid = element_blank()) +
-    labs(x = "log10(Control AUC)\n(hr cfu/mL)", 
-         y = "log10(AUC)\n(hr cfu/mL)")
-  print(p1a)
-  dev.off()
-  
-  png("./statplots/run10_auc_refauc_uS1.png", width = 5, height = 4,
-      units = "in", res = 300)
-  p1b <- ggplot(data = filter(ysum10, init_moi != 0, h == 0, init_moi == 0.01,
-                       k == 10**9),
-         aes(x = log10(ref_auc), y = log10(auc), 
-             fill = as.factor(a_S1), color = as.factor(a_S1))) +
-    geom_point(size = 2) +
-    geom_abline(slope = 1) +
-    geom_abline(lty = 3, lwd = 0.5, color = "gray50",
-                slope = 0.5, intercept = seq(1, 9, 0.5)) +
-    lims(y = log10(c(min(ysum10$auc, ysum10$ref_auc), max(ysum10$auc, ysum10$ref_auc))),
-         x = c(12, 13)) +
-    #geom_smooth(method = "lm", se = FALSE) +
-    scale_fill_manual(name = "Infection rate\n(/min)",
-                      breaks = 10**(-12:-8),
-                      values = mycolors[1:6],
-                      labels = c(expression(10^-12),
-                                 expression(10^-11), expression(10^-10),
-                                 expression(10^-9), expression(10^-8))) +
-    scale_color_manual(name = "Infection rate\n(/min)",
-                       breaks = 10**(-12:-8),
-                       values = mycolors[1:6],
-                       labels = c(expression(10^-12),
-                                  expression(10^-11), expression(10^-10),
-                                  expression(10^-9), expression(10^-8))) +
-    guides(shape = guide_legend(override.aes = list(fill = "black"))) +
-    theme_bw() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1),
-          panel.grid = element_blank()) +
-    labs(x = "log10(Control AUC)\n(hr cfu/mL)", 
-         y = "log10(AUC)\n(hr cfu/mL)")
-  print(p1b)
-  dev.off()
   
   png("./statplots/run10_auc_refauc_all.png", width = 5, height = 4,
       units = "in", res = 300)
@@ -3202,71 +3237,6 @@ if(glob_make_statplots) {
            y = "log10(AUC)\n(hr cfu/mL)"))
   dev.off()
   
-  png("./statplots/run10_relauc_refauc_k.png", width = 5, height = 4,
-      units = "in", res = 300)
-  p1c <- ggplot(data = filter(ysum10, init_moi != 0, h == 0, init_moi == 0.01,
-                       u_S1 == 0.0179),
-         aes(x = log10(ref_auc), y = log10(rel_auc), 
-             color = as.factor(a_S1), fill = as.factor(a_S1))) +
-    geom_point(size = 2) +
-    geom_abline(slope = 0) +
-    geom_abline(lty = 3, lwd = 0.5, color = "gray50",
-                slope = -0.5, intercept = seq(0, 8, 0.5)) +
-    lims(y = log10(c(min(ysum10$rel_auc), max(ysum10$rel_auc)))) +
-    #geom_smooth(method = "lm", se = FALSE) +
-    scale_fill_manual(name = "Infection rate\n(/min)",
-                      breaks = 10**(-12:-8),
-                      values = mycolors[1:6],
-                      labels = c(expression(10^-12),
-                                 expression(10^-11), expression(10^-10),
-                                 expression(10^-9), expression(10^-8))) +
-    scale_color_manual(name = "Infection rate\n(/min)",
-                       breaks = 10**(-12:-8),
-                       values = mycolors[1:6],
-                       labels = c(expression(10^-12),
-                                  expression(10^-11), expression(10^-10),
-                                  expression(10^-9), expression(10^-8))) +
-    theme_bw() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1),
-          panel.grid = element_blank()) +
-    labs(x = "log10(Control AUC)\n(hr cfu/mL)", 
-         y = "log10(Relative AUC)")
-  print(p1c)
-  dev.off()
-  
-  png("./statplots/run10_relauc_refauc_uS1.png", width = 5, height = 4,
-      units = "in", res = 300)
-  p1d <- ggplot(data = filter(ysum10, init_moi != 0, h == 0, init_moi == 0.01,
-                       k == 10**9),
-         aes(x = log10(ref_auc), y = log10(rel_auc), 
-             color = as.factor(a_S1), fill = as.factor(a_S1))) +
-    geom_point(size = 2) +
-    geom_abline(slope = 0) +
-    geom_abline(lty = 3, lwd = 0.5, color = "gray50",
-                slope = -0.5, intercept = seq(0, 8, 0.5)) +
-    lims(y = log10(c(min(ysum10$rel_auc), max(ysum10$rel_auc))),
-         x = c(12, 13)) +
-    #geom_smooth(method = "lm", se = FALSE) +
-    scale_fill_manual(name = "Infection rate\n(/min)",
-                      breaks = 10**(-12:-8),
-                      values = mycolors[1:6],
-                      labels = c(expression(10^-12),
-                                 expression(10^-11), expression(10^-10),
-                                 expression(10^-9), expression(10^-8))) +
-    scale_color_manual(name = "Infection rate\n(/min)",
-                       breaks = 10**(-12:-8),
-                       values = mycolors[1:6],
-                       labels = c(expression(10^-12),
-                                  expression(10^-11), expression(10^-10),
-                                  expression(10^-9), expression(10^-8))) +
-    theme_bw() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1),
-          panel.grid = element_blank()) +
-    labs(x = "log10(Control AUC)\n(hr cfu/mL)", 
-         y = "log10(Relative AUC)")
-  print(p1d)
-  dev.off()
-  
   png("./statplots/run10_relauc_refauc_all.png", width = 5, height = 4,
       units = "in", res = 300)
   print(ggplot(data = filter(ysum10, h == 0, init_moi == 0.01),
@@ -3297,23 +3267,6 @@ if(glob_make_statplots) {
           panel.grid = element_blank()) +
     labs(x = "log10(Control AUC)\n(hr cfu/mL)", 
          y = "log10(Relative AUC)"))
-  dev.off()
-  
-  png("./statplots/fig8_run10.png", width = 6, height = 5,
-      units = "in", res = 300)
-  print(
-    plot_grid(ncol = 2, rel_widths = c(0.8, 0.2),
-              plot_grid(nrow = 2, align = "hv", axis = "tblr", labels = "AUTO",
-                        p1a + guides(color = "none", fill = "none") +
-                          theme(axis.title.x = element_blank()), 
-                        p1b + guides(color = "none", fill = "none") +
-                          theme(axis.title = element_blank()),
-                        p1c + guides(color = "none", fill = "none"), 
-                        p1d + guides(color = "none", fill = "none") +
-                          theme(axis.title.y = element_blank())
-              ),
-              get_legend(p1a))
-  )
   dev.off()
 }
 
