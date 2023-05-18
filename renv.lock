@@ -511,7 +511,7 @@
     },
     "gcplyr": {
       "Package": "gcplyr",
-      "Version": "1.5.1",
+      "Version": "1.5.2",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
@@ -522,7 +522,7 @@
         "tools",
         "utils"
       ],
-      "Hash": "b79ec3ec4b90897ce0b1183c874bc83f"
+      "Hash": "fc6d84a2ec7ece273b497f34d465b8a4"
     },
     "generics": {
       "Package": "generics",
