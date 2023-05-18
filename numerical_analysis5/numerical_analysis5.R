@@ -1135,8 +1135,9 @@ if(glob_make_statplots) {
       scale_x_continuous(breaks = seq(from = 0, to = 10, by = 2.5)) +
       scale_color_manual(limits = c("S", "I", "P", "N"),
                          values = my_cols[c(2, 3, 1, 7)],
-                         labels = c("Susceptible", "Infected", 
-                                    "Phage", "Nutrients")) +
+                         labels = c("Susceptible\nhosts", 
+                                    "Infected\nhosts", 
+                                    "Phages", "Nutrients")) +
       geom_hline(yintercept = 1, lty = 2) +
       theme_bw() +
       theme(axis.text.x = element_text(size = 18),
@@ -1144,8 +1145,10 @@ if(glob_make_statplots) {
             axis.title = element_text(size = 20),
             legend.text = element_text(size = 18),
             legend.title = element_text(size = 20),
+            legend.spacing.y = unit(.1, "in"),
             plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "in")) +
       labs(y = "Density", color = "Population", x = "Time (hr)") +
+      guides(color = guide_legend(byrow = TRUE)) +
       NULL
   )
   dev.off()
@@ -1513,7 +1516,7 @@ if (glob_make_statplots) {
       geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
       geom_point(aes(color = peak_time/60, shape = extin_flag),
                  size = 3) +
-      scale_color_viridis_c(name = "Peak time (hr)",
+      scale_color_viridis_c(name = "Peak\ntime (hr)",
                             breaks = c(4, 8, 12)) +
       scale_shape_manual(breaks = c("neark", "noextin", "none"), 
                          values = c(4, 4, 16)) +
@@ -1522,6 +1525,9 @@ if (glob_make_statplots) {
       xlab("Infection rate (/min)") +
       ylab("Lysis time (min)") +
       guides(fill = "none", shape = "none") +
+      theme(axis.title = element_text(size = 20),
+            legend.title = element_text(size = 18),
+            legend.text = element_text(size = 16)) +
       NULL)
   dev.off()
   
@@ -2424,60 +2430,69 @@ ysum7 <- mutate(
   extin_time_4 = ifelse(is.na(extin_time_4), run_time, extin_time_4))
 
 if (glob_make_statplots) {
-  png("./statplots/run7_maxtime_a_initSconst_contour_nobars.png", width = 5, height = 3.8,
-      units = "in", res = 300)
-  print(ggplot(data = filter(ysum7, init_S1 == 10**6), 
+  p1 <- ggplot(data = filter(ysum7, init_S1 == 10**6), 
                aes(x = a_S1, y = init_P)) +
           geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
           geom_point(aes(color = peak_time/60, shape = extin_flag),
                      size = 3) +
-          scale_color_viridis_c(name = "Peak time (hr)",
+          scale_color_viridis_c(name = "Peak\ntime (hr)",
                                 breaks = c(3, 6, 9, 12)) +
           scale_shape_manual(breaks = c("neark", "noextin", "none"), 
                              values = c(4, 4, 16)) +
           scale_y_continuous(trans = "log10") +
           scale_x_continuous(trans = "log10") +
           labs(x = "Infection rate (/min)",
-               y = "Initial phage density (pfu/mL)") +
+               y = "Initial phage\ndensity (pfu/mL)") +
           guides(fill = "none", shape = "none") +
-          NULL)
-  dev.off()
+          theme(axis.title = element_text(size = 20),
+                legend.title = element_text(size = 18),
+                legend.text = element_text(size = 16)) +
+          NULL
   
-  png("./statplots/run7_maxtime_a_initPconst_contour_nobars.png", width = 5, height = 3.8,
-      units = "in", res = 300)
-  print(ggplot(data = filter(ysum7, init_P == 10**4), 
+  p2 <- ggplot(data = filter(ysum7, init_P == 10**4), 
                aes(x = a_S1, y = init_S1)) +
           geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
           geom_point(aes(color = peak_time/60, shape = extin_flag),
                      size = 3) +
-          scale_color_viridis_c(name = "Peak time (hr)",
+          scale_color_viridis_c(name = "Peak\ntime (hr)",
                                 breaks = c(4, 8, 12, 16)) +
           scale_shape_manual(breaks = c("neark", "noextin", "none"), 
                              values = c(4, 4, 16)) +
           scale_y_continuous(trans = "log10") +
           scale_x_continuous(trans = "log10") +
           labs(x = "Infection rate (/min)",
-               y = "Initial bacterial density (cfu/mL)") +
+               y = "Initial bacterial\ndensity (cfu/mL)") +
           guides(fill = "none", shape = "none") +
-          NULL)
+          theme(axis.title = element_text(size = 20),
+                legend.title = element_text(size = 18),
+                legend.text = element_text(size = 16)) +
+          NULL
+
+  png("./statplots/fig7_run7.png", width = 10, height = 3.2,
+      units = "in", res = 300)
+  print(cowplot::plot_grid(p1, p2, nrow = 1,
+                     labels = "AUTO", align = "hv", axis = "tb"))
   dev.off()
   
-  png("./statplots/run7_maxtime_a_moiconst_contour_nobars.png", width = 5, height = 3.8,
+  png("./statplots/run7_maxtime_a_moiconst_contour_nobars.png", width = 5, height = 3.2,
       units = "in", res = 300)
   print(ggplot(data = filter(ysum7, init_moi == 0.01), 
                aes(x = a_S1, y = init_S1)) +
           geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
           geom_point(aes(color = peak_time/60, shape = extin_flag),
                      size = 3) +
-          scale_color_viridis_c(name = "Peak time (hr)",
+          scale_color_viridis_c(name = "Peak\ntime (hr)",
                                 breaks = c(6, 12, 18, 24)) +
           scale_shape_manual(breaks = c("neark", "noextin", "none"), 
                              values = c(4, 4, 16)) +
           scale_y_continuous(trans = "log10") +
           scale_x_continuous(trans = "log10") +
           labs(x = "Infection rate (/min)",
-               y = "Initial bacterial density (cfu/mL)") +
+               y = "Initial bacterial density\n(cfu/mL)") +
           guides(fill = "none", shape = "none") +
+          theme(axis.title = element_text(size = 20),
+                legend.title = element_text(size = 18),
+                legend.text = element_text(size = 16)) +
           NULL)
   dev.off()
   
@@ -2987,19 +3002,7 @@ if (glob_make_statplots) {
 
 
 ## Run 10: test of metrics across dift bact ----
-## 
-## 
-## TODO
-##  do variance decomposition of each phage (variance of that phage
-##  across dift bact divided by total variance of all phages across
-##  dift bact) (do at each moi)
-##  then use F test on decomposed variance to test whether the
-##  decomposed variance of each phage is smaller after normalization
-##  than it was before normalization
-##  Maybe add a plot of the expectation of auc linearly scaling
-##  so that people can see how we expected relative auc to be
-##  constant but in fact it's not
-##  What if we use bootstrapping to test
+
 run10 <- run_sims_filewrapper(
   name = "run10",
   read_file = glob_read_files,
