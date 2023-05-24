@@ -1157,70 +1157,66 @@ if(glob_make_statplots) {
   temp <- filter(ybig1, uniq_run == myrun, Pop == "B")
   png("./statplots/run1_example_B.png",
       width = 5, height = 5, units = "in", res = 150)
-  print(
+  p1 <- 
     ggplot(data = temp, 
            aes(x = time/60, y = Density+dens_offset)) +
-      geom_line(lwd = 1.5, alpha = 1, color = "black") + 
-      scale_y_continuous(trans = "log10",
-                         breaks = scales::trans_breaks("log10", function(x) 10^x),
-                         labels = scales::trans_format("log10", 
-                                                       scales::math_format(10^.x))) +
-      scale_x_continuous(breaks = seq(from = 0, to = 10, by = 2.5)) +
-      theme_bw() +
-      theme(axis.text.x = element_text(size = 18),
-            axis.text.y = element_text(size = 18),
-            axis.title = element_text(size = 20),
-            legend.text = element_text(size = 18),
-            legend.title = element_text(size = 20),
-            plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "in")) +
-      labs(y = "Density", x = "Time (hr)") +
-      NULL)
+    geom_line(lwd = 1.5, alpha = 1, color = "black") + 
+    scale_y_continuous(trans = "log10",
+                       breaks = scales::trans_breaks("log10", function(x) 10^x),
+                       labels = scales::trans_format("log10", 
+                                                     scales::math_format(10^.x))) +
+    scale_x_continuous(breaks = seq(from = 0, to = 10, by = 2.5)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(size = 18),
+          axis.text.y = element_text(size = 18),
+          axis.title = element_text(size = 20),
+          legend.text = element_text(size = 18),
+          legend.title = element_text(size = 20),
+          plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "in")) +
+    labs(y = "Density", x = "Time (hr)") +
+    NULL
+  print(p1)
+  dev.off()
+  
+  png("./statplots/run1_example_Bpeak.png",
+      width = 5, height = 5, units = "in", res = 150)
+  p1 <- p1 +
+    geom_point(data = filter(ysum1, uniq_run == myrun),
+               aes(x = peak_time/60, y = peak_dens+dens_offset), 
+               color = "red", size = 3) +
+    geom_segment(data = filter(ysum1, uniq_run == myrun),
+                 aes(y = peak_dens + dens_offset,
+                     yend = peak_dens + dens_offset,
+                     x = 0, xend = peak_time/60),
+                 lty = 2, size = 1.5, color = "red", alpha = 0.8) +
+    geom_segment(data = filter(ysum1, uniq_run == myrun),
+                 aes(y = 0 + dens_offset,
+                     yend = peak_dens + dens_offset,
+                     x = peak_time/60, xend = peak_time/60),
+                 lty = 2, size = 1.5, color = "red", alpha = 0.8)
+  print(p1)
+  dev.off()
+  
+  png("./statplots/run1_example_Bpeakextin.png",
+      width = 5, height = 5, units = "in", res = 150)
+  p1 <- p1 +
+    geom_point(data = filter(ysum1, uniq_run == myrun),
+               aes(x = extin_time_4/60, y = 10**4+dens_offset), 
+               color = "red", size = 3) +
+    geom_segment(data = filter(ysum1, uniq_run == myrun),
+                 aes(y = 0 + dens_offset,
+                     yend = 10**4 + dens_offset,
+                     x = extin_time_4/60, xend = extin_time_4/60),
+                 lty = 2, size = 1.5, color = "red", alpha = 0.8)
+  print(p1)
   dev.off()
   
   png("./statplots/run1_example_Ballsum.png",
       width = 5, height = 5, units = "in", res = 150)
-  print(
-    ggplot(data = temp, 
-           aes(x = time/60, y = Density+dens_offset)) +
-      geom_line(lwd = 1.5, alpha = 1, color = "black") + 
-      geom_point(data = filter(ysum1, uniq_run == myrun),
-                 aes(x = peak_time/60, y = peak_dens+dens_offset), 
-                 color = "red", size = 3) +
-      geom_point(data = filter(ysum1, uniq_run == myrun),
-                 aes(x = extin_time_4/60, y = 10**4+dens_offset), 
-                 color = "red", size = 3) +
-      scale_y_continuous(trans = "log10",
-                         breaks = scales::trans_breaks("log10", function(x) 10^x),
-                         labels = scales::trans_format("log10", 
-                                                       scales::math_format(10^.x))) +
-      scale_x_continuous(breaks = seq(from = 0, to = 10, by = 2.5)) +
-      geom_segment(data = filter(ysum1, uniq_run == myrun),
-                   aes(y = peak_dens + dens_offset,
-                       yend = peak_dens + dens_offset,
-                       x = 0, xend = peak_time/60),
-                   lty = 2, size = 1.5, color = "red", alpha = 0.8) +
-      geom_segment(data = filter(ysum1, uniq_run == myrun),
-                   aes(y = 0 + dens_offset,
-                       yend = peak_dens + dens_offset,
-                       x = peak_time/60, xend = peak_time/60),
-                   lty = 2, size = 1.5, color = "red", alpha = 0.8) +
-      geom_segment(data = filter(ysum1, uniq_run == myrun),
-                   aes(y = 0 + dens_offset,
-                       yend = 10**4 + dens_offset,
-                       x = extin_time_4/60, xend = extin_time_4/60),
-                   lty = 2, size = 1.5, color = "red", alpha = 0.8) +
-      geom_area(aes(y = Density+dens_offset),
-                fill = "red", alpha = 0.5) +
-      #geom_hline(yintercept = dens_offset, lty = 2) +
-      theme_bw() +
-      theme(axis.text.x = element_text(size = 18),
-            axis.text.y = element_text(size = 18),
-            axis.title = element_text(size = 20),
-            legend.text = element_text(size = 18),
-            legend.title = element_text(size = 20),
-            plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "in")) +
-      labs(y = "Density", x = "Time (hr)") +
-      NULL)
+  p1 <- p1 +
+    geom_area(aes(y = Density+dens_offset),
+              fill = "red", alpha = 0.5)
+  print(p1)
   dev.off()
 }
 
