@@ -3,7 +3,13 @@ library(gcplyr)
 library(ggplot2)
 library(dplyr)
 
-setwd("./Empirical/")
+mysplit <- strsplit(getwd(), split = "/")[[1]]
+if(mysplit[length(mysplit)] != "Empirical") {setwd("./Empirical/")}
+
+#Okabe and Ito 2008 colorblind-safe qualitative color scale
+my_cols <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
+             "#D55E00", "#CC79A7", "#000000")
+scales::show_col(my_cols)
 
 #Read data ----
 trav_resis <- read.csv("trav-phage_resis_data.csv")
@@ -41,11 +47,14 @@ for (i in 1:length(gcdata_211108)) {
 }
               
 gcdata_lng <- trans_wide_to_tidy(gcdata,
-                                id_cols = c("file", "Time", "T° 600"),
+                                id_cols = c("file", "Time", "T\xb0 600"),
                                 values_to = "OD600")
+gcdata_lng <- 
+  lapply(gcdata_lng, function(x) select(x, "file", "Time", "Well", "OD600"))
+
 #Create designs ----
 design_diftconcs <- 
-  make_tidydesign(
+  make_design(output_format = "tidy",
     nrows = 8, ncols = 12,
     block_row_names = LETTERS[1:8],
     block_col_names = 1:12,
@@ -71,10 +80,13 @@ design_diftconcs <-
                                   rows = 2:7, cols = 2:7,
                                   pattern = "1")
   )
-design_diftconcs$init_phage <- design_diftconcs$init_bact * design_diftconcs$init_moi
+design_diftconcs$init_phage <- 
+  as.character(
+    as.numeric(design_diftconcs$init_bact) * 
+      as.numeric(design_diftconcs$init_moi))
 
 design_isols <- 
-  make_tidydesign(
+  make_design(output_format = "tidy",
     nrows = 8, ncols = 12,
     block_row_names = LETTERS[1:8],
     block_col_names = 1:12,
@@ -102,7 +114,7 @@ design_isols <-
   )
 
 design_5e4_5e3 <-
-  make_tidydesign(
+  make_design(output_format = "tidy",
     nrows = 8, ncols = 12,
     block_row_names = LETTERS[1:8],
     block_col_names = 1:12,
@@ -119,7 +131,7 @@ design_5e4_5e3 <-
   )
 
 design_1e5_1e4 <-
-  make_tidydesign(
+  make_design(output_format = "tidy",
     nrows = 8, ncols = 12,
     block_row_names = LETTERS[1:8],
     block_col_names = 1:12,
@@ -158,27 +170,26 @@ gcdata_lng[["2021-11-03_Emma_Growth_Curve"]] <-
 
 gcdata_lng <- merge_dfs(gcdata_lng, collapse = TRUE)
 
-gcdata_lng$Time <- lubridate::hms(gcdata_lng$Time)
+gcdata_lng$Time <- lubridate::time_length(lubridate::hms(gcdata_lng$Time))
 
 #Smooth and summarize ----
-gcdata_lng$fitted <- smooth_data(x = gcdata_lng$Time,
-                          y = gcdata_lng$OD600,
-                          method = "moving-average",
-                          subset_by = paste(gcdata_lng$file, gcdata_lng$Well),
-                          window_width = 5)
+gcdata_lng <- 
+  mutate(group_by(gcdata_lng, Well, file),
+         smoothed = smooth_data(x = Time,
+                                y = OD600,
+                                sm_method = "moving-average",
+                                window_width_n = 5))
 
-gcdata_lng <- group_by(gcdata_lng,
-                             file, init_bact, init_phage, init_moi, Well, bacteria)
 gcdata_sum <- dplyr::summarize(
-  gcdata_lng,
-  peak_index = find_local_extrema(y = fitted,
+  group_by(gcdata_lng, file, Well, init_bact, init_phage, init_moi, bacteria),
+  peak_index = find_local_extrema(y = smoothed,
                                   return_minima = FALSE,
-                                  width_limit_n = 11,
+                                  window_width_n = 11,
                                   na.rm = TRUE,
                                   return_endpoints = TRUE)[1],
   peak_time = Time[peak_index],
-  peak_dens = fitted[peak_index],
-  auc = auc(x = as.numeric(Time), y = fitted))
+  peak_dens = smoothed[peak_index],
+  auc = auc(x = as.numeric(Time), y = smoothed))
 
 gcdata_sum_sum <- dplyr::summarise(
   group_by(gcdata_sum, file, init_bact, init_phage, init_moi, bacteria),
@@ -241,7 +252,7 @@ temp_sum_sum <- group_by(temp_sum[temp_sum$init_bact > 0 &
                    peak_time = mean(as.numeric(peak_time)))
 
 print(ggplot(data = temp, 
-             aes(x = as.numeric(Time)/3600, y = fitted+1, 
+             aes(x = as.numeric(Time)/3600, y = smoothed+1, 
                  color = as.factor(init_bact), group = Well)) +
         geom_line() +
         scale_y_continuous(trans = "log10", name = "Smoothed OD600") +
@@ -249,7 +260,7 @@ print(ggplot(data = temp,
         NULL)
 
 print(ggplot(data = temp[temp$init_bact > 0, ], 
-             aes(x = as.numeric(Time)/3600, y = fitted+1, 
+             aes(x = as.numeric(Time)/3600, y = smoothed+1, 
                  color = as.factor(init_moi), group = Well)) +
         geom_line() +
         facet_wrap(~init_bact) +
@@ -292,8 +303,31 @@ temp_sum_sum <- gcdata_sum_sum[gcdata_sum_sum$file %in%
                                    "2021-10-27_Emma_Growth_Curve",
                                    "2021-11-03_Emma_Growth_Curve"), ]
 
+#Example plot
+png("./example_plot.png",
+    width = 6, height = 4, units = "in", res = 150)
+ggplot(data = filter(temp, file == "2021-10-25_Emma_Growth_Curve",
+                     bacteria == "PF", Well %in% c("B2", "B8"),
+                     Time/3600 <= 16),
+       aes(x = as.numeric(Time)/3600, y = smoothed+1, lty = init_phage > 0,
+           group = Well)) +
+  geom_point(aes(color = init_phage > 0), size = 2) +
+  scale_color_manual(values = my_cols[c(8, 3)], name = "Phage Added",
+                     breaks = c(FALSE, TRUE), labels = c("No", "Yes")) +
+  theme_bw() +
+  theme(axis.text.x = element_text(size = 16),
+        axis.text.y = element_text(size = 16),
+        axis.title = element_text(size = 18),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 18),
+        legend.spacing.y = unit(.1, "in"),
+        plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "in")) +
+  labs(y = "Density", color = "Population", x = "Time (hr)")
+dev.off()
+
+
 ggplot(data = temp[temp$bacteria != "Blank", ],
-       aes(x = as.numeric(Time)/3600, y = fitted, lty = init_phage > 0,
+       aes(x = as.numeric(Time)/3600, y = smoothed+1, lty = init_phage > 0,
            group = Well)) +
   geom_line() +
   scale_x_continuous(breaks = c(0, 12)) +
