@@ -1816,11 +1816,26 @@ if (glob_make_statplots) {
       scale_x_log10() + 
       scale_y_log10() +
       labs(x = "Extinction time (hr)", 
-           y = "Average phage growth\nrate (e-fold/hour)") +
+           y = "Average phage growth\nrate (e-fold/hr)") +
       theme_bw() +
       theme(axis.title = element_text(size = 20)) +
       NULL
   print(f5a)
+  dev.off()
+  
+  png("./statplots/run1_phager_extintime_subset_nocol.png", width = 5, height = 4,
+      units = "in", res = 300)
+  print(
+    ggplot(data = filter(ysum1, extin_flag == "none"),
+           aes(x = extin_time_4/60, y = phage_r*60)) +
+    geom_point() +
+    scale_x_log10() + 
+    scale_y_log10() +
+    labs(x = "Extinction time (hr)", 
+         y = "Average phage growth rate") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 20)) +
+    NULL)
   dev.off()
   
   png("./statplots/run1_phager_extintime.png", width = 5, height = 4,
@@ -1836,7 +1851,7 @@ if (glob_make_statplots) {
       scale_x_log10() + 
       scale_y_log10() +
       labs(x = "Extinction time (hr)", 
-           y = "Average phage growth\nrate (e-fold/hour)") +
+           y = "Average phage growth\nrate (e-fold/hr)") +
       theme_bw() +
       guides(shape = "none") +
       theme(axis.title = element_text(size = 20)) +
