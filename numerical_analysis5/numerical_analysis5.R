@@ -1383,7 +1383,9 @@ if(glob_make_statplots) {
       scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
                          name = "Burst size") +
       theme_bw() +
-      theme(axis.title = element_text(size = 20))
+      theme(axis.title = element_text(size = 16),
+            legend.title = element_text(size = 14),
+            legend.text = element_text(size = 12))
   
   fs4b <-
     ggplot(data = filter(ybig1, Pop == "B", a_S1 == 10**-10, b == 50),
@@ -1400,10 +1402,12 @@ if(glob_make_statplots) {
       scale_color_manual(values = colorRampPalette(c("darkblue", "gray70"))(5),
                          name = "Lag time (min)") +
     theme_bw() +
-      theme(axis.title = element_text(size = 20))
+    theme(axis.title = element_text(size = 16),
+          legend.title = element_text(size = 14),
+          legend.text = element_text(size = 12))
   
-  png("./statplots/figS4_run1.png",
-      width = 10, height = 4, units = "in", res = 150)
+  png("./statplots/figS4_run1_Bcurves_b_or_tau.png",
+      width = 10, height = 3, units = "in", res = 150)
   print(plot_grid(fs4a, fs4b, nrow = 1, labels = "AUTO",
                   label_size = 20, align = "hv", axis = "tb"))
   dev.off()
@@ -1691,7 +1695,7 @@ if (glob_make_statplots) {
     cowplot::plot_grid(p1 + theme(legend.position = "none"), 
                        p2 + theme(legend.position = "none"), 
                        p3 + theme(legend.position = "none"),
-                       ncol = 1),
+                       ncol = 1, labels = "AUTO"),
     cowplot::get_legend(p1),
     rel_widths = c(1, .28),
     ncol = 2))
@@ -1763,7 +1767,7 @@ if (glob_make_statplots) {
     cowplot::plot_grid(p1 + theme(legend.position = "none"), 
                        p2 + theme(legend.position = "none"), 
                        p3 + theme(legend.position = "none"),
-                       ncol = 1),
+                       ncol = 1, labels = "AUTO"),
     cowplot::get_legend(p1),
     rel_widths = c(1, .33),
     ncol = 2))
@@ -1795,9 +1799,11 @@ if (glob_make_statplots) {
       scale_x_log10() + 
       scale_y_log10() +
       labs(x = "Extinction time (hr)", 
-           y = "Average phage growth\nrate (e-fold/hr)") +
+           y = "Average phage\ngrowth rate (e-fold/hr)") +
       theme_bw() +
-      theme(axis.title = element_text(size = 20)) +
+      theme(axis.title = element_text(size = 20),
+            legend.title = element_text(size = 18),
+            legend.text = element_text(size = 16)) +
       NULL
   
   f5b <-
@@ -1807,14 +1813,19 @@ if (glob_make_statplots) {
     scale_y_log10() + scale_x_log10() +
     scale_color_viridis_d(end = 0.95, name = "Burst size") +
     labs(x = "Peak bacterial density (cfu/mL)", 
-         y = "Final phage density\n(pfu/mL)") +
+         y = "Final phage\ndensity (pfu/mL)") +
     geom_line(aes(y = peak_dens*b)) +
     theme_bw() +
-    theme(axis.title = element_text(size = 20))
+    theme(axis.title = element_text(size = 20),
+          legend.title = element_text(size = 18),
+          legend.text = element_text(size = 16))
   
   png("./statplots/fig5_run1_phager_finalphagevpeakdens_subset.png", 
       width = 10, height = 4, units = "in", res = 300)
-  print(plot_grid(f5a, f5b, nrow = 1, labels = "AUTO",
+  print(plot_grid(f5a + guides(color = "none"), 
+                  f5b + guides(color = "none"), 
+                  get_legend(f5a),
+                  rel_widths = c(1, 1, 0.5), nrow = 1, labels = c("A", "B"),
                   align = "hv", axis = "tb", label_size = 20))
   dev.off()
   
@@ -1829,7 +1840,7 @@ if (glob_make_statplots) {
       scale_x_log10() + 
       scale_y_log10() +
       labs(x = "Extinction time (hr)", 
-           y = "Average phage growth\nrate (e-fold/hr)") +
+           y = "Average phage\ngrowth rate (e-fold/hr)") +
       theme_bw() +
       guides(shape = "none") +
       theme(axis.title = element_text(size = 20),
@@ -1922,37 +1933,39 @@ if(glob_make_statplots) {
   fs3a <- 
     ggplot(data = ysum2,
            aes(x = peak_time/60, y = peak_dens)) +
-      geom_point(aes(shape = extin_flag)) +
-      geom_line(data = run2_preds,
-                aes(x = time/60, y = peak_dens_pred),
-                lty = 2) +
-      facet_nested("k" * k ~ "u_S1" * u_S1, scales = "free_y") +
+    geom_point(aes(shape = extin_flag)) +
+    geom_line(data = run2_preds,
+              aes(x = time/60, y = peak_dens_pred),
+              lty = 2) +
+    facet_nested("k (cfu/mL)" * signif(k, 2) ~ "u_S1 (/hr)" * signif(u_S1*60, 2), 
+                 scales = "free_y") +
     scale_x_continuous(breaks = c(0, 12, 24), limits = c(0, 24)) +
-      scale_shape_manual(breaks = c("none", "neark", "noextin"),
-                         values = c(16, 4, 3)) +
-      labs(x = "Peak Time (hr)", y = "Peak Density\n(cfu/mL)") +
-      guides(shape = "none") + 
-      theme_bw() +
-      theme(axis.title = element_text(size = 20),
-            strip.text = element_text(size = 8))
+    scale_shape_manual(breaks = c("none", "neark", "noextin"),
+                       values = c(16, 4, 3)) +
+    labs(x = "Peak Time (hr)", y = "Peak Density\n(cfu/mL)") +
+    guides(shape = "none") + 
+    theme_bw() +
+    theme(axis.title = element_text(size = 20),
+          strip.text = element_text(size = 10))
   
   fs3b <- 
     ggplot(data = ysum2,
            aes(x = peak_time/60, y = auc/60)) +
-      geom_point(aes(shape = extin_flag)) +
-      geom_line(data = run2_preds,
-                aes(x = time/60, y = auc_pred/60),
-                lty = 2) +
-    facet_nested("k" * k ~ "u_S1" * u_S1, scales = "free_y") +
+    geom_point(aes(shape = extin_flag)) +
+    geom_line(data = run2_preds,
+              aes(x = time/60, y = auc_pred/60),
+              lty = 2) +
+    facet_nested("k (cfu/mL)" * signif(k, 2) ~ "u_S1 (/hr)" * signif(u_S1*60, 2), 
+                 scales = "free_y") +
     scale_x_continuous(breaks = c(0, 12, 24), limits = c(0, 24)) +
-      scale_y_log10() +
-      scale_shape_manual(breaks = c("none", "neark", "noextin"),
-                         values = c(16, 4, 3)) +
-      labs(x = "Peak Time (hr)", y = "Area Under the\nCurve (hr cfu/mL)") +
-      guides(shape = "none") +
-      theme_bw() +
-      theme(axis.title = element_text(size = 20),
-            strip.text = element_text(size = 8))
+    scale_y_log10() +
+    scale_shape_manual(breaks = c("none", "neark", "noextin"),
+                       values = c(16, 4, 3)) +
+    labs(x = "Peak Time (hr)", y = "Area Under the\nCurve (hr cfu/mL)") +
+    guides(shape = "none") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 20),
+          strip.text = element_text(size = 10))
   
   fs3c <- 
     ggplot(data = ysum2,
@@ -2032,7 +2045,7 @@ if (glob_make_statplots) {
     cowplot::plot_grid(p1 + theme(legend.position = "none"), 
                        p2 + theme(legend.position = "none"), 
                        p3 + theme(legend.position = "none"),
-                       ncol = 1),
+                       ncol = 1, labels = "AUTO"),
     cowplot::get_legend(p1),
     rel_widths = c(1, .2),
     ncol = 2))
@@ -2080,7 +2093,7 @@ ybig3_wide <- filter(ybig3_wide,
                      time %% 20 == 0)
 
 if(glob_make_statplots) {
-  png("./statplots/run3_BvsNk.png", width = 6, height = 4,
+  png("./statplots/figS14_run3_BvsNk.png", width = 6, height = 4,
       units = "in", res = 300)
   print(ggplot(data = ybig3_wide,
                aes(x = (k-N)/k, y = Density, color = time/60)) +
@@ -2145,7 +2158,7 @@ ybig4_wide <- filter(ybig4_wide,
                      time %% 20 == 0)
 
 if(glob_make_statplots) {
-  png("./statplots/run4_BvsNk.png", width = 6, height = 4,
+  png("./statplots/figS15_run4_BvsNk.png", width = 6, height = 4,
       units = "in", res = 300)
   print(ggplot(data = ybig4_wide,
                aes(x = (k-N)/k, y = Density, color = time/60)) +
@@ -2213,7 +2226,7 @@ ybig5_wide <- filter(ybig5_wide,
                      time %% 20 == 0)
 
 if(glob_make_statplots) {
-  png("./statplots/run5_BvsNk.png", width = 6, height = 4,
+  png("./statplots/figS16_run5_BvsNk.png", width = 6, height = 4,
       units = "in", res = 300)
   print(ggplot(data = ybig5_wide,
                aes(x = (k-N)/k, y = Density, color = time/60)) +
@@ -2295,7 +2308,7 @@ ybig6 <-
          Density = ifelse(Density < 1, 0, Density))
 
 if(glob_make_statplots) {
-  png("./statplots/h_Bcurves_constant_uS20.png", width = 6, height = 2.5,
+  png("./statplots/fig6_run6_h_Bcurves_constant_uS2_0.png", width = 6, height = 2.5,
       units = "in", res = 300)
   print(ggplot(data = filter(ybig6, Pop == "B", transition == "Constant",
                              u_S2 == 0),
@@ -2311,7 +2324,7 @@ if(glob_make_statplots) {
           NULL)
   dev.off()
   
-  png("./statplots/h_Bcurves_uS20.png", width = 6, height = 4,
+  png("./statplots/figS17_run6_h_Bcurves_uS2_0.png", width = 6, height = 4,
       units = "in", res = 300)
   print(ggplot(data = filter(ybig6, Pop == "B", u_S2 == 0),
                aes(x = time/60, y = Density, color = log10(a_S1), group = uniq_run)) +
@@ -2326,7 +2339,7 @@ if(glob_make_statplots) {
           NULL)
   dev.off()
   
-  png("./statplots/h_Bcurves_uS2not0.png", width = 6, height = 4,
+  png("./statplots/figS18_run6_h_Bcurves_uS2not0.png", width = 6, height = 4,
       units = "in", res = 300)
   print(ggplot(data = filter(ybig6, Pop == "B", u_S2 != 0),
                aes(x = time/60, y = Density, color = log10(a_S1), group = uniq_run)) +
@@ -2427,13 +2440,14 @@ if (glob_make_statplots) {
                 legend.text = element_text(size = 16)) +
           NULL
 
-  png("./statplots/fig7_run7.png", width = 10, height = 3.2,
+  png("./statplots/fig7_run7_inocdensity_a.png", width = 10, height = 3.2,
       units = "in", res = 300)
   print(cowplot::plot_grid(p1, p2, nrow = 1,
                      labels = "AUTO", align = "hv", axis = "tb"))
   dev.off()
   
-  png("./statplots/run7_maxtime_a_moiconst_contour_nobars.png", width = 5, height = 3.2,
+  png("./statplots/figS19_run7_maxtime_a_moiconst_contour_nobars.png", 
+      width = 5, height = 3.2,
       units = "in", res = 300)
   print(ggplot(data = filter(ysum7, init_moi == 0.01), 
                aes(x = a_S1, y = init_S1)) +
@@ -2449,9 +2463,9 @@ if (glob_make_statplots) {
           labs(x = "Infection rate (/min)",
                y = "Initial bacterial density\n(cfu/mL)") +
           guides(fill = "none", shape = "none") +
-          theme(axis.title = element_text(size = 20),
-                legend.title = element_text(size = 18),
-                legend.text = element_text(size = 16)) +
+          theme(axis.title = element_text(size = 18),
+                legend.title = element_text(size = 16),
+                legend.text = element_text(size = 14)) +
           NULL)
   dev.off()
   
@@ -2474,8 +2488,11 @@ if (glob_make_statplots) {
           scale_y_continuous(trans = "log10") +
           scale_x_continuous(trans = "log10") +
           labs(x = "Infection rate (/min)",
-               y = "Initial phage density (pfu/mL)") +
+               y = "Initial phage\ndensity (pfu/mL)") +
           guides(fill = "none", shape = "none") +
+    theme(axis.title = element_text(size = 18),
+          legend.title = element_text(size = 16),
+          legend.text = element_text(size = 14)) +
           NULL
   
   p2 <- ggplot(data = filter(ysum7, init_P == 10**4), 
@@ -2497,13 +2514,16 @@ if (glob_make_statplots) {
           scale_y_continuous(trans = "log10") +
           scale_x_continuous(trans = "log10") +
           labs(x = "Infection rate (/min)",
-               y = "Initial bacterial density (cfu/mL)") +
+               y = "Initial bacterial\ndensity (cfu/mL)") +
           guides(fill = "none", shape = "none") +
+    theme(axis.title = element_text(size = 18),
+          legend.title = element_text(size = 16),
+          legend.text = element_text(size = 14)) +
           NULL
   
-  png("./statplots/run7_peaktime_a_estimatebars_contour.png", 
-      width = 10, height = 4, units = "in", res = 300)
-  print(cowplot::plot_grid(p1, p2, ncol = 2))
+  png("./statplots/figS23_run7_peaktime_a_estimatebars_contour.png", 
+      width = 10, height = 3.2, units = "in", res = 300)
+  print(cowplot::plot_grid(p1, p2, ncol = 2, labels = "AUTO"))
   dev.off()
   
   p1 <- ggplot(data = filter(ysum7, init_P == 10**4), 
@@ -2522,8 +2542,11 @@ if (glob_make_statplots) {
           scale_y_continuous(trans = "log10") +
           scale_x_continuous(trans = "log10") +
           labs(x = "Infection rate (/min)",
-               y = "Initial bacterial density (cfu/mL)") +
+               y = "Initial bacterial\ndensity (cfu/mL)") +
           guides(fill = "none", shape = "none") +
+    theme(axis.title = element_text(size = 18),
+          legend.title = element_text(size = 16),
+          legend.text = element_text(size = 14)) +
           NULL
         
   p2 <- ggplot(data = filter(ysum7, init_S1 == 10**6), 
@@ -2542,13 +2565,16 @@ if (glob_make_statplots) {
           scale_y_continuous(trans = "log10") +
           scale_x_continuous(trans = "log10") +
           labs(x = "Infection rate (/min)",
-               y = "Initial phage density (pfu/mL)") +
+               y = "Initial phage]\ndensity (pfu/mL)") +
           guides(fill = "none", shape = "none") +
+    theme(axis.title = element_text(size = 18),
+          legend.title = element_text(size = 16),
+          legend.text = element_text(size = 14)) +
           NULL
 
-  png("./statplots/run7_peaktime_a_samplebars_contour.png", 
-      width = 10, height = 4, units = "in", res = 300)
-  print(cowplot::plot_grid(p1, p2, ncol = 2))
+  png("./statplots/figS25_run7_peaktime_a_samplebars_contour.png", 
+      width = 10, height = 3.2, units = "in", res = 300)
+  print(cowplot::plot_grid(p1, p2, ncol = 2, labels = "AUTO"))
   dev.off()
   
   p1 <- ggplot(data = filter(ysum7, init_P == 10**4), 
@@ -2574,8 +2600,11 @@ if (glob_make_statplots) {
     scale_y_continuous(trans = "log10") +
     scale_x_continuous(trans = "log10") +
     labs(x = "Infection rate (/min)",
-         y = "Initial bacterial density (cfu/mL)") +
+         y = "Initial bacterial\ndensity (cfu/mL)") +
     guides(fill = "none", shape = "none") +
+    theme(axis.title = element_text(size = 18),
+          legend.title = element_text(size = 16),
+          legend.text = element_text(size = 14)) +
     NULL
   
   p2 <- ggplot(data = filter(ysum7, init_S1 == 10**6), 
@@ -2601,13 +2630,16 @@ if (glob_make_statplots) {
     scale_y_continuous(trans = "log10") +
     scale_x_continuous(trans = "log10") +
     labs(x = "Infection rate (/min)",
-         y = "Initial phage density (pfu/mL)") +
+         y = "Initial phage\ndensity (pfu/mL)") +
     guides(fill = "none", shape = "none") +
+    theme(axis.title = element_text(size = 18),
+          legend.title = element_text(size = 16),
+          legend.text = element_text(size = 14)) +
     NULL
   
-  png("./statplots/run7_peaktime_a_initP_initS_varyingn_contour.png", 
-      width = 10, height = 4, units = "in", res = 300)
-  print(cowplot::plot_grid(p1, p2, ncol = 2))
+  png("./statplots/figS24_run7_peaktime_a_initP_initS_varyingn_contour.png", 
+      width = 10, height = 3.2, units = "in", res = 300)
+  print(cowplot::plot_grid(p1, p2, ncol = 2, labels = "AUTO"))
   dev.off()
   
   p1 <- print(ggplot(data = filter(ysum7, init_P == 10**4), 
@@ -2629,8 +2661,11 @@ if (glob_make_statplots) {
           scale_y_continuous(trans = "log10") +
           scale_x_continuous(trans = "log10") +
           labs(x = "Infection rate (/min)",
-               y = "Initial bacterial density (cfu/mL)") +
+               y = "Initial bacterial\ndensity (cfu/mL)") +
           guides(fill = "none", shape = "none") +
+            theme(axis.title = element_text(size = 16),
+                  legend.title = element_text(size = 14),
+                  legend.text = element_text(size = 12)) +
           NULL)
 
   p2 <- print(ggplot(data = filter(ysum7, init_S1 == 10**6), 
@@ -2652,8 +2687,11 @@ if (glob_make_statplots) {
           scale_y_continuous(trans = "log10") +
           scale_x_continuous(trans = "log10") +
           labs(x = "Infection rate (/min)",
-               y = "Initial phage density (pfu/mL)") +
+               y = "Initial phage\ndensity (pfu/mL)") +
           guides(fill = "none", shape = "none") +
+            theme(axis.title = element_text(size = 16),
+                  legend.title = element_text(size = 14),
+                  legend.text = element_text(size = 12)) +
           NULL)
   
   p3 <- print(ggplot(data = filter(ysum7, init_P == 10**4), 
@@ -2676,8 +2714,11 @@ if (glob_make_statplots) {
                 scale_y_continuous(trans = "log10") +
                 scale_x_continuous(trans = "log10") +
                 labs(x = "Infection rate (/min)",
-                     y = "Initial bacterial density (cfu/mL)") +
+                     y = "Initial bacterial\ndensity (cfu/mL)") +
                 guides(fill = "none", shape = "none") +
+                theme(axis.title = element_text(size = 16),
+                      legend.title = element_text(size = 14),
+                      legend.text = element_text(size = 12)) +
                 NULL)
   
   p4 <- print(ggplot(data = filter(ysum7, init_S1 == 10**6), 
@@ -2700,8 +2741,11 @@ if (glob_make_statplots) {
                 scale_y_continuous(trans = "log10") +
                 scale_x_continuous(trans = "log10") +
                 labs(x = "Infection rate (/min)",
-                     y = "Initial phage density (pfu/mL)") +
+                     y = "Initial phage\ndensity (pfu/mL)") +
                 guides(fill = "none", shape = "none") +
+                theme(axis.title = element_text(size = 16),
+                      legend.title = element_text(size = 14),
+                      legend.text = element_text(size = 12)) +
                 NULL)
   
   p5 <- print(ggplot(data = filter(ysum7, init_P == 10**4), 
@@ -2727,8 +2771,11 @@ if (glob_make_statplots) {
                 scale_y_continuous(trans = "log10") +
                 scale_x_continuous(trans = "log10") +
                 labs(x = "Infection rate (/min)",
-                     y = "Initial bacterial density (cfu/mL)") +
+                     y = "Initial bacterial\ndensity (cfu/mL)") +
                 guides(fill = "none", shape = "none") +
+                theme(axis.title = element_text(size = 16),
+                      legend.title = element_text(size = 14),
+                      legend.text = element_text(size = 12)) +
                 NULL)
   
   p6 <- print(ggplot(data = filter(ysum7, init_S1 == 10**6), 
@@ -2754,13 +2801,18 @@ if (glob_make_statplots) {
                 scale_y_continuous(trans = "log10") +
                 scale_x_continuous(trans = "log10") +
                 labs(x = "Infection rate (/min)",
-                     y = "Initial phage density (pfu/mL)") +
+                     y = "Initial phage\ndensity (pfu/mL)") +
                 guides(fill = "none", shape = "none") +
+                theme(axis.title = element_text(size = 16),
+                      legend.title = element_text(size = 14),
+                      legend.text = element_text(size = 12)) +
                 NULL)
   
-  png("./statplots/run7_othermetrics_a_initP_initS_contour.png", width = 11, height = 12,
+  png("./statplots/figS22_run7_othermetrics_a_initP_initS_contour.png", 
+      width = 10.5, height = 8,
       units = "in", res = 300)
-  print(cowplot::plot_grid(p1, p2, p3, p4, p5, p6, ncol = 2))
+  print(cowplot::plot_grid(p1, p2, p3, p4, p5, p6, ncol = 2, 
+                           labels = "AUTO", align = "hv", axis = "tblr"))
   dev.off()
 }
 
@@ -2829,7 +2881,7 @@ if (glob_make_statplots) {
           scale_y_continuous(trans = "log10") +
           scale_x_continuous(trans = "log10") +
           labs(x = "Burst size",
-               y = "Initial bacterial density (cfu/mL)") +
+               y = "Initial bacterial density\n(cfu/mL)") +
           guides(fill = "none", shape = "none") +
           NULL
 
@@ -2852,13 +2904,14 @@ if (glob_make_statplots) {
           scale_y_continuous(trans = "log10") +
           scale_x_continuous(trans = "log10") +
           labs(x = "Burst size",
-               y = "Initial phage density (pfu/mL)") +
+               y = "Initial phage density\n(pfu/mL)") +
           guides(fill = "none", shape = "none") +
           NULL
   
-  png("./statplots/run8_peaktime_b_initP_initS_contour.png", width = 8, height = 3,
+  png("./statplots/figS20_run8_peaktime_b_initP_initS_contour.png", 
+      width = 8, height = 2.5,
       units = "in", res = 300)
-  print(cowplot::plot_grid(p1, p2, ncol = 2))
+  print(cowplot::plot_grid(p1, p2, ncol = 2, labels = "AUTO"))
   dev.off()
 }
 
@@ -2926,7 +2979,7 @@ if (glob_make_statplots) {
           scale_y_continuous(trans = "log10") +
           scale_x_continuous(trans = "log10") +
           labs(x = "Lysis time (min)",
-               y = "Initial bacterial density (cfu/mL)") +
+               y = "Initial bacterial density\n(cfu/mL)") +
           guides(fill = "none", shape = "none") +
           NULL
 
@@ -2949,13 +3002,14 @@ if (glob_make_statplots) {
           scale_y_continuous(trans = "log10") +
           scale_x_continuous(trans = "log10") +
           labs(x = "Lysis time (min)",
-               y = "Initial phage density (pfu/mL)") +
+               y = "Initial phage density\n(pfu/mL)") +
           guides(fill = "none", shape = "none") +
           NULL
   
-  png("./statplots/run9_peaktime_tau_initP_initS_contour.png", width = 8, height = 3,
+  png("./statplots/figS21_run9_peaktime_tau_initP_initS_contour.png", 
+      width = 8, height = 2.5,
       units = "in", res = 300)
-  print(cowplot::plot_grid(p1, p2, ncol = 2))
+  print(cowplot::plot_grid(p1, p2, ncol = 2, labels = "AUTO"))
   dev.off()
 }
 
@@ -3153,7 +3207,7 @@ if(glob_make_statplots) {
     theme(axis.text.y = element_blank(),
           axis.title.y = element_blank())
   
-  png("./statplots/run10_auccurves.png", width = 6, height = 4,
+  png("./statplots/fig8_run10_auccurves.png", width = 6, height = 4,
       units = "in", res = 300)
   print(cowplot::plot_grid(
     cowplot::plot_grid(p1, p2, rel_widths = c(0.45, 1), 
@@ -3165,9 +3219,8 @@ if(glob_make_statplots) {
   
   mycolors <- c("black", scales::viridis_pal(end = 0.9)(5))
   
-  png("./statplots/run10_auc_refauc_all.png", width = 5, height = 4,
-      units = "in", res = 300)
-  print(ggplot(data = filter(ysum10, h == 0, init_moi == 0.01),
+  fs27a <-
+    print(ggplot(data = filter(ysum10, h == 0, init_moi == 0.01),
          aes(x = log10(ref_auc), y = log10(auc), 
              fill = as.factor(a_S1), color = as.factor(a_S1))) +
     geom_point(size = 2, aes(shape = as.factor(k))) +
@@ -3197,11 +3250,8 @@ if(glob_make_statplots) {
           panel.grid = element_blank()) +
       labs(x = "log10(Control AUC)\n(hr cfu/mL)", 
            y = "log10(AUC)\n(hr cfu/mL)"))
-  dev.off()
-  
-  png("./statplots/run10_relauc_refauc_all.png", width = 5, height = 4,
-      units = "in", res = 300)
-  print(ggplot(data = filter(ysum10, h == 0, init_moi == 0.01),
+  fs27b <-
+    print(ggplot(data = filter(ysum10, h == 0, init_moi == 0.01),
          aes(x = log10(ref_auc), y = log10(rel_auc), 
              color = as.factor(a_S1), fill = as.factor(a_S1))) +
     geom_point(aes(shape = as.factor(k))) +
@@ -3229,6 +3279,40 @@ if(glob_make_statplots) {
           panel.grid = element_blank()) +
     labs(x = "log10(Control AUC)\n(hr cfu/mL)", 
          y = "log10(Relative AUC)"))
+  
+  png("./statplots/figS27_run10_relauc_controlauc_all.png", 
+      width = 4.5, height = 6,
+      units = "in", res = 300)
+  print(
+    cowplot::plot_grid(
+      cowplot::plot_grid(
+        fs27a + guides(shape = "none", color = "none", fill = "none"), 
+        fs27b + guides(shape = "none", color = "none", fill = "none"), 
+        ncol = 1, labels = "AUTO", align = "hv", axis = "tblr"),
+      get_legend(fs27a), 
+      ncol = 2, rel_widths = c(1, 0.6)))
+  dev.off()
+  
+  png("./statplots/figS28_run10_relauc_moi_VirulenceIndexNull.png", 
+      width = 6, height = 4,
+      units = "in", res = 300)
+  print(ggplot(filter(ysum10, h == 0, init_moi != 0),
+               aes(x = log10(init_moi), y = 1-rel_auc, color = as.factor(log10(a_S1)))) +
+          geom_point(alpha = 0.7) +
+          #scale_x_log10() +
+          facet_nested("k (cfu/mL)" * signif(k, 2) ~ 
+                         "u_S1 (/hr)" * signif(60*u_S1, 2)) +
+          labs(x = "log10(initial MOI)", y = "Virulence Index") +
+          scale_color_viridis_d(name = "log10(infection rate)",
+                                direction = 1,
+                                guide = guide_legend(reverse = TRUE)) +
+          theme_bw() +
+          theme(axis.title = element_text(size = 16),
+                axis.text = element_text(size = 7),
+                legend.title = element_text(size = 14),
+                legend.text = element_text(size = 12),
+                strip.text = element_text(size = 9.5)) +
+          NULL)
   dev.off()
 }
 
@@ -3260,31 +3344,31 @@ ybig10_B_wide <- cbind(ybig10_B_wide,
 
 #Plot
 if(glob_make_statplots) {
-  png("./statplots/run10_pca.png", width = 5, height = 4,
-      units = "in", res = 300)
-  print(ggplot(data = ybig10_B_wide,
-               aes(x = PC1, y = PC2)) +
-          geom_point(aes(color = as.factor(a_S1)), alpha = 0.7) +
-          scale_color_viridis_d(name = "Infection rate\n(/min)", end = 0.85,
-                                labels = c("NA", expression(10^-12),
-                                           expression(10^-11), expression(10^-10),
-                                           expression(10^-9), expression(10^-8))) +
-          labs(x = paste("PC1 (",
-                         round((100*((mypca$sdev)**2)/
-                                  sum((mypca$sdev)**2))[1], 1),
-                         "%)", sep = ""),
-               y = paste("PC2 (",
-                         round((100*((mypca$sdev)**2)/
-                                  sum((mypca$sdev)**2))[2], 1),
-                         "%)", sep = "")) +
-          theme_bw() +
-          NULL)
-  dev.off()
+  fs26a <- 
+    ggplot(data = ybig10_B_wide,
+           aes(x = PC1, y = PC2)) +
+    geom_point(aes(color = as.factor(a_S1)), alpha = 0.7) +
+    scale_color_viridis_d(name = "Infection rate\n(/min)", end = 0.85,
+                          labels = c("NA", expression(10^-12),
+                                     expression(10^-11), expression(10^-10),
+                                     expression(10^-9), expression(10^-8))) +
+    labs(x = paste("PC1 (",
+                   round((100*((mypca$sdev)**2)/
+                            sum((mypca$sdev)**2))[1], 1),
+                   "%)", sep = ""),
+         y = paste("PC2 (",
+                   round((100*((mypca$sdev)**2)/
+                            sum((mypca$sdev)**2))[2], 1),
+                   "%)", sep = "")) +
+    theme_bw() +
+    theme(axis.title = element_text(size = 18),
+          legend.title = element_text(size = 16),
+          legend.text = element_text(size = 14)) +
+    NULL
   
-  png("./statplots/run10_pca_norm.png", width = 5, height = 4,
-      units = "in", res = 300)
-  print(ggplot(data = ybig10_B_wide,
-         aes(x = norm_PC1, y = norm_PC2)) +
+  fs26b <- 
+    ggplot(data = ybig10_B_wide,
+           aes(x = norm_PC1, y = norm_PC2)) +
     geom_point(aes(color = as.factor(a_S1)), alpha = 0.7) +
     scale_color_viridis_d(name = "Infection rate\n(/min)", end = 0.85,
                           labels = c("NA", expression(10^-12),
@@ -3299,6 +3383,19 @@ if(glob_make_statplots) {
                             sum((mypcanorm$sdev)**2))[2], 1),
                    "%)", sep = "")) +
     theme_bw() +
-      NULL)
+    theme(axis.title = element_text(size = 18),
+          legend.title = element_text(size = 16),
+          legend.text = element_text(size = 14)) +
+    NULL
+  
+  png("./statplots/figS26_run10_pca.png", 
+      width = 8, height = 3,
+      units = "in", res = 300)
+  print(
+    cowplot::plot_grid(fs26a + guides(color = "none"), 
+                       fs26b + guides(color = "none"),
+                       get_legend(fs26a),
+                       nrow = 1, align = "hv", axis = "tblr",
+                       labels = c("A", "B", ""), rel_widths = c(1, 1, 0.5)))
   dev.off()
 }
