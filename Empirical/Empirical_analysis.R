@@ -2,6 +2,7 @@
 library(gcplyr)
 library(ggplot2)
 library(dplyr)
+library(lubridate)
 
 mysplit <- strsplit(getwd(), split = "/")[[1]]
 if(mysplit[length(mysplit)] != "Empirical") {setwd("./Empirical/")}
@@ -13,84 +14,38 @@ scales::show_col(my_cols)
 
 #Read data ----
 trav_resis <- read.csv("trav-phage_resis_data.csv")
+trav_resis_sum <-
+  summarize(group_by(trav_resis, Proj, Pop, Treat, Timepoint, Isol),
+                   mean_eop = mean(EOP),
+                   bd = any(bd))
 
-#Growth curve runs:
-#2021-10-15 Dift inoc dens
-#2021-10-25 Dift isols (starting at 5e4 bact 5e3 phage)
-#2021-10-27 Dift isols (starting at 1e5 bact 1e4 phage, 7xEGC not run)
-#2021-11-03 Dift isols (starting at 1e5 bact 1e4 phage)
-#2021-11-08 Dift isols (starting at 1e5 bact 1e4 phage, titered post-peak)
-#    TODO: get these data stitched together across "plates"
+#Main data experiments:
+#2021-11-03 Testing different isolates with initial 1e5 bact, 1e4 phage
+#2022-06-07 Testing different isolates with initial 1e5 bact, 1e4 phage
+#2022-07-15 Testing different isolates with initial 1e5 bact, 1e4 phage
+#    Note that the wells of PF with no phage and 7xCLD with no phage were 
+#    flipped in the 2022-07-15 run
 
 
 gcdata <-
   read_wides(
-    files = c("2021-10-15_Emma_Growth_Curve.csv",
-              "2021-10-25_Emma_Growth_Curve.csv",
-              "2021-10-27_Emma_Growth_Curve.csv",
-              "2021-11-03_Emma_Growth_Curve.csv"),
-    startrow = 29, startcol = "B")
-gcdata_211108 <- 
-  read_wides(
-    files = c("2021-11-08_Emma_Growth_Curve_1.csv",
-              "2021-11-08_Emma_Growth_Curve_2.csv",
-              "2021-11-08_Emma_Growth_Curve_3.csv",
-              "2021-11-08_Emma_Growth_Curve_4.csv"),
-    startrow = 29, startcol = "B",
-    metadata = list(startdate = c(6, 2), starttime = c(7, 2)),
-    run_names = rep("2021-11-08_Emma_Growth_Curve", 4))
-for (i in 1:length(gcdata_211108)) {
-  gcdata_211108[[i]]$Time <- 
-    lubridate::hms(gcdata_211108[[i]]$Time) +
-    lubridate::parse_date_time(gcdata_211108[[i]]$starttime, orders = "IMSp") -
-    lubridate::hms(gcdata_211108[[1]]$starttime)
-}
+    files = c("2021-11-03_Emma_Growth_Curve.csv",
+              "2022-06-07_William_Growth_Curve.csv",
+              "2022-07-15_William_Growth_Curve.csv"),
+    startrow = c(29, 41, 41), startcol = c("B", "B", "B"))
+
+#Drop temperature columns
+gcdata <- lapply(X = gcdata,
+                 FUN = function(x) x[, -grep("^T.*600$", colnames(x))])
               
 gcdata_lng <- trans_wide_to_tidy(gcdata,
-                                id_cols = c("file", "Time", "T\xb0 600"),
+                                id_cols = c("file", "Time"),
                                 values_to = "OD600")
-gcdata_lng <- 
-  lapply(gcdata_lng, function(x) select(x, "file", "Time", "Well", "OD600"))
 
 #Create designs ----
-design_diftconcs <- 
-  make_design(output_format = "tidy",
-    nrows = 8, ncols = 12,
-    block_row_names = LETTERS[1:8],
-    block_col_names = 1:12,
-    wellnames_sep = "",
-    init_bact = make_designpattern(c(10**5, 5*10**4, 10**4, 0),
-                                   rows = 2:7, cols = 2:4,
-                                   pattern = "444111222333222222",
-                                   byrow = TRUE),
-    init_bact = make_designpattern(c(10**5, 10**4),
-                                   rows = 2:6, cols = 5:7,
-                                   pattern = "111111111222222",
-                                   byrow = TRUE),
-    init_moi = make_designpattern(c(0, 0.1, 0.01),
-                                  rows = 2:7, cols = 2:4,
-                                  pattern = "111111111111222333",
-                                  byrow = TRUE),
-    init_moi = make_designpattern(c(0.1, 0.01, 0.001),
-                                  rows = 2:6, cols = 5:7,
-                                  pattern = "111222333111222",
-                                  byrow = TRUE),
-    #Row 7 cols 5:7 is actually empty but df rows will be dropped anyway
-    bacteria = make_designpattern("PF",
-                                  rows = 2:7, cols = 2:7,
-                                  pattern = "1")
-  )
-design_diftconcs$init_phage <- 
-  as.character(
-    as.numeric(design_diftconcs$init_bact) * 
-      as.numeric(design_diftconcs$init_moi))
-
 design_isols <- 
   make_design(output_format = "tidy",
     nrows = 8, ncols = 12,
-    block_row_names = LETTERS[1:8],
-    block_col_names = 1:12,
-    wellnames_sep = "",
     bacteria = make_designpattern(c("PF", "125ALE", "7xEGC", "7xACD",
                                     "125ALA", "125CGE"),
                                   rows = 2:7, cols = 2:4,
@@ -113,83 +68,87 @@ design_isols <-
                                   byrow = TRUE)
   )
 
-design_5e4_5e3 <-
+design_isols_2022_07_15 <- 
   make_design(output_format = "tidy",
-    nrows = 8, ncols = 12,
-    block_row_names = LETTERS[1:8],
-    block_col_names = 1:12,
-    wellnames_sep = "",
-    init_bact = make_designpattern(c(5*10**4),
-                                   rows = 2:7, cols = 2:11,
-                                   pattern = "1"),
-    init_phage = make_designpattern(c(5*10**3),
-                                    rows = 2:7, cols = 2:7,
-                                    pattern = "1"),
-    init_phage = make_designpattern(c(0),
-                                    rows = 2:7, cols = 8:11,
-                                    pattern = "1")
+              nrows = 8, ncols = 12,
+              bacteria = make_designpattern(c("PF", "125ALE", "7xEGC", "7xACD",
+                                              "125ALA", "125CGE"),
+                                            rows = 2:7, cols = 2:4,
+                                            pattern = "111222333444555666",
+                                            byrow = TRUE),
+              bacteria = make_designpattern(c("7xCLD", "7xEGD",
+                                              "7xALA", "125CGA", "Blank"),
+                                            rows = 2:6, cols = 5:7,
+                                            pattern = "111222333444555",
+                                            byrow = TRUE),
+              bacteria = make_designpattern(c("7xCLD", "125ALE", "7xEGC", "7xACD",
+                                              "125ALA", "125CGE"),
+                                            rows = 2:7, cols = 8:9,
+                                            pattern = "112233445566",
+                                            byrow = TRUE),
+              bacteria = make_designpattern(c("PF", "7xEGD",
+                                              "7xALA", "125CGA", "Blank"),
+                                            rows = 2:6, cols = 10:11,
+                                            pattern = "1122334455",
+                                            byrow = TRUE)
   )
 
-design_1e5_1e4 <-
-  make_design(output_format = "tidy",
-    nrows = 8, ncols = 12,
-    block_row_names = LETTERS[1:8],
-    block_col_names = 1:12,
-    wellnames_sep = "",
-    init_bact = make_designpattern(c(10**5),
-                                   rows = 2:7, cols = 2:11,
-                                   pattern = "1"),
-    init_phage = make_designpattern(c(10**4),
-                                    rows = 2:7, cols = 2:7,
-                                    pattern = "1"),
-    init_phage = make_designpattern(c(0),
-                                    rows = 2:7, cols = 8:11,
-                                    pattern = "1")
-  )
+design_phage <- make_design(output_format = "tidy",
+                            nrows = 8, ncol = 12,
+                            phage_added = mdp("Yes", rows = 2:7, cols = 2:7),
+                            phage_added = mdp("No", rows = 2:7, cols = 8:11))
+                            
+                            
 
 #Merge design and measures ----
-gcdata_lng[["2021-10-15_Emma_Growth_Curve"]] <-
-  merge_dfs(design_diftconcs,
-            gcdata_lng[["2021-10-15_Emma_Growth_Curve"]],
-            drop = TRUE)
-gcdata_lng[["2021-10-25_Emma_Growth_Curve"]] <-
-  merge_dfs(
-    merge_dfs(design_isols, design_5e4_5e3),
-    gcdata_lng[["2021-10-25_Emma_Growth_Curve"]],
-    drop = TRUE)
-gcdata_lng[["2021-10-27_Emma_Growth_Curve"]] <-
-  merge_dfs(
-    merge_dfs(design_isols, design_1e5_1e4),
-    gcdata_lng[["2021-10-27_Emma_Growth_Curve"]],
-    drop = TRUE)
-gcdata_lng[["2021-11-03_Emma_Growth_Curve"]] <-
-  merge_dfs(
-    merge_dfs(design_isols, design_1e5_1e4),
-    gcdata_lng[["2021-11-03_Emma_Growth_Curve"]],
-    drop = TRUE)
+gcdata_lng[[1]] <- merge_dfs(gcdata_lng[[1]], design_isols)
+gcdata_lng[[2]] <- merge_dfs(gcdata_lng[[2]], design_isols)
+gcdata_lng[[3]] <- merge_dfs(gcdata_lng[[3]], design_isols_2022_07_15)
 
-gcdata_lng <- merge_dfs(gcdata_lng, collapse = TRUE)
+gcdata_lng <- lapply(X = gcdata_lng, 
+                     FUN = function(x, y) merge_dfs(x = x, y = y, drop = TRUE),
+                     y = design_phage)
 
-gcdata_lng$Time <- lubridate::time_length(lubridate::hms(gcdata_lng$Time))
+gcdata_tidy <- merge_dfs(gcdata_lng, collapse = TRUE, drop = TRUE)
 
-#Smooth and summarize ----
-gcdata_lng <- 
-  mutate(group_by(gcdata_lng, Well, file),
-         smoothed = smooth_data(x = Time,
-                                y = OD600,
-                                sm_method = "moving-average",
-                                window_width_n = 5))
+#Convert Time, subtract blank, smooth, calc_deriv, summarize
+gcdata_tidy <- mutate(group_by(gcdata_tidy, file),
+                      Time = time_length(hms(Time), unit = "hour"),
+                      OD600 = OD600 - min(OD600[bacteria == "Blank"]))
+gcdata_tidy <- mutate(group_by(gcdata_tidy, file, Well),
+                      smoothed = smooth_data(x = Time, y = OD600,
+                                             sm_method = "moving-average",
+                                             window_width = 1.3),
+                      deriv = calc_deriv(y = smoothed, x = Time,
+                                         window_width_n = 3))
+                     
+
+ggplot(data = gcdata_tidy, aes(x = Time, y = smoothed, color = file)) +
+  geom_line(aes(group = paste(file, Well), lty = phage_added)) +
+  facet_wrap(~bacteria)
 
 gcdata_sum <- dplyr::summarize(
-  group_by(gcdata_lng, file, Well, init_bact, init_phage, init_moi, bacteria),
-  peak_index = find_local_extrema(y = smoothed,
-                                  return_minima = FALSE,
-                                  window_width_n = 11,
-                                  na.rm = TRUE,
-                                  return_endpoints = TRUE)[1],
-  peak_time = Time[peak_index],
-  peak_dens = smoothed[peak_index],
-  auc = auc(x = as.numeric(Time), y = smoothed))
+  group_by(gcdata_tidy, 
+           file, Well, bacteria, phage_added),
+  peak_dens = first_maxima(y = smoothed, x = Time, return = "y"),
+  peak_time = first_maxima(y = smoothed, x = Time, return = "x"),
+  auc = auc(x = Time, y = smoothed),
+  death_slope = min_gc(deriv))
+
+ggplot(data = gcdata_sum,
+       aes(x = peak_time, y = peak_dens, color = file)) +
+  geom_point() +
+  facet_wrap(~bacteria)
+
+ggplot(data = gcdata_sum,
+       aes(x = peak_time, y = auc, color = phage_added, shape = file)) +
+  geom_point()
+
+ggplot(data = gcdata_sum,
+       aes(x = peak_dens, y = -death_slope, color = phage_added, shape = file)) +
+  geom_point()
+
+
 
 gcdata_sum_sum <- dplyr::summarise(
   group_by(gcdata_sum, file, init_bact, init_phage, init_moi, bacteria),
@@ -198,10 +157,7 @@ gcdata_sum_sum <- dplyr::summarise(
   auc_avg = mean(auc))
 
 #Join in EOP data
-trav_resis_sum <-
-  dplyr::summarize(group_by(trav_resis, Proj, Pop, Treat, Timepoint, Isol),
-                   mean_eop = mean(EOP),
-                   bd = any(bd))
+
 gcdata_sum_sum <- cbind(gcdata_sum_sum, 
                     data.frame(Proj = NA, Pop = NA, 
                                Treat = NA, Timepoint = NA, Isol = NA))
