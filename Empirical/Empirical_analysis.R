@@ -1,8 +1,9 @@
-#Import functions ----
+#Setup and libraries ----
 library(gcplyr)
 library(ggplot2)
 library(dplyr)
 library(lubridate)
+library(forcats)
 
 mysplit <- strsplit(getwd(), split = "/")[[1]]
 if(mysplit[length(mysplit)] != "Empirical") {setwd("./Empirical/")}
@@ -16,8 +17,21 @@ scales::show_col(my_cols)
 trav_resis <- read.csv("trav-phage_resis_data.csv")
 trav_resis_sum <-
   summarize(group_by(trav_resis, Proj, Pop, Treat, Timepoint, Isol),
-                   mean_eop = mean(EOP),
-                   bd = any(bd))
+            .groups = "drop",
+            mean_eop = mean(EOP),
+            bd = any(bd),
+            bacteria = paste0(Proj[1], Pop[1], Treat[1], Isol[1]))
+#Fix ancestor for easy merging
+trav_resis_sum <- trav_resis_sum[-which(trav_resis_sum$Pop == "Anc")[-1], ]
+trav_resis_sum <- 
+  mutate(trav_resis_sum,
+         bacteria = ifelse(Pop == "Anc", "Anc", bacteria),
+         Proj = fct_recode(Proj, "Weak" = "7x", "Strong" = "125"),
+         Treat = 
+           fct_recode(Treat, "Control" = "C", "Local" = "L", "Global" = "G"),
+         plot_names = ifelse(Pop == "Anc", "Anc",
+                             paste0(Proj, " ", Treat, "\nPop ", Pop, 
+                                    " T", Timepoint, " Isol ", Isol)))
 
 #Main data experiments:
 #2021-11-03 Testing different isolates with initial 1e5 bact, 1e4 phage
@@ -25,7 +39,6 @@ trav_resis_sum <-
 #2022-07-15 Testing different isolates with initial 1e5 bact, 1e4 phage
 #    Note that the wells of PF with no phage and 7xCLD with no phage were 
 #    flipped in the 2022-07-15 run
-
 
 gcdata <-
   read_wides(
@@ -98,9 +111,7 @@ design_phage <- make_design(output_format = "tidy",
                             phage_added = mdp("Yes", rows = 2:7, cols = 2:7),
                             phage_added = mdp("No", rows = 2:7, cols = 8:11))
                             
-                            
-
-#Merge design and measures ----
+#Merge design, measures, EOP data ----
 gcdata_lng[[1]] <- merge_dfs(gcdata_lng[[1]], design_isols)
 gcdata_lng[[2]] <- merge_dfs(gcdata_lng[[2]], design_isols)
 gcdata_lng[[3]] <- merge_dfs(gcdata_lng[[3]], design_isols_2022_07_15)
@@ -110,6 +121,10 @@ gcdata_lng <- lapply(X = gcdata_lng,
                      y = design_phage)
 
 gcdata_tidy <- merge_dfs(gcdata_lng, collapse = TRUE, drop = TRUE)
+
+#Rename PF to Anc for eventual merging
+gcdata_tidy <- mutate(gcdata_tidy,
+                     bacteria = ifelse(bacteria == "PF", "Anc", bacteria))
 
 #Convert Time, subtract blank, smooth, calc_deriv, summarize
 gcdata_tidy <- mutate(group_by(gcdata_tidy, file),
@@ -121,143 +136,99 @@ gcdata_tidy <- mutate(group_by(gcdata_tidy, file, Well),
                                              window_width = 1.3),
                       deriv = calc_deriv(y = smoothed, x = Time,
                                          window_width_n = 3))
-                     
 
-ggplot(data = gcdata_tidy, aes(x = Time, y = smoothed, color = file)) +
-  geom_line(aes(group = paste(file, Well), lty = phage_added)) +
-  facet_wrap(~bacteria)
+#Join EOP data
+gcdata_tidy <- left_join(gcdata_tidy, trav_resis_sum)
+gcdata_tidy$plot_names <- as.factor(gcdata_tidy$plot_names)
+gcdata_tidy$plot_names <-
+  factor(gcdata_tidy$plot_names,
+         levels = levels(gcdata_tidy$plot_names)[
+           c(1, 6, 9, 10, 7, 8, 4, 5, 2, 3)])
 
 gcdata_sum <- dplyr::summarize(
   group_by(gcdata_tidy, 
-           file, Well, bacteria, phage_added),
+           file, Well, bacteria, phage_added, Proj, Pop, Treat, Timepoint, Isol),
   peak_dens = first_maxima(y = smoothed, x = Time, return = "y"),
   peak_time = first_maxima(y = smoothed, x = Time, return = "x"),
   auc = auc(x = Time, y = smoothed),
-  death_slope = min_gc(deriv))
+  death_slope = min_gc(deriv),
+  eop = mean(mean_eop),
+  bd = any(bd))
 
-ggplot(data = gcdata_sum,
-       aes(x = peak_time, y = peak_dens, color = file)) +
-  geom_point() +
-  facet_wrap(~bacteria)
+gcdata_sum_sum <- summarize(
+  group_by(gcdata_sum, 
+           file, bacteria, phage_added, Proj, Pop, Treat, Timepoint, Isol),
+  across(c(peak_dens, peak_time, auc, death_slope, eop), 
+         list(mean = mean, sd = sd)))
 
-ggplot(data = gcdata_sum,
-       aes(x = peak_time, y = auc, color = phage_added, shape = file)) +
-  geom_point()
+gcdata_sum_sum_sum <- summarize(
+  group_by(gcdata_sum_sum, 
+           bacteria, phage_added, Proj, Pop, Treat, Timepoint, Isol),
+  across(c(peak_dens_mean, peak_time_mean, auc_mean, death_slope_mean, eop_mean), 
+         list(mean = mean, min = min, max = max)))
 
-ggplot(data = gcdata_sum,
-       aes(x = peak_dens, y = -death_slope, color = phage_added, shape = file)) +
-  geom_point()
+#Plots ----
+png("figS12_empiricalcurves.png", width = 8, height = 4,
+    units = "in", res = 300)
+ggplot(data = filter(gcdata_tidy, bacteria != "Blank"), 
+       aes(x = Time, y = smoothed, color = file)) +
+  geom_line(aes(group = paste(file, Well), lty = phage_added),
+            alpha = 0.7) +
+  facet_wrap(~paste0(plot_names, "\nEOP=", signif(mean_eop, 1)), nrow = 2) +
+  scale_color_manual(values = my_cols[1:3],
+                     name = "Batch", labels = 1:3) +
+  scale_linetype_manual(name = "Phage added?", values = 2:1) +
+  scale_x_continuous(breaks = c(0, 12, 24)) +
+  labs(x = "Time (hr)", y = "OD600", subtitle = "Bacterial strain") +
+  theme_bw()
+dev.off()
+
+fs13a <- 
+  ggplot(data = filter(gcdata_sum_sum_sum, phage_added == "Yes"),
+         aes(x = eop_mean_mean, y = peak_dens_mean_mean)) +
+  geom_point(size = 2, alpha = 0.7) +
+  geom_linerange(aes(ymin = peak_dens_mean_min, ymax = peak_dens_mean_max)) +
+  scale_x_log10() +
+  labs(x = "Efficiency of plaquing", y = "Peak density (OD600)") +
+  theme_bw()
+
+fs13b <- 
+  ggplot(data = filter(gcdata_sum_sum_sum, phage_added == "Yes"),
+         aes(x = eop_mean_mean, y = peak_time_mean_mean)) +
+  geom_point(size = 2, alpha = 0.7) +
+  geom_linerange(aes(ymin = peak_time_mean_min, ymax = peak_time_mean_max)) +
+  scale_x_log10() +
+  scale_y_continuous(breaks = c(0, 6, 12, 18, 24)) +
+  labs(x = "Efficiency of plaquing", y = "Peak time (hr)") +
+  theme_bw()
+
+fs13c <- 
+  ggplot(data = filter(gcdata_sum_sum_sum, phage_added == "Yes"),
+         aes(x = eop_mean_mean, y = auc_mean_mean)) +
+  geom_point(size = 2, alpha = 0.7) +
+  geom_linerange(aes(ymin = auc_mean_min, ymax = auc_mean_max)) +
+  scale_x_log10() +
+  labs(x = "Efficiency of plaquing", y = "Area under the curve\n(OD600 hrs)") +
+  theme_bw()
+
+fs13d <- 
+  ggplot(data = filter(gcdata_sum_sum_sum, phage_added == "Yes"),
+         aes(x = eop_mean_mean, y = death_slope_mean_mean)) +
+  geom_point(size = 2, alpha = 0.7) +
+  geom_linerange(aes(ymin = death_slope_mean_min, ymax = death_slope_mean_max)) +
+  scale_x_log10() +
+  labs(x = "Efficiency of plaquing", y = "Minimum death slope\n(OD600/hr)") +
+  theme_bw()
+
+png("figS13_EOPvmetrics.png", width = 6, height = 5,
+    units = "in", res = 300)
+cowplot::plot_grid(fs13a, fs13b, fs13c, fs13d,
+                   nrow = 2, labels = "AUTO", align = "hv", axis = "tblr")
+dev.off()
 
 
 
-gcdata_sum_sum <- dplyr::summarise(
-  group_by(gcdata_sum, file, init_bact, init_phage, init_moi, bacteria),
-  peak_time_avg = mean(as.numeric(peak_time)),
-  peak_dens_avg = mean(peak_dens),
-  auc_avg = mean(auc))
 
-#Join in EOP data
-
-gcdata_sum_sum <- cbind(gcdata_sum_sum, 
-                    data.frame(Proj = NA, Pop = NA, 
-                               Treat = NA, Timepoint = NA, Isol = NA))
-for (i in 1:nrow(gcdata_sum_sum)) {
-  if(gcdata_sum_sum$bacteria[i] == "PF") {
-    gcdata_sum_sum$Proj[i] <- "125"
-    gcdata_sum_sum$Pop[i] <- "Anc"
-    gcdata_sum_sum$Treat[i] <- "Anc"
-    gcdata_sum_sum$Timepoint[i] <- 0
-    gcdata_sum_sum$Isol[i] <- "Anc"
-  } else if (substr(gcdata_sum_sum$bacteria[i], 1, 2) == "7x") {
-    gcdata_sum_sum$Proj[i] <- "7x"
-    gcdata_sum_sum$Pop[i] <- substr(gcdata_sum_sum$bacteria[i], 3, 3)
-    gcdata_sum_sum$Treat[i] <- substr(gcdata_sum_sum$bacteria[i], 4, 4)
-    gcdata_sum_sum$Timepoint[i] <- 14
-    gcdata_sum_sum$Isol[i] <- substr(gcdata_sum_sum$bacteria[i], 5, 5)
-  } else if (substr(gcdata_sum_sum$bacteria[i], 1, 3) == "125") {
-    gcdata_sum_sum$Proj[i] <- "125"
-    gcdata_sum_sum$Pop[i] <- substr(gcdata_sum_sum$bacteria[i], 4, 4)
-    gcdata_sum_sum$Treat[i] <- substr(gcdata_sum_sum$bacteria[i], 5, 5)
-    gcdata_sum_sum$Timepoint[i] <- 14
-    gcdata_sum_sum$Isol[i] <- substr(gcdata_sum_sum$bacteria[i], 6, 6)
-  }
-}
-
-gcdata_sum_sum <- left_join(gcdata_sum_sum, trav_resis_sum)
-
-
-#Plot all data sloppily ----
-for (filenm in unique(gcdata_lng$file)) {
-  temp <- gcdata_lng[gcdata_lng$file == filenm, ]
-  print(ggplot(data = temp, 
-               aes(x = as.numeric(Time)/3600, y = OD600, 
-                   color = bacteria, group = Well)) +
-          geom_line() +
-          # geom_point(data = gcdata_sum[gcdata_sum$file == filenm, ],
-          #            aes(x = peak_time, y = peak_dens)) +
-          NULL)
-}
-
-#Plots of run varying init dens & moi ----
-temp <- gcdata_lng[gcdata_lng$file == "2021-10-15_Emma_Growth_Curve", ]
-temp_sum <- gcdata_sum[gcdata_sum$file == "2021-10-15_Emma_Growth_Curve", ]
-temp_sum_sum <- group_by(temp_sum[temp_sum$init_bact > 0 &
-                                    temp_sum$peak_dens < 0.75, ], 
-                         init_bact, init_moi) %>%
-  dplyr::summarise(peak_dens = mean(peak_dens),
-                   peak_time = mean(as.numeric(peak_time)))
-
-print(ggplot(data = temp, 
-             aes(x = as.numeric(Time)/3600, y = smoothed+1, 
-                 color = as.factor(init_bact), group = Well)) +
-        geom_line() +
-        scale_y_continuous(trans = "log10", name = "Smoothed OD600") +
-        labs(color = "Initial Bacteria\n(cfu/mL)", x = "Time (h)") +
-        NULL)
-
-print(ggplot(data = temp[temp$init_bact > 0, ], 
-             aes(x = as.numeric(Time)/3600, y = smoothed+1, 
-                 color = as.factor(init_moi), group = Well)) +
-        geom_line() +
-        facet_wrap(~init_bact) +
-        scale_y_continuous(trans = "log10", name = "Smoothed OD600") +
-        labs(color = "Initial MOI\n(pfu/cfu)", x = "Time (h)",
-             subtitle = "Initial Bacteria (cfu/mL)") +
-        NULL)
-
-print(ggplot(data = temp_sum[temp_sum$init_bact > 0, ],
-             aes(x = as.factor(init_moi), y = as.numeric(peak_time)/3600)) +
-        geom_point(alpha = 0.5, position = position_jitter(0.2)) +
-        facet_grid(~init_bact) +
-        scale_y_continuous(trans = "log10", name = "Peak time (h)") +
-        labs(subtitle = "Initial Bacteria (cfu/mL)",
-             x = "Initial MOI (pfu/cfu)") +
-        NULL)
-
-print(ggplot(data = temp_sum[temp_sum$init_bact > 0, ],
-             aes(x = as.factor(init_moi), y = as.numeric(peak_dens))) +
-        geom_point(alpha = 0.5, position = position_jitter(0.2)) +
-        facet_grid(~init_bact) +
-        # geom_point(data = temp_sum_sum, size = 3, alpha = 0.5,
-        #            aes(x = as.factor(init_moi), y = as.numeric(peak_dens))) +
-        scale_y_continuous(trans = "log10", name = "Peak density (OD600)") +
-        labs(subtitle = "Initial Bacteria (cfu/mL)",
-             x = "Initial MOI (pfu/cfu)") +
-        NULL)
-
-#Plots of varying isolates ----
-temp <- gcdata_lng[gcdata_lng$file %in% 
-                     c("2021-10-25_Emma_Growth_Curve", 
-                       "2021-10-27_Emma_Growth_Curve",
-                       "2021-11-03_Emma_Growth_Curve"), ]
-temp_sum <- gcdata_sum[gcdata_sum$file %in% 
-                         c("2021-10-25_Emma_Growth_Curve", 
-                           "2021-10-27_Emma_Growth_Curve",
-                           "2021-11-03_Emma_Growth_Curve"), ]
-temp_sum_sum <- gcdata_sum_sum[gcdata_sum_sum$file %in% 
-                                 c("2021-10-25_Emma_Growth_Curve", 
-                                   "2021-10-27_Emma_Growth_Curve",
-                                   "2021-11-03_Emma_Growth_Curve"), ]
 
 #Example plot
 png("./example_plot.png",
