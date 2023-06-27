@@ -1400,7 +1400,7 @@ if(glob_make_statplots) {
                                                  k = 10**9, times = 0:1440)),
                 aes(x = x/60, y = y), lty = 2) +
       scale_color_manual(values = colorRampPalette(c("darkblue", "gray70"))(5),
-                         name = "Lag time (min)") +
+                         name = "Lysis time (min)") +
     theme_bw() +
     theme(axis.title = element_text(size = 16),
           legend.title = element_text(size = 14),
