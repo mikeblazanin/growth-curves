@@ -3399,3 +3399,112 @@ if(glob_make_statplots) {
                        labels = c("A", "B", ""), rel_widths = c(1, 1, 0.5)))
   dev.off()
 }
+
+# Run 11: Transitions to resistant subpop (at mutational rates) ----
+run11 <- run_sims_filewrapper(
+  name = "run11", read_file = glob_read_files,
+  u_S1 = signif(0.04*10**-0.35, 3),
+  u_S2 = signif(0.04*10**-0.35, 3),
+  k = 10**9,
+  a_S1 = signif(10**seq(from = -12, to = -8, length.out = 7), 3),
+  a_S2 = 0,
+  tau = 31.6,
+  b = 50,
+  z = 1,
+  d = c(0, 1),
+  h = 10**(-2:-8),
+  g1 = 1,
+  g2 = 1,
+  init_S1 = 10**6,
+  init_moi = 10**-2,
+  equil_cutoff_dens = 0.1,
+  init_time = 4*24*60,
+  max_time = 4*24*60,
+  init_stepsize = 5,
+  print_info = TRUE
+)
+
+ybig11 <- run11[[1]]
+
+#for plotting extend all to end at same time
+#Set Density below 0 to 0
+ybig11 <- 
+  mutate(group_by(ybig11, uniq_run),
+         time = ifelse(time == max(time), max(ybig11$time), time),
+         Density = ifelse(Density < 1, 0, Density))
+
+ysum11 <- summarize(group_by(filter(ybig11, Pop == "B"),
+                             uniq_run, u_S1, u_S2, k, a_S1, a_S2,
+                             tau, b, z, f_a, f_b, d, h, g1, g2,
+                             init_S1, init_S2, init_moi, init_N, equil),
+                    peak_dens = max(Density),
+                    extin_time = 
+                      first_minima(y = Density, x = time,
+                                   window_width = 2*60, return = "x",
+                                  return_endpoints = FALSE),
+                    emerg_time_6 =
+                      first_above(y = Density[time > extin_time], 
+                                  x = time[time > extin_time],
+                                  threshold = 10**6, return = "x"))
+
+if(glob_make_curveplots) {
+  print(ggplot(data = filter(ybig11, d == 0, Pop == "B"),
+               aes(x = time, y = Density)) +
+          geom_line() +
+          scale_y_log10() +
+          facet_grid(a_S1 ~ h) +
+          geom_vline(data = filter(ysum11, d == 0), aes(xintercept = extin_time),
+                     color = "red") +
+          geom_vline(data = filter(ysum11, d == 0), aes(xintercept = emerg_time_6),
+                     color = "blue") +
+          NULL)
+  print(ggplot(data = filter(ybig11, d == 1, Pop == "B"),
+               aes(x = time, y = Density)) +
+          geom_line() +
+          scale_y_log10() +
+          facet_grid(a_S1 ~ h) +
+          geom_vline(data = filter(ysum11, d == 1), aes(xintercept = extin_time),
+                     color = "red") +
+          geom_vline(data = filter(ysum11, d == 1), aes(xintercept = emerg_time_6),
+                     color = "blue") +
+          NULL)
+}
+
+
+if (glob_make_statplots) {
+  print(ggplot(data = ysum11, 
+               aes(x = a_S1, y = h)) +
+    geom_contour_filled(aes(z = extin_time/60), alpha = 0.5) +
+    geom_point(aes(color = extin_time/60),
+               size = 3) +
+    scale_color_viridis_c(name = "Extinction time (hr)",
+                          breaks = c(6, 12, 18, 24)) +
+    scale_y_continuous(trans = "log10") +
+    scale_x_continuous(trans = "log10") +
+    guides(fill = "none", shape = "none") +
+      facet_grid(~d) +
+    NULL)
+  
+  png("./statplots/figSXX_run11_emergencetime_a_mutrate_contour.png", 
+      width = 4.5, height = 5, units = "in", res = 300)
+  print(ggplot(data = ysum11, 
+               aes(x = a_S1, y = h)) +
+          geom_contour_filled(aes(z = emerg_time_6/60), alpha = 0.5) +
+          geom_point(aes(color = emerg_time_6/60),
+                     size = 3) +
+          scale_color_viridis_c(name = "Emergence\ntime (hr)",
+                                breaks = c(0, 12, 24, 36, 48)) +
+          scale_y_continuous(trans = "log10") +
+          scale_x_continuous(trans = "log10") +
+          labs(x = "Infection rate (/min)", y = "Resistance Mutation Rate") +
+          guides(fill = "none", shape = "none") +
+          facet_grid(d ~ .,
+                     labeller = labeller(
+                       d = c("0" = "No nutrients returned by cell lysis",
+                             "1" = "All nutrients returned by cell lysis"))) +
+          theme(axis.title = element_text(size = 18),
+                legend.title = element_text(size = 16),
+                legend.text = element_text(size = 14)) +
+          NULL)
+  dev.off()
+}
