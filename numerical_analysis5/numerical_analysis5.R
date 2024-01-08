@@ -1317,13 +1317,13 @@ if(glob_make_statplots) {
                   labels = "AUTO", label_size = 20))
   dev.off()
   
-  f3a <-
+  f2a <-
     ggplot(data = filter(ybig1, Pop == "B", b == 50, tau == 31.6),
            aes(x = time/60, y = Density)) +
       geom_line(aes(color = as.factor(a_S1), group = interaction(a_S1, b, tau)),
                 lwd = 1.5) +
       labs(x = "Time (hr)", y = "Density (cfu/mL)") +
-      scale_x_continuous(limits = c(NA, 24)) +
+      scale_x_continuous(limits = c(NA, 24), breaks = c(0, 6, 12, 18, 24)) +
       geom_line(data = data.frame(x = 0:1440,
                                   y = logis_func(S_0 = 10**6, u_S = 0.0179,
                                                  k = 10**9, times = 0:1440)),
@@ -1331,24 +1331,51 @@ if(glob_make_statplots) {
       scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
                          name = "Infection rate\n(/cfu/pfu/min)") +
     theme_bw() +
-    theme(axis.title = element_text(size = 20)) +
+    theme(axis.title = element_text(size = 17),
+          legend.title = element_text(size = 14),
+          legend.text = element_text(size = 12)) +
     NULL
   
-  f3b <- 
-    ggplot(data = filter(ysum1, extin_flag == "none"),
-           aes(x = peak_dens, y = -death_slope)) +
-    geom_point() +
-    scale_y_log10() +
-    scale_x_log10() +
-    labs(x = "Peak Density (cfu/mL)", 
-         y = "Maximum death rate\n(cfu/mL/hr)") +
+  f2b <-
+    ggplot(data = filter(ybig1, Pop == "B", a_S1 == 10**-10, tau == 31.6),
+           aes(x = time/60, y = Density)) +
+    geom_line(aes(color = as.factor(b), group = interaction(a_S1, b, tau)),
+              lwd = 1.5) +
+    labs(x = "Time (hr)", y = "Density (cfu/mL)") +
+    scale_x_continuous(limits = c(NA, 12), breaks = c(0, 6, 12)) +
+    geom_line(data = data.frame(x = 0:1440,
+                                y = logis_func(S_0 = 10**6, u_S = 0.0179,
+                                               k = 10**9, times = 0:1440)),
+              aes(x = x/60, y = y), lty = 2) +
+    scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
+                       name = "Burst size") +
     theme_bw() +
-    theme(axis.title = element_text(size = 20)) +
-    NULL
+    theme(axis.title = element_text(size = 17),
+          legend.title = element_text(size = 14),
+          legend.text = element_text(size = 12))
   
-  png("./statplots/fig3_run1_Bcurvesa_deathslopesubset.png",
-      width = 10, height = 4, units = "in", res = 150)
-  print(plot_grid(f3a, f3b, nrow = 1, labels = "AUTO",
+  f2c <-
+    ggplot(data = filter(ybig1, Pop == "B", a_S1 == 10**-10, b == 50),
+           aes(x = time/60, y = Density)) +
+    geom_line(aes(color = as.factor(tau), group = interaction(a_S1, b, tau)),
+              lwd = 1.5) +
+    theme_bw() +
+    labs(x = "Time (hr)", y = "Density (cfu/mL)") +
+    scale_x_continuous(limits = c(NA, 13), breaks = c(0, 6, 12)) +
+    geom_line(data = data.frame(x = 0:1440,
+                                y = logis_func(S_0 = 10**6, u_S = 0.0179,
+                                               k = 10**9, times = 0:1440)),
+              aes(x = x/60, y = y), lty = 2) +
+    scale_color_manual(values = colorRampPalette(c("darkblue", "gray70"))(5),
+                       name = "Lysis time (min)") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 17),
+          legend.title = element_text(size = 14),
+          legend.text = element_text(size = 12))
+  
+  png("./statplots/fig2_run1_Bcurves_a_b_tau.png",
+      width = 5, height = 9, units = "in", res = 150)
+  print(plot_grid(f2a, f2b, f2c, ncol = 1, labels = "AUTO",
                   label_size = 20, align = "hv", axis = "tb"))
   dev.off()
   
@@ -1367,49 +1394,6 @@ if(glob_make_statplots) {
           theme_bw() +
           theme(axis.title = element_text(size = 20)) +
           NULL)
-  dev.off()
-  
-  fs4a <-
-    ggplot(data = filter(ybig1, Pop == "B", a_S1 == 10**-10, tau == 31.6),
-           aes(x = time/60, y = Density)) +
-      geom_line(aes(color = as.factor(b), group = interaction(a_S1, b, tau)),
-                lwd = 1.5) +
-      labs(x = "Time (hr)", y = "Density (cfu/mL)") +
-      scale_x_continuous(limits = c(NA, 24)) +
-      geom_line(data = data.frame(x = 0:1440,
-                                  y = logis_func(S_0 = 10**6, u_S = 0.0179,
-                                                 k = 10**9, times = 0:1440)),
-                aes(x = x/60, y = y), lty = 2) +
-      scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
-                         name = "Burst size") +
-      theme_bw() +
-      theme(axis.title = element_text(size = 16),
-            legend.title = element_text(size = 14),
-            legend.text = element_text(size = 12))
-  
-  fs4b <-
-    ggplot(data = filter(ybig1, Pop == "B", a_S1 == 10**-10, b == 50),
-           aes(x = time/60, y = Density)) +
-      geom_line(aes(color = as.factor(tau), group = interaction(a_S1, b, tau)),
-                lwd = 1.5) +
-      theme_bw() +
-      labs(x = "Time (hr)", y = "Density (cfu/mL)") +
-      scale_x_continuous(limits = c(NA, 24)) +
-      geom_line(data = data.frame(x = 0:1440,
-                                  y = logis_func(S_0 = 10**6, u_S = 0.0179,
-                                                 k = 10**9, times = 0:1440)),
-                aes(x = x/60, y = y), lty = 2) +
-      scale_color_manual(values = colorRampPalette(c("darkblue", "gray70"))(5),
-                         name = "Lysis time (min)") +
-    theme_bw() +
-    theme(axis.title = element_text(size = 16),
-          legend.title = element_text(size = 14),
-          legend.text = element_text(size = 12))
-  
-  png("./statplots/figS4_run1_Bcurves_b_or_tau.png",
-      width = 10, height = 3, units = "in", res = 150)
-  print(plot_grid(fs4a, fs4b, nrow = 1, labels = "AUTO",
-                  label_size = 20, align = "hv", axis = "tb"))
   dev.off()
 }
 
