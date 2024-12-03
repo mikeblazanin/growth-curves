@@ -108,19 +108,24 @@ deriv_dede <- function(t, y, parms) {
   #        - af_t * a_S2 * S2*P
   #        - z * af_t * a_S1 * I1 * P
   #        - z * af_t * a_S2 * I2 * P
+  #        - P * (v + w * (S1 + S2 + I1 + I2))
   #        (factored in code for efficiency)
   if (t < parms["tau"]) {
     dY["P"] <-
       (-af_t * y["P"] *
          (parms["a_S1"] * (y["S1"] + parms["z"]*y["I1"])
-          + parms["a_S2"] * (y["S2"] + parms["z"]*y["I2"])))
+          + parms["a_S2"] * (y["S2"] + parms["z"]*y["I2"]))
+       -y["P"] * (parms["v"] + parms["w"] * 
+                    (y["S1"] + y["S2"] + y["I1"] + y["I2"])))
   } else {
     dY["P"] <-
       (bf_t * parms["b"] * af_tau * lagY[5] *
          (parms["a_S1"]*lagY[1] + parms["a_S2"]*lagY[2])
         - af_t * y["P"] *
           (parms["a_S1"] * (y["S1"] + parms["z"]*y["I1"])
-           + parms["a_S2"] * (y["S2"] + parms["z"]*y["I2"])))
+           + parms["a_S2"] * (y["S2"] + parms["z"]*y["I2"]))
+       -y["P"] * (parms["v"] + parms["w"] * 
+                    (y["S1"] + y["S2"] + y["I1"] + y["I2"])))
   }
   
   #Calculate dN
@@ -218,7 +223,6 @@ deriv_ode <- function(t, y, parms) {
   return(list(dY))
 }
 
-
 ## Simple test run ----
 if(F) {
   #delay differential
@@ -233,6 +237,7 @@ if(F) {
               f_a = 0, f_b = 0,
               d = 0,
               h = 0, g1 = 0, g2 = 0,
+              v = 0, w = 0,
               warnings = 1, thresh_min_dens = 10**-100)
   
   test <- as.data.frame(dede(y = yinit, times = times, func = deriv_dede, 
@@ -247,8 +252,10 @@ if(F) {
                                names_to = "Pop", values_to = "Density")
   ggplot(data = filter(test2, Pop %in% c("S1", "S2", "I1", "I2", "P")), 
          aes(x = time, y = Density, color = Pop)) +
-    geom_line() + scale_y_continuous(trans = "log10", limits = c(1, NA)) +
-    #geom_line(data = filter(test2, Pop == "pred"), lty = 2, color = "black") +
+    #geom_line() + 
+    #scale_y_continuous(trans = "log10", limits = c(1, NA)) +
+    geom_line(data = filter(test2, Pop == "pred"), lty = 2, color = "black") +
+    geom_line(data = filter(test2, Pop == "B"), color = "black", alpha = 0.5) +
     NULL
   
   #ode differential
@@ -413,6 +420,7 @@ run_sims_dede <- function(u_S1, u_S2,
                           f_a = 0, f_b = 0,
                           d = 1,
                           h = 0, g1 = 0, g2 = 0,
+                          v = 0, w = 0,
                           init_S1 = 10**6,
                           init_S2 = 0,
                           init_moi = 10**-2,
@@ -461,7 +469,7 @@ run_sims_dede <- function(u_S1, u_S2,
   sim_vars <- sim_vars[names(sim_vars) %in%
                          c("u_S1", "u_S2", "k", "a_S1", "a_S2",
                            "tau", "b", "z", "f_a", "f_b", "d",
-                           "h", "g1", "g2",
+                           "h", "g1", "g2", "v", "w",
                            "init_S1", "init_S2", "init_moi", "init_N")]
   
   if (combinatorial) {
