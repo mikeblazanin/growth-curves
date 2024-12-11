@@ -1269,7 +1269,7 @@ if(glob_make_statplots) {
   
   png("./statplots/fig3_run1_metricvmetric_subset.png",
       width = 15, height = 5, units = "in", res = 150)
-  print(plot_grid(f2a, f2b, f2c, nrow = 1, align = "hv", axis = "tb",
+  print(plot_grid(f3a, f3b, f3c, nrow = 1, align = "hv", axis = "tb",
                   labels = "AUTO", label_size = 20))
   dev.off()
   
