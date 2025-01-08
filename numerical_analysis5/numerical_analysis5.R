@@ -1248,11 +1248,11 @@ if(glob_make_statplots) {
            aes(x = peak_time/60, y = auc/60)) +
       geom_point() +
       theme_bw() +
-      geom_line(data = data.frame(
-        x = 0:540,
-        y = logis_def_integral(S_0 = 10**6, u_S = 0.0179,
-                               k = 10**9, times = 0:540)),
-        aes(x = x/60, y = y/60), lty = 2) +
+      # geom_line(data = data.frame(
+      #   x = 0:540,
+      #   y = logis_def_integral(S_0 = 10**6, u_S = 0.0179,
+      #                          k = 10**9, times = 0:540)),
+      #   aes(x = x/60, y = y/60), lty = 2) +
       scale_y_log10() +
       labs(x = "Peak Time (hr)", y = "Area Under the Curve\n(hr cfu/mL)") +
       theme(axis.title = element_text(size = 20)) +
@@ -1262,7 +1262,7 @@ if(glob_make_statplots) {
            aes(x = peak_time/60, y = extin_time_4/60)) +
       geom_point() +
       theme_bw() +
-      geom_abline(slope = 1, intercept = 0, alpha = 0.5) +
+      #geom_abline(slope = 1, intercept = 0, alpha = 0.5) +
       labs(x = "Peak Time (hr)", y = "Extinction Time (hr)") +
       theme(axis.title = element_text(size = 20)) +
       NULL
@@ -2623,10 +2623,6 @@ if (glob_make_statplots) {
                      y = init_S1*qpois(0.025, 3*10)/3/10,
                      yend = init_S1*qpois(0.975, 3*10)/3/10),
                  lwd = 2) +
-    geom_segment(aes(x = a_S1, xend = a_S1,
-                     y = init_S1*qpois(0.025, 5*10)/5/10,
-                     yend = init_S1*qpois(0.975, 5*10)/5/10),
-                 lwd = 3) +
     geom_point(aes(color = peak_time/60, shape = extin_flag),
                size = 3) +
     scale_color_viridis_c(name = "Peak time (hr)",
@@ -2653,10 +2649,6 @@ if (glob_make_statplots) {
                      y = init_P*qpois(0.025, 3*10)/3/10,
                      yend = init_P*qpois(0.975, 3*10)/3/10),
                  lwd = 2) +
-    geom_segment(aes(x = a_S1, xend = a_S1,
-                     y = init_P*qpois(0.025, 5*10)/5/10,
-                     yend = init_P*qpois(0.975, 5*10)/5/10),
-                 lwd = 3) +
     geom_point(aes(color = peak_time/60, shape = extin_flag),
                size = 3) +
     scale_color_viridis_c(name = "Peak time (hr)",
@@ -2679,56 +2671,64 @@ if (glob_make_statplots) {
   dev.off()
   
   p1 <- print(ggplot(data = filter(ysum7, init_P == 10**4), 
-               aes(x = a_S1, y = init_S1)) +
-          geom_contour_filled(aes(z = peak_dens), alpha = 0.5) +
-          # geom_segment(aes(x = a_S1, xend = a_S1,
-          #                  y = init_S1*qpois(0.025, 10)/10,
-          #                  yend = init_S1*qpois(0.975, 10)/10)) +
-          # geom_segment(aes(x = a_S1, xend = a_S1,
-          #                  y = init_S1*qpois(0.025, 100)/100,
-          #                  yend = init_S1*qpois(0.975, 100)/100),
-          #              lwd = 2) +
-          geom_point(aes(color = peak_dens, shape = extin_flag),
-                     size = 3) +
-          scale_color_viridis_c(name = "Peak density\n[log10(cfu/mL)]") +#,
-                                #breaks = c(6, 7, 8, 9)) +
-          scale_shape_manual(breaks = c("neark", "noextin", "none"), 
-                             values = c(4, 4, 16)) +
-          scale_y_continuous(trans = "log10") +
-          scale_x_continuous(trans = "log10") +
-          labs(x = "Infection rate (/min)",
-               y = "Initial bacterial\ndensity (cfu/mL)") +
-          guides(fill = "none", shape = "none") +
-            theme(axis.title = element_text(size = 16),
-                  legend.title = element_text(size = 14),
-                  legend.text = element_text(size = 12)) +
-          NULL)
+                     aes(x = a_S1, y = init_S1)) +
+                geom_contour_filled(aes(z = peak_dens), alpha = 0.5) +
+                # geom_segment(aes(x = a_S1, xend = a_S1,
+                #                  y = init_S1*qpois(0.025, 10)/10,
+                #                  yend = init_S1*qpois(0.975, 10)/10)) +
+                # geom_segment(aes(x = a_S1, xend = a_S1,
+                #                  y = init_S1*qpois(0.025, 100)/100,
+                #                  yend = init_S1*qpois(0.975, 100)/100),
+                #              lwd = 2) +
+                geom_point(aes(color = peak_dens, shape = extin_flag),
+                           size = 3) +
+                scale_color_viridis_c(name = "Peak density\n(cfu/mL)",
+                                      breaks = c(0, 5*10**8, 10**9),
+                                      labels = c(0,
+                                                 expression(5%*%10^8),
+                                                 expression(10^9)),
+                                      limits = c(0, 10**9)) +
+                scale_shape_manual(breaks = c("neark", "noextin", "none"), 
+                                   values = c(4, 4, 16)) +
+                scale_y_continuous(trans = "log10") +
+                scale_x_continuous(trans = "log10") +
+                labs(x = "Infection rate (/min)",
+                     y = "Initial bacterial\ndensity (cfu/mL)") +
+                guides(fill = "none", shape = "none") +
+                theme(axis.title = element_text(size = 16),
+                      legend.title = element_text(size = 14),
+                      legend.text = element_text(size = 12)) +
+                NULL)
 
   p2 <- print(ggplot(data = filter(ysum7, init_S1 == 10**6), 
-               aes(x = a_S1, y = init_P)) +
-          geom_contour_filled(aes(z = peak_dens), alpha = 0.5) +
-          # geom_segment(aes(x = a_S1, xend = a_S1,
-          #                  y = init_P*qpois(0.025, 10)/10,
-          #                  yend = init_P*qpois(0.975, 10)/10)) +
-          # geom_segment(aes(x = a_S1, xend = a_S1,
-          #                  y = init_P*qpois(0.025, 100)/100,
-          #                  yend = init_P*qpois(0.975, 100)/100),
-          #              lwd = 2) +
-          geom_point(aes(color = peak_dens, shape = extin_flag),
-                     size = 3) +
-          scale_color_viridis_c(name = "Peak density\n[log10(cfu/mL)]") +#,
-                                #breaks = c(6, 7, 8, 9)) +
-          scale_shape_manual(breaks = c("neark", "noextin", "none"), 
-                             values = c(4, 4, 16)) +
-          scale_y_continuous(trans = "log10") +
-          scale_x_continuous(trans = "log10") +
-          labs(x = "Infection rate (/min)",
-               y = "Initial phage\ndensity (pfu/mL)") +
-          guides(fill = "none", shape = "none") +
-            theme(axis.title = element_text(size = 16),
-                  legend.title = element_text(size = 14),
-                  legend.text = element_text(size = 12)) +
-          NULL)
+                     aes(x = a_S1, y = init_P)) +
+                geom_contour_filled(aes(z = peak_dens), alpha = 0.5) +
+                # geom_segment(aes(x = a_S1, xend = a_S1,
+                #                  y = init_P*qpois(0.025, 10)/10,
+                #                  yend = init_P*qpois(0.975, 10)/10)) +
+                # geom_segment(aes(x = a_S1, xend = a_S1,
+                #                  y = init_P*qpois(0.025, 100)/100,
+                #                  yend = init_P*qpois(0.975, 100)/100),
+                #              lwd = 2) +
+                geom_point(aes(color = peak_dens, shape = extin_flag),
+                           size = 3) +
+                scale_color_viridis_c(name = "Peak density\n(cfu/mL)",
+                                      breaks = c(0, 5*10**8, 10**9),
+                                      labels = c(0,
+                                                 expression(5%*%10^8),
+                                                 expression(10^9)),
+                                      limits = c(0, 10**9)) +
+                scale_shape_manual(breaks = c("neark", "noextin", "none"), 
+                                   values = c(4, 4, 16)) +
+                scale_y_continuous(trans = "log10") +
+                scale_x_continuous(trans = "log10") +
+                labs(x = "Infection rate (/min)",
+                     y = "Initial phage\ndensity (pfu/mL)") +
+                guides(fill = "none", shape = "none") +
+                theme(axis.title = element_text(size = 16),
+                      legend.title = element_text(size = 14),
+                      legend.text = element_text(size = 12)) +
+                NULL)
   
   p3 <- print(ggplot(data = filter(ysum7, init_P == 10**4), 
                      aes(x = a_S1, y = init_S1)) +
@@ -2744,7 +2744,8 @@ if (glob_make_statplots) {
                            size = 3) +
                 scale_color_viridis_c(name = "Extinction time (hr)",
                                       breaks = c(0, 0.5, 1, 1.5),
-                                      labels = c(1, 3.2, 10, 32)) +
+                                      labels = c(1, 3.2, 10, 32),
+                                      limits = c(NA, 1.5)) +
                 scale_shape_manual(breaks = c("neark", "noextin", "none"), 
                                    values = c(4, 4, 16)) +
                 scale_y_continuous(trans = "log10") +
@@ -2771,7 +2772,8 @@ if (glob_make_statplots) {
                            size = 3) +
                 scale_color_viridis_c(name = "Extinction time (hr)",
                                       breaks = c(0, 0.5, 1, 1.5),
-                                      labels = c(1, 3.2, 10, 32)) +
+                                      labels = c(1, 3.2, 10, 32),
+                                      limits = c(NA, 1.5)) +
                 scale_shape_manual(breaks = c("neark", "noextin", "none"), 
                                    values = c(4, 4, 16)) +
                 scale_y_continuous(trans = "log10") +
