@@ -1154,7 +1154,7 @@ if(glob_make_statplots) {
             axis.title = element_text(size = 20),
             legend.text = element_text(size = 18),
             legend.title = element_text(size = 20),
-            legend.spacing.y = unit(.1, "in"),
+            legend.key.spacing.y = unit(0.1, "in"),
             plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "in")) +
       labs(y = "Density", color = "Population", x = "Time (hr)") +
       guides(color = guide_legend(byrow = TRUE)) +
@@ -1162,16 +1162,13 @@ if(glob_make_statplots) {
   )
   dev.off()
   
-  
   temp <- filter(ybig1, uniq_run == myrun, Pop == "B")
-  png("./statplots/fig1C_run1.png",
-      width = 5, height = 5, units = "in", res = 150)
   p1 <- 
     ggplot(data = temp, 
            aes(x = time/60, y = Density+dens_offset)) +
     geom_line(lwd = 1.5, alpha = 1, color = "black") + 
     scale_y_continuous(trans = "log10",
-                       breaks = scales::trans_breaks("log10", function(x) 10^x),
+                       breaks = 10**c(0, 3, 6, 9),
                        labels = scales::trans_format("log10", 
                                                      scales::math_format(10^.x))) +
     scale_x_continuous(breaks = seq(from = 0, to = 10, by = 2.5)) +
@@ -1179,11 +1176,13 @@ if(glob_make_statplots) {
     theme(axis.text.x = element_text(size = 18),
           axis.text.y = element_text(size = 18),
           axis.title = element_text(size = 20),
-          legend.text = element_text(size = 18),
+          legend.text = element_text(size = 16),
           legend.title = element_text(size = 20),
           plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "in")) +
     labs(y = "Density", x = "Time (hr)") +
     NULL
+  png("./statplots/run1_example_B.png",
+      width = 5, height = 5, units = "in", res = 150)
   print(p1)
   dev.off()
   
@@ -1220,8 +1219,8 @@ if(glob_make_statplots) {
   print(p1)
   dev.off()
   
-  png("./statplots/fig1D_run1.png",
-      width = 5, height = 5, units = "in", res = 150)
+  png("./statplots/fig1C_run1.png",
+      width = 4, height = 4, units = "in", res = 150)
   p1 <- p1 +
     geom_area(aes(y = Density+dens_offset),
               fill = "red", alpha = 0.5)
