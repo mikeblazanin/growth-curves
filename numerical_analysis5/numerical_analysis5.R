@@ -1782,23 +1782,67 @@ if (glob_make_statplots) {
       NULL)
   dev.off()
   
-  png("./statplots/fig4_run1_phager_peaktime_subset.png", 
-      width = 5, height = 3.5, units = "in", res = 300)
-  print(
+  f4a <- 
     ggplot(data = filter(ysum1, extin_flag == "none"),
-           aes(x = peak_time/60, y = phage_r*60, color = as.factor(b))) +
-      geom_point() +
-      scale_color_viridis_d(end = 0.95, name = "Burst size") +
-      scale_x_log10() + 
-      scale_y_log10() +
-      labs(x = "Peak Time (hr)", 
-           y = "Average phage\ngrowth rate (e-fold/hr)") +
-      theme_bw() +
-      theme(axis.title = element_text(size = 20),
-            legend.title = element_text(size = 18),
-            legend.text = element_text(size = 16)) +
-      NULL
-  )
+           aes(x = peak_dens, y = phage_r*60)) +
+    geom_point() +
+    scale_x_log10() + 
+    scale_y_log10() +
+    labs(x = "Peak Density (cfu/mL)", 
+         y = "Average phage\ngrowth rate (e-fold/hr)") +
+    theme_bw() +
+    guides(shape = "none") +
+    theme(axis.title = element_text(size = 20),
+          legend.title = element_text(size = 18),
+          legend.text = element_text(size = 14))
+  
+  f4b <- 
+    ggplot(data = filter(ysum1, extin_flag == "none"),
+           aes(x = peak_time/60, y = phage_r*60)) +
+    geom_point() +
+    scale_x_log10() + 
+    scale_y_log10() +
+    labs(x = "Peak Time (hr)", 
+         y = "Average phage\ngrowth rate (e-fold/hr)") +
+    theme_bw() +
+    guides(shape = "none") +
+    theme(axis.title = element_text(size = 20),
+          legend.title = element_text(size = 18),
+          legend.text = element_text(size = 14))
+  
+  f4c <- 
+    ggplot(data = filter(ysum1, extin_flag == "none"),
+           aes(x = auc, y = phage_r*60)) +
+    geom_point() +
+    scale_x_log10() + 
+    scale_y_log10() +
+    labs(x = "Area Under the Curve\n(hr cfu/mL)", 
+         y = "Average phage\ngrowth rate (e-fold/hr)") +
+    theme_bw() +
+    guides(shape = "none") +
+    theme(axis.title = element_text(size = 20),
+          legend.title = element_text(size = 18),
+          legend.text = element_text(size = 14))
+  
+  f4d <- 
+    ggplot(data = filter(ysum1, extin_flag == "none"),
+           aes(x = extin_time_4/60, y = phage_r*60)) +
+    geom_point() +
+    scale_x_log10() + 
+    scale_y_log10() +
+    labs(x = "Extinction time (hr)", 
+         y = "Average phage\ngrowth rate (e-fold/hr)") +
+    theme_bw() +
+    guides(shape = "none") +
+    theme(axis.title = element_text(size = 20),
+          legend.title = element_text(size = 18),
+          legend.text = element_text(size = 14))
+  
+  png("./statplots/fig4_run1_phager_peakextinauc_subset.png", 
+      width = 8, height = 8, units = "in", res = 300)
+  print(plot_grid(f4a, f4b, f4c, f4d,
+                  ncol = 2, labels = c("A", "B", "C", "D"),
+                  align = "hv", axis = "tb", label_size = 20))
   dev.off()
   
   fs5a <- 
