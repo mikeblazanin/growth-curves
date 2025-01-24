@@ -1493,8 +1493,8 @@ lm(peak_time ~ norma + normb + normtau, data = temp)
 
 tidy_gradient_n <- function(data, response_var, pred_vars,
                             return) {
-  stop("There might be something wrong with the
-gradients of dimensions higher than 1 here")
+#   stop("There might be something wrong with the
+# gradients of dimensions higher than 1 here")
   stopifnot(return %in% c("grid", "tidy"))
   
   data <- as.data.frame(data)
@@ -1560,6 +1560,48 @@ ysum_gradients <- tidy_gradient_n(data = temp,
                 response_var = "peak_time",
                 pred_vars = c("loga", "logb", "logtau"),
                 return = "tidy")
+
+central_diff <- function(x, y, end_behavior = "NA"){
+  stopifnot(end_behavior %in% c("NA", "back-forwards"))
+  res <- pracma::gradient(F = y, h1 = x)
+  if(end_behavior == "NA") {res[1] <- NA; res[length(res)] <- NA}
+  return(res)
+}
+
+ysum_gradients2 <- 
+  mutate(group_by(temp, loga, logb),
+         dpeaktime_dlogtau = central_diff(y = peak_time, x = logtau))
+ysum_gradients2 <- 
+  mutate(group_by(ysum_gradients2, logb, logtau),
+         dpeaktime_dloga = central_diff(y = peak_time, x = loga))
+ysum_gradients2 <- 
+  mutate(group_by(ysum_gradients2, loga, logtau),
+         dpeaktime_dlogb = central_diff(y = peak_time, x = logb))
+
+ggplot(data = ysum_gradients2,
+       aes(x = loga, y = dpeaktime_dloga)) +
+  geom_line(aes(group = paste(logb, logtau)))
+ggplot(data = ysum_gradients2,
+       aes(x = logb, y = dpeaktime_dlogb)) +
+  geom_line(aes(group = paste(loga, logtau)))
+ggplot(data = ysum_gradients2,
+       aes(x = logtau, y = dpeaktime_dlogtau)) +
+  geom_line(aes(group = paste(loga, logb)))
+
+
+
+temp2 <- inner_join(ysum_gradients, ysum_gradients2)
+ggplot(data = temp2) +
+  #geom_histogram(aes(x = dpeaktime_dlogtau), col = "red") +
+  geom_histogram(aes(x = dpeak_time_dlogtau), col = "blue") +
+  NULL
+
+
+ggplot(data = ysum_gradients2,
+       aes(x = logtau, y = dpeaktime_dlogtau)) +
+  geom_line(aes(group = paste(loga, logb)))
+
+
 ysum_gradients <- inner_join(ysum_gradients, temp)
 
 ggplot(data = filter(ysum_gradients,
@@ -1589,7 +1631,12 @@ ggplot(data = ysum_gradients,
        aes(x = loga, y = logtau)) +
   facet_wrap(~b) +
   geom_contour_filled(aes(z = peak_time))
-
+ggplot(data = ysum_gradients,
+       aes(x = logtau, y = peak_time, group = paste(loga, logb))) + 
+  geom_line()
+ggplot(data = ysum_gradients,
+       aes(x = logtau, y = dpeak_time_dlogtau, group = paste(loga, logb))) +
+  geom_line()
 
 
 #y = mx + (y1 - m x1)
