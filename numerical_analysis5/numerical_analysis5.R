@@ -1475,91 +1475,13 @@ if(glob_make_statplots) {
   dev.off()
 }
 
-# temp <- dplyr::filter(ysum1,
-#                       a_S1 %in% c(10**-11, 10**-10, 10**-9),
-#                       b %in% c(15.8, 50, 158),
-#                       tau %in% c(17.8, 31.6, 56.2))
-temp <- ysum1
-temp <- mutate(ungroup(temp),
-               loga = log10(a_S1),
-               logb = log10(b),
-               logtau = log10(tau),
-               norma = as.vector(scale(loga)),
-               normb = as.vector(scale(logb)),
-               normtau = as.vector(scale(logtau)))
-
-lm(peak_time ~ loga + logb + logtau, data = temp)
-lm(peak_time ~ norma + normb + normtau, data = temp)
-
-tidy_gradient_n <- function(data, response_var, pred_vars,
-                            return) {
-#   stop("There might be something wrong with the
-# gradients of dimensions higher than 1 here")
-  stopifnot(return %in% c("grid", "tidy"))
-  
-  data <- as.data.frame(data)
-  
-  ndim <- length(pred_vars)
-  
-  #sort data (with first pred_var changing fastest)
-  for(i in 1:ndim) {data <- data[order(data[, pred_vars[i]]), ]}
-  
-  # Identify unique coordinates
-  coord_vals <- rep(list(NA), ndim)
-  names(coord_vals) <- pred_vars
-  for(i in 1:ndim) {coord_vals[[i]] <- sort(unique(data[, pred_vars[i]]))}
-  
-  #Save dimensions of space for later reference
-  dim_dims <- sapply(coord_vals, length)
-  
-  # Map response variable into nD array
-  r_array <- array(data[, response_var], dim = dim_dims)
-  
-  #Create empty array to hold partial derivatives
-  # (each list is partial derivatives wrt that pred variable)
-  #pds <- rep(list(array(NA, dim = dim_dims)), ndim)
-  #names(pds) <- pred_vars
-  pds <- list()
-  
-  #Calculate gradient
-  for(dimen in 1:length(pred_vars)) {
-    gradvals <- c()
-    otherdim_idxs <- 
-      expand.grid(lapply(coord_vals[-dimen], FUN = function(x) {1:length(x)}))
-    for(i in 1:nrow(otherdim_idxs)) {
-      idxs <- rep(list(NULL), ndim)
-      idxs[-dimen] <- lapply(otherdim_idxs[i, ], function(x) c(x))
-      idxs[[dimen]] <- 1:length(coord_vals[[dimen]])
-      
-      gradvals <- 
-        c(gradvals,
-          pracma::gradient(
-            F = do.call(function(...) {r_array[...]}, idxs),
-            #This is a previous version that works too
-            # F = abind::asub(r_array, 
-            #               idx = lapply(otherdim_idxs[i, ], function(x) c(x)),
-            #               dims = (1:length(pred_vars))[-dimen]),
-            h1 = coord_vals[[dimen]])
-        )
-    }
-    pds[[dimen]] <- array(gradvals, dim = dim_dims)
-  }
-  names(pds) <- pred_vars
-  
-  if(return == "grid") {
-    return(pds)
-  } else {
-    pds_tidy <- sapply(X = pds, FUN = c)
-    colnames(pds_tidy) <- paste0("d", response_var, "_d", colnames(pds_tidy))
-    pds_tidy <- cbind(expand.grid(coord_vals), pds_tidy)
-    return(pds_tidy)
-  }
-}
-
-ysum_gradients <- tidy_gradient_n(data = temp,
-                response_var = "peak_time",
-                pred_vars = c("loga", "logb", "logtau"),
-                return = "tidy")
+ysum1 <- mutate(ungroup(ysum1),
+                loga = log10(a_S1),
+                logb = log10(b),
+                logtau = log10(tau),
+                norma = as.vector(scale(loga)),
+                normb = as.vector(scale(logb)),
+                normtau = as.vector(scale(logtau)))
 
 central_diff <- function(x, y, end_behavior = "NA"){
   stopifnot(end_behavior %in% c("NA", "back-forwards"))
@@ -1568,75 +1490,43 @@ central_diff <- function(x, y, end_behavior = "NA"){
   return(res)
 }
 
-ysum_gradients2 <- 
-  mutate(group_by(temp, loga, logb),
-         dpeaktime_dlogtau = central_diff(y = peak_time, x = logtau))
-ysum_gradients2 <- 
-  mutate(group_by(ysum_gradients2, logb, logtau),
+ysum1 <- 
+  mutate(group_by(ysum1, logb, logtau),
          dpeaktime_dloga = central_diff(y = peak_time, x = loga))
-ysum_gradients2 <- 
-  mutate(group_by(ysum_gradients2, loga, logtau),
+ysum1 <- 
+  mutate(group_by(ysum1, loga, logtau),
          dpeaktime_dlogb = central_diff(y = peak_time, x = logb))
+ysum1 <- 
+  mutate(group_by(ysum1, loga, logb),
+         dpeaktime_dlogtau = central_diff(y = peak_time, x = logtau))
 
-ggplot(data = ysum_gradients2,
+ggplot(data = ysum1,
        aes(x = loga, y = dpeaktime_dloga)) +
   geom_line(aes(group = paste(logb, logtau)))
-ggplot(data = ysum_gradients2,
+ggplot(data = ysum1,
        aes(x = logb, y = dpeaktime_dlogb)) +
   geom_line(aes(group = paste(loga, logtau)))
-ggplot(data = ysum_gradients2,
+ggplot(data = ysum1,
        aes(x = logtau, y = dpeaktime_dlogtau)) +
   geom_line(aes(group = paste(loga, logb)))
 
 
-
-temp2 <- inner_join(ysum_gradients, ysum_gradients2)
-ggplot(data = temp2) +
-  #geom_histogram(aes(x = dpeaktime_dlogtau), col = "red") +
-  geom_histogram(aes(x = dpeak_time_dlogtau), col = "blue") +
-  NULL
-
-
-ggplot(data = ysum_gradients2,
-       aes(x = logtau, y = dpeaktime_dlogtau)) +
-  geom_line(aes(group = paste(loga, logb)))
-
-
-ysum_gradients <- inner_join(ysum_gradients, temp)
-
-ggplot(data = filter(ysum_gradients,
-                     a_S1 %in% c(10**-11, 10**-10, 10**-9),
-                     b %in% c(15.8, 50, 158),
-                     tau %in% c(17.8, 31.6, 56.2)),
-       aes(x = loga, y = dpeak_time_dloga)) +
-  geom_line(aes(group = paste(logb, logtau)))
-ggplot(data = filter(ysum_gradients,
-                     a_S1 %in% c(10**-11, 10**-10, 10**-9),
-                     b %in% c(15.8, 50, 158),
-                     tau %in% c(17.8, 31.6, 56.2)),
-       aes(x = logb, y = dpeak_time_dlogb)) +
-  geom_line(aes(group = paste(loga, logtau)))
-ggplot(data = filter(ysum_gradients,
-                     a_S1 %in% c(10**-11, 10**-10, 10**-9),
-                     b %in% c(15.8, 50, 158),
-                     tau %in% c(17.8, 31.6, 56.2)),
-       aes(x = logtau, y = dpeak_time_dlogtau)) +
-  geom_line(aes(group = paste(loga, logb)))
-
-ggplot(data = ysum_gradients,
+ggplot(data = ysum1,
        aes(x = loga, y = logtau)) +
   facet_wrap(~b) +
-  geom_contour_filled(aes(z = dpeak_time_dlogtau))
-ggplot(data = ysum_gradients,
+  geom_contour_filled(aes(z = dpeaktime_dlogtau))
+ggplot(data = ysum1,
        aes(x = loga, y = logtau)) +
   facet_wrap(~b) +
   geom_contour_filled(aes(z = peak_time))
-ggplot(data = ysum_gradients,
-       aes(x = logtau, y = peak_time, group = paste(loga, logb))) + 
-  geom_line()
-ggplot(data = ysum_gradients,
-       aes(x = logtau, y = dpeak_time_dlogtau, group = paste(loga, logb))) +
-  geom_line()
+ggplot(data = ysum1,
+       aes(x = logb, y = logtau)) +
+  facet_wrap(~loga) +
+  geom_contour_filled(aes(z = dpeaktime_dlogb))
+ggplot(data = ysum1,
+       aes(x = logb, y = logtau)) +
+  facet_wrap(~loga) +
+  geom_contour_filled(aes(z = peak_time))
 
 
 #y = mx + (y1 - m x1)
