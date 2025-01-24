@@ -1475,6 +1475,150 @@ if(glob_make_statplots) {
   dev.off()
 }
 
+# temp <- dplyr::filter(ysum1,
+#                       a_S1 %in% c(10**-11, 10**-10, 10**-9),
+#                       b %in% c(15.8, 50, 158),
+#                       tau %in% c(17.8, 31.6, 56.2))
+temp <- ysum1
+temp <- mutate(ungroup(temp),
+               loga = log10(a_S1),
+               logb = log10(b),
+               logtau = log10(tau),
+               norma = as.vector(scale(loga)),
+               normb = as.vector(scale(logb)),
+               normtau = as.vector(scale(logtau)))
+
+lm(peak_time ~ loga + logb + logtau, data = temp)
+lm(peak_time ~ norma + normb + normtau, data = temp)
+
+tidy_gradient_n <- function(data, response_var, pred_vars,
+                            return) {
+  stop("There might be something wrong with the
+gradients of dimensions higher than 1 here")
+  stopifnot(return %in% c("grid", "tidy"))
+  
+  data <- as.data.frame(data)
+  
+  ndim <- length(pred_vars)
+  
+  #sort data (with first pred_var changing fastest)
+  for(i in 1:ndim) {data <- data[order(data[, pred_vars[i]]), ]}
+  
+  # Identify unique coordinates
+  coord_vals <- rep(list(NA), ndim)
+  names(coord_vals) <- pred_vars
+  for(i in 1:ndim) {coord_vals[[i]] <- sort(unique(data[, pred_vars[i]]))}
+  
+  #Save dimensions of space for later reference
+  dim_dims <- sapply(coord_vals, length)
+  
+  # Map response variable into nD array
+  r_array <- array(data[, response_var], dim = dim_dims)
+  
+  #Create empty array to hold partial derivatives
+  # (each list is partial derivatives wrt that pred variable)
+  #pds <- rep(list(array(NA, dim = dim_dims)), ndim)
+  #names(pds) <- pred_vars
+  pds <- list()
+  
+  #Calculate gradient
+  for(dimen in 1:length(pred_vars)) {
+    gradvals <- c()
+    otherdim_idxs <- 
+      expand.grid(lapply(coord_vals[-dimen], FUN = function(x) {1:length(x)}))
+    for(i in 1:nrow(otherdim_idxs)) {
+      idxs <- rep(list(NULL), ndim)
+      idxs[-dimen] <- lapply(otherdim_idxs[i, ], function(x) c(x))
+      idxs[[dimen]] <- 1:length(coord_vals[[dimen]])
+      
+      gradvals <- 
+        c(gradvals,
+          pracma::gradient(
+            F = do.call(function(...) {r_array[...]}, idxs),
+            #This is a previous version that works too
+            # F = abind::asub(r_array, 
+            #               idx = lapply(otherdim_idxs[i, ], function(x) c(x)),
+            #               dims = (1:length(pred_vars))[-dimen]),
+            h1 = coord_vals[[dimen]])
+        )
+    }
+    pds[[dimen]] <- array(gradvals, dim = dim_dims)
+  }
+  names(pds) <- pred_vars
+  
+  if(return == "grid") {
+    return(pds)
+  } else {
+    pds_tidy <- sapply(X = pds, FUN = c)
+    colnames(pds_tidy) <- paste0("d", response_var, "_d", colnames(pds_tidy))
+    pds_tidy <- cbind(expand.grid(coord_vals), pds_tidy)
+    return(pds_tidy)
+  }
+}
+
+ysum_gradients <- tidy_gradient_n(data = temp,
+                response_var = "peak_time",
+                pred_vars = c("loga", "logb", "logtau"),
+                return = "tidy")
+ysum_gradients <- inner_join(ysum_gradients, temp)
+
+ggplot(data = filter(ysum_gradients,
+                     a_S1 %in% c(10**-11, 10**-10, 10**-9),
+                     b %in% c(15.8, 50, 158),
+                     tau %in% c(17.8, 31.6, 56.2)),
+       aes(x = loga, y = dpeak_time_dloga)) +
+  geom_line(aes(group = paste(logb, logtau)))
+ggplot(data = filter(ysum_gradients,
+                     a_S1 %in% c(10**-11, 10**-10, 10**-9),
+                     b %in% c(15.8, 50, 158),
+                     tau %in% c(17.8, 31.6, 56.2)),
+       aes(x = logb, y = dpeak_time_dlogb)) +
+  geom_line(aes(group = paste(loga, logtau)))
+ggplot(data = filter(ysum_gradients,
+                     a_S1 %in% c(10**-11, 10**-10, 10**-9),
+                     b %in% c(15.8, 50, 158),
+                     tau %in% c(17.8, 31.6, 56.2)),
+       aes(x = logtau, y = dpeak_time_dlogtau)) +
+  geom_line(aes(group = paste(loga, logb)))
+
+ggplot(data = ysum_gradients,
+       aes(x = loga, y = logtau)) +
+  facet_wrap(~b) +
+  geom_contour_filled(aes(z = dpeak_time_dlogtau))
+ggplot(data = ysum_gradients,
+       aes(x = loga, y = logtau)) +
+  facet_wrap(~b) +
+  geom_contour_filled(aes(z = peak_time))
+
+
+
+#y = mx + (y1 - m x1)
+ggplot(data = temp,
+       aes(x = loga, y = logb)) +
+  geom_contour_filled(aes(z = peak_time)) +
+  facet_grid(~logtau) +
+  geom_point(aes(color = peak_time)) +
+  scale_color_viridis_c(name = "Peak\ntime (hr)") +
+  geom_abline(slope = -1, intercept = 1.7 - 10)
+ggplot(data = temp,
+       aes(x = loga, y = logtau)) +
+  geom_contour_filled(aes(z = peak_time)) +
+  facet_grid(~logb) +
+  geom_point(aes(color = peak_time)) +
+  scale_color_viridis_c(name = "Peak\ntime (hr)")  +
+  geom_abline(slope = 1, intercept = 1.5 + 10) +
+  #geom_abline(slope = 2, intercept = 1.5 + 20) +
+  NULL
+ggplot(data = temp,
+       aes(x = logb, y = logtau)) +
+  geom_contour_filled(aes(z = peak_time)) +
+  facet_grid(~loga) +
+  geom_point(aes(color = peak_time)) +
+  scale_color_viridis_c(name = "Peak\ntime (hr)")   +
+  geom_abline(slope = 1, intercept = 1.5 - 1.7)
+
+
+
 #Run 1: contour plots ----
 if (glob_make_statplots) {
   png("./statplots/fig4_run1_maxtime_a_tau_contour.png", width = 5, height = 4,
