@@ -1090,7 +1090,9 @@ ybig1 <- run1[[1]]
 #Set below 0 values to 0
 ybig1 <- mutate(group_by(ybig1, uniq_run, Pop),
                 Density = ifelse(Density < 0, 0, Density),
-                deriv = calc_deriv(y = Density, x = time, x_scale = 60))
+                deriv = calc_deriv(y = Density, x = time, x_scale = 60),
+                percap_deriv = calc_deriv(y = Density, x = time, percapita = TRUE,
+                                          blank = 0, window_width_n = 5))
 
 ysum1_1 <- summarize(group_by(filter(ybig1, Pop == "B"),
                           uniq_run, u_S1, u_S2, k, a_S1, a_S2,
@@ -1102,7 +1104,10 @@ ysum1_1 <- summarize(group_by(filter(ybig1, Pop == "B"),
                    first_below(y = Density, x = time,
                                threshold = 10**4, return = "x"),
                  run_time = max(time),
-                 death_slope = min(deriv, na.rm = TRUE))
+                 death_slope = min(deriv, na.rm = TRUE),
+                 max_percap = max_gc(percap_deriv),
+                 first_above_107 = first_above(y = Density, x = time, return = "x",
+                             threshold = 10**7))
 ysum1_2 <- summarize(group_by(filter(ybig1, Pop == "P"),
                               uniq_run, u_S1, u_S2, k, a_S1, a_S2,
                               tau, b, z, f_a, f_b, d, h, g1, g2,
@@ -1324,6 +1329,45 @@ if(glob_make_statplots) {
                   labels = "AUTO", label_size = 20))
   dev.off()
   
+  ggplot(data = ysum1,
+         aes(x = log10(a_S1), y = peak_dens)) +
+    geom_line(aes(group = paste(b, tau)))
+  
+  ggplot(data = ysum1,
+         aes(x = log10(a_S1), y = auc)) +
+    geom_line(aes(group = paste(b, tau)))
+  
+  ggplot(data = ysum1,
+         aes(x = log10(a_S1), y = extin_time_4)) +
+    geom_line(aes(group = paste(b, tau)))
+  
+  ggplot(data = ysum1,
+         aes(x = log10(a_S1), y = death_slope)) +
+    geom_line(aes(group = paste(b, tau)))
+  
+  ggplot(data = ysum1,
+         aes(x = log10(a_S1), y = max_percap)) +
+    geom_line(aes(group = paste(b, tau)),
+              alpha = 0.5,
+              position = position_jitter(width = 0.05, height = 0.000015))
+  
+  ggplot(data = ysum1,
+         aes(x = log10(a_S1), y = first_above_107)) +
+    geom_line(aes(group = paste(b, tau)),
+              alpha = 0.5,
+              position = position_jitter(width = 0.05, height = 0.1))
+  
+  ggplot(data = ysum1,
+         aes(x = log10(a_S1), y = peak_time)) +
+    geom_line(aes(group = paste(b, tau)))
+  
+  
+    
+  #todo: PCA
+  
+  
+  
+  
   f2a <-
     ggplot(data = filter(ybig1, Pop == "B", b == 50, tau == 31.6),
            aes(x = time/60, y = Density)) +
@@ -1529,30 +1573,30 @@ ggplot(data = ysum1,
   geom_contour_filled(aes(z = peak_time))
 
 
-#y = mx + (y1 - m x1)
-ggplot(data = temp,
-       aes(x = loga, y = logb)) +
-  geom_contour_filled(aes(z = peak_time)) +
-  facet_grid(~logtau) +
-  geom_point(aes(color = peak_time)) +
-  scale_color_viridis_c(name = "Peak\ntime (hr)") +
-  geom_abline(slope = -1, intercept = 1.7 - 10)
-ggplot(data = temp,
-       aes(x = loga, y = logtau)) +
-  geom_contour_filled(aes(z = peak_time)) +
-  facet_grid(~logb) +
-  geom_point(aes(color = peak_time)) +
-  scale_color_viridis_c(name = "Peak\ntime (hr)")  +
-  geom_abline(slope = 1, intercept = 1.5 + 10) +
-  #geom_abline(slope = 2, intercept = 1.5 + 20) +
-  NULL
-ggplot(data = temp,
-       aes(x = logb, y = logtau)) +
-  geom_contour_filled(aes(z = peak_time)) +
-  facet_grid(~loga) +
-  geom_point(aes(color = peak_time)) +
-  scale_color_viridis_c(name = "Peak\ntime (hr)")   +
-  geom_abline(slope = 1, intercept = 1.5 - 1.7)
+# #y = mx + (y1 - m x1)
+# ggplot(data = temp,
+#        aes(x = loga, y = logb)) +
+#   geom_contour_filled(aes(z = peak_time)) +
+#   facet_grid(~logtau) +
+#   geom_point(aes(color = peak_time)) +
+#   scale_color_viridis_c(name = "Peak\ntime (hr)") +
+#   geom_abline(slope = -1, intercept = 1.7 - 10)
+# ggplot(data = temp,
+#        aes(x = loga, y = logtau)) +
+#   geom_contour_filled(aes(z = peak_time)) +
+#   facet_grid(~logb) +
+#   geom_point(aes(color = peak_time)) +
+#   scale_color_viridis_c(name = "Peak\ntime (hr)")  +
+#   geom_abline(slope = 1, intercept = 1.5 + 10) +
+#   #geom_abline(slope = 2, intercept = 1.5 + 20) +
+#   NULL
+# ggplot(data = temp,
+#        aes(x = logb, y = logtau)) +
+#   geom_contour_filled(aes(z = peak_time)) +
+#   facet_grid(~loga) +
+#   geom_point(aes(color = peak_time)) +
+#   scale_color_viridis_c(name = "Peak\ntime (hr)")   +
+#   geom_abline(slope = 1, intercept = 1.5 - 1.7)
 
 
 
@@ -3670,3 +3714,4 @@ if (glob_make_statplots) {
           NULL)
   dev.off()
 }
+
