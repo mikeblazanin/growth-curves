@@ -5,6 +5,8 @@ library(dplyr)
 library(gcplyr)
 library(cowplot)
 library(ggh4x)
+library(scales)
+library(ggtext)
 
 #Setwd
 mywd_split <- strsplit(getwd(), split = "/")
@@ -1106,8 +1108,8 @@ ysum1_1 <- summarize(group_by(filter(ybig1, Pop == "B"),
                  run_time = max(time),
                  death_slope = min(deriv, na.rm = TRUE),
                  max_percap = max_gc(percap_deriv),
-                 first_above_107 = first_above(y = Density, x = time, return = "x",
-                             threshold = 10**7))
+                 first_above_15106 = first_above(y = Density, x = time, return = "x",
+                             threshold = 1.5*10**6))
 ysum1_2 <- summarize(group_by(filter(ybig1, Pop == "P"),
                               uniq_run, u_S1, u_S2, k, a_S1, a_S2,
                               tau, b, z, f_a, f_b, d, h, g1, g2,
@@ -1236,6 +1238,177 @@ if(glob_make_statplots) {
 
 # Run 1: B curves & stat v stat plots ----
 if(glob_make_statplots) {
+  ybig1_PCA <- filter(ybig1, Pop == "B")
+  ybig1_PCA <- interp_data(df = ybig1_PCA,
+                          x = "time", y = "Density",
+                          subset_by = ybig1_PCA$uniq_run)
+  ybig1_PCA <- mutate(group_by(ybig1_PCA, init_S1, u_S1, k),
+                     Dens_norm = Density - logis_func(S_0 = init_S1,
+                                                      u_S = u_S1,
+                                                      k = k,
+                                                      times = time))
+  
+  ybig1_PCA <- filter(ybig1_PCA, time %% 20 == 0)
+  
+  ybig1_PCA_wide <- tidyr::pivot_wider(ybig1_PCA,
+                                      names_from = time,
+                                      names_prefix = "t_",
+                                      values_from = c(Density, Dens_norm))
+  
+  mypca <- prcomp(
+    ybig1_PCA_wide[, grep("Density_", colnames(ybig1_PCA_wide))[-1]],
+    center = TRUE, scale = TRUE, retx = TRUE)
+  mypcanorm <- prcomp(
+    ybig1_PCA_wide[, grep("Dens_norm", colnames(ybig1_PCA_wide))[-1]],
+    center = TRUE, scale = TRUE, retx = TRUE)
+  
+  #Merge with orig data
+  colnames(mypcanorm$x) <- paste0("norm_", colnames(mypcanorm$x))
+  ybig1_PCA_wide <- cbind(ybig1_PCA_wide,
+                         as.data.frame(mypca$x),
+                         as.data.frame(mypcanorm$x))
+  ybig1_PCA_wide <- inner_join(ybig1_PCA_wide,
+                               ysum1)
+  
+  #Make plots
+  set.seed(1)
+  f2a <- ggplot(data = ysum1,
+         aes(x = log10(a_S1), y = max_percap)) +
+    geom_line(aes(group = paste(b, tau)),
+              alpha = 0.5,
+              position = position_jitter(width = 0.05, height = 0.000015)) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    labs(x = "Infection rate\n(/cfu/pfu/min)", 
+         y = "Maximum cellular\ngrowth rate (/min)") +
+    #geom_hline(yintercept = 0.0179, lty = 2) +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12))
+  
+  set.seed(1)
+  f2b <- ggplot(data = ysum1,
+         aes(x = log10(a_S1), y = first_above_15106)) +
+    geom_line(aes(group = paste(b, tau)),
+              alpha = 0.5,
+              position = position_jitter(width = 0.05, height = 0.01)) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    labs(x = "Infection rate\n(/cfu/pfu/min)", 
+         y = expression(atop("Time to reach",
+                             paste("1.5×", 10^6, " cfu/mL (min)")))) +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12))
+    
+  
+  f2c <- ggplot(data = ysum1,
+                aes(x = log10(a_S1), y = peak_dens)) +
+    geom_line(aes(group = paste(b, tau))) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    scale_y_continuous(labels = c("0", 
+                                  "2.5×10<sup>8</sup>", 
+                                  "5×10<sup>8</sup>",
+                                  "7.5×10<sup>8</sup>", 
+                                  "10<sup>9</sup>")) +
+    labs(x = "Infection rate\n(/cfu/pfu/min)", 
+         y = "Peak Bacterial\nDensity (cfu/mL)") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12),
+          axis.text.y = element_markdown())
+  
+  f2d <- ggplot(data = ysum1,
+         aes(x = log10(a_S1), y = peak_time/60)) +
+    geom_line(aes(group = paste(b, tau))) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    labs(x = "Infection rate\n(/cfu/pfu/min)", 
+         y = "Time of Peak\nBacterial Density (hr)") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12))
+  
+  f2e <- ggplot(data = ysum1,
+         aes(x = log10(a_S1), y = death_slope)) +
+    geom_line(aes(group = paste(b, tau))) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    scale_y_continuous(breaks = c(0, -5*10**8, -10**9, -1.5*10**9),
+                       labels = c(0, -5, -10, -15)) +
+    labs(x = "Infection rate\n(/cfu/pfu/min)", 
+         y = expression(atop("Maximum rate of",
+                             paste("decline (", 10^8, " cfu/hr)")))) +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12))
+  
+  f2f <- ggplot(data = ysum1,
+         aes(x = log10(a_S1), y = extin_time_4)) +
+    geom_line(aes(group = paste(b, tau))) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    labs(x = "Infection rate\n(/cfu/pfu/min)", 
+         y = "Extinction Time (hr)") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12))
+  
+  f2g <- ggplot(data = ysum1,
+         aes(x = log10(a_S1), y = auc)) +
+    geom_line(aes(group = paste(b, tau))) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    scale_y_continuous(breaks = c(0, 10**12, 2*10**12),
+                       labels = c("0", 
+                                  "10<sup>12</sup>", 
+                                  "2×10<sup>12</sup>")) +
+    labs(x = "Infection rate\n(/cfu/pfu/min)", 
+         y = "Area Under the\nCurve (hr cfu/mL)") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12),
+          axis.text.y = element_markdown())
+  
+  f2h <- ggplot(data = ybig1_PCA_wide,
+         aes(x = log10(a_S1), y = PC1)) +
+    geom_line(aes(group = paste(b, tau))) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    labs(x = "Infection rate\n(/cfu/pfu/min)", 
+         y = "PC1") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12))
+  
+  png("./statplots/fig2_run1_metricvaS1.png",
+      width = 9, height = 14, units = "in", res = 150)
+  print(plot_grid(f2a, f2b, f2c, f2d, f2e, f2f, f2g, f2h,
+                  ncol = 2,
+                  labels = "AUTO", label_size = 16))
+  dev.off()
+  
+  GGally::ggpairs(
+    data = ungroup(ybig1_PCA_wide),
+    columns = c("peak_dens", "peak_time", "extin_time_4", "auc", "PC1"),
+    columnLabels = c("Peak Bacterial\nDensity (cfu/mL)",
+                     "Time of Peak\nBacterial\nDensity (hr)",
+                     "Extinction\nTime (hr)",
+                     "Area Under\nthe Curve\n(hr cfu/mL)",
+                     "PC1"),
+    upper = list(continuous = "points"), lower = list(continuous = "points"),
+    diag = list(continuous = "autopointDiag")) +
+    theme_bw()
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   f3a <- ggplot(data = filter(ysum1, extin_flag == "none"),
            aes(x = peak_time/60, y = peak_dens)) +
       geom_point() +
@@ -1270,6 +1443,11 @@ if(glob_make_statplots) {
       labs(x = "Peak Time (hr)", y = "Extinction Time (hr)") +
       theme(axis.title = element_text(size = 20)) +
       NULL
+  
+  warning("add pca here!")
+  ggplot(data = ybig1_PCA_wide,
+         aes(x = PC1, y = peak_time)) +
+    geom_point(aes(color = peak_time))
   
   png("./statplots/fig3_run1_metricvmetric_subset.png",
       width = 15, height = 5, units = "in", res = 150)
@@ -1328,45 +1506,6 @@ if(glob_make_statplots) {
   print(plot_grid(fs1a, fs1b, fs1c, nrow = 1, align = "hv", axis = "tb",
                   labels = "AUTO", label_size = 20))
   dev.off()
-  
-  ggplot(data = ysum1,
-         aes(x = log10(a_S1), y = peak_dens)) +
-    geom_line(aes(group = paste(b, tau)))
-  
-  ggplot(data = ysum1,
-         aes(x = log10(a_S1), y = auc)) +
-    geom_line(aes(group = paste(b, tau)))
-  
-  ggplot(data = ysum1,
-         aes(x = log10(a_S1), y = extin_time_4)) +
-    geom_line(aes(group = paste(b, tau)))
-  
-  ggplot(data = ysum1,
-         aes(x = log10(a_S1), y = death_slope)) +
-    geom_line(aes(group = paste(b, tau)))
-  
-  ggplot(data = ysum1,
-         aes(x = log10(a_S1), y = max_percap)) +
-    geom_line(aes(group = paste(b, tau)),
-              alpha = 0.5,
-              position = position_jitter(width = 0.05, height = 0.000015))
-  
-  ggplot(data = ysum1,
-         aes(x = log10(a_S1), y = first_above_107)) +
-    geom_line(aes(group = paste(b, tau)),
-              alpha = 0.5,
-              position = position_jitter(width = 0.05, height = 0.1))
-  
-  ggplot(data = ysum1,
-         aes(x = log10(a_S1), y = peak_time)) +
-    geom_line(aes(group = paste(b, tau)))
-  
-  
-    
-  #todo: PCA
-  
-  
-  
   
   f2a <-
     ggplot(data = filter(ybig1, Pop == "B", b == 50, tau == 31.6),
