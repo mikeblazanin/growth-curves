@@ -1236,7 +1236,72 @@ if(glob_make_statplots) {
 }
 
 
-# Run 1: B curves & stat v stat plots ----
+# Run 1: B curves ----
+if(glob_make_statplots) {
+  f1a <-
+    ggplot(data = filter(ybig1, Pop == "B", b == 50, tau == 31.6),
+           aes(x = time/60, y = Density)) +
+    geom_line(aes(color = as.factor(a_S1), group = interaction(a_S1, b, tau)),
+              lwd = 1.5) +
+    labs(x = "Time (hr)", y = "Density (cfu/mL)") +
+    scale_x_continuous(limits = c(NA, 24), breaks = c(0, 6, 12, 18, 24)) +
+    geom_line(data = data.frame(x = 0:1440,
+                                y = logis_func(S_0 = 10**6, u_S = 0.0179,
+                                               k = 10**9, times = 0:1440)),
+              aes(x = x/60, y = y), lty = 2) +
+    scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
+                       name = "Infection rate\n(/cfu/pfu/min)") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 17),
+          legend.title = element_text(size = 14),
+          legend.text = element_text(size = 12)) +
+    NULL
+  
+  f1b <-
+    ggplot(data = filter(ybig1, Pop == "B", a_S1 == 10**-10, tau == 31.6),
+           aes(x = time/60, y = Density)) +
+    geom_line(aes(color = as.factor(b), group = interaction(a_S1, b, tau)),
+              lwd = 1.5) +
+    labs(x = "Time (hr)", y = "Density (cfu/mL)") +
+    scale_x_continuous(limits = c(NA, 12), breaks = c(0, 6, 12)) +
+    geom_line(data = data.frame(x = 0:1440,
+                                y = logis_func(S_0 = 10**6, u_S = 0.0179,
+                                               k = 10**9, times = 0:1440)),
+              aes(x = x/60, y = y), lty = 2) +
+    scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
+                       name = "Burst size") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 17),
+          legend.title = element_text(size = 14),
+          legend.text = element_text(size = 12))
+  
+  f1c <-
+    ggplot(data = filter(ybig1, Pop == "B", a_S1 == 10**-10, b == 50),
+           aes(x = time/60, y = Density)) +
+    geom_line(aes(color = as.factor(tau), group = interaction(a_S1, b, tau)),
+              lwd = 1.5) +
+    theme_bw() +
+    labs(x = "Time (hr)", y = "Density (cfu/mL)") +
+    scale_x_continuous(limits = c(NA, 13), breaks = c(0, 6, 12)) +
+    geom_line(data = data.frame(x = 0:1440,
+                                y = logis_func(S_0 = 10**6, u_S = 0.0179,
+                                               k = 10**9, times = 0:1440)),
+              aes(x = x/60, y = y), lty = 2) +
+    scale_color_manual(values = colorRampPalette(c("darkblue", "gray70"))(5),
+                       name = "Lysis time (min)") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 17),
+          legend.title = element_text(size = 14),
+          legend.text = element_text(size = 12))
+  
+  png("./statplots/fig1_run1_Bcurves_a_b_tau.png",
+      width = 5, height = 9, units = "in", res = 150)
+  print(plot_grid(f1a, f1b, f1c, ncol = 1, labels = "AUTO",
+                  label_size = 20, align = "hv", axis = "tb"))
+  dev.off()
+}
+
+# Run 1: stat v stat plots ----
 if(glob_make_statplots) {
   ybig1_PCA <- filter(ybig1, Pop == "B")
   ybig1_PCA <- interp_data(df = ybig1_PCA,
@@ -1381,9 +1446,14 @@ if(glob_make_statplots) {
                   labels = "AUTO", label_size = 16))
   dev.off()
   
+  png("./statplots/fig3_run1_allmetricsvmetrics_subset.png",
+      width = 9, height = 9, units = "in", res = 150)
   GGally::ggpairs(
-    data = ungroup(ybig1_PCA_wide),
-    columns = c("peak_dens", "peak_time", "extin_time_4", "auc", "PC1"),
+    data = mutate(ungroup(filter(ybig1_PCA_wide, extin_flag != "noextin")),
+                  peak_time_hr = peak_time/60,
+                  extin_time_4_hr = extin_time_4/60,
+                  auc_hr = auc/60),
+    columns = c("peak_dens", "peak_time_hr", "extin_time_4_hr", "auc_hr", "PC1"),
     columnLabels = c("Peak Bacterial\nDensity (cfu/mL)",
                      "Time of Peak\nBacterial\nDensity (hr)",
                      "Extinction\nTime (hr)",
@@ -1391,183 +1461,36 @@ if(glob_make_statplots) {
                      "PC1"),
     upper = list(continuous = "points"), lower = list(continuous = "points"),
     diag = list(continuous = "autopointDiag")) +
-    theme_bw()
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  f3a <- ggplot(data = filter(ysum1, extin_flag == "none"),
-           aes(x = peak_time/60, y = peak_dens)) +
-      geom_point() +
-      theme_bw() +
-      labs(x = "Peak Time (hr)", y = "Peak Density (cfu/mL)") +
-      geom_line(data = data.frame(x = 0:900,
-                                  y = logis_func(S_0 = 10**6, u_S = 0.0179,
-                                                 k = 10**9, times = 0:900)),
-                aes(x = x/60, y = y), lty = 2) +
-      theme(axis.title = element_text(size = 20)) +
-    NULL
-  
-  f3b <- ggplot(data = filter(ysum1, extin_flag == "none"),
-           aes(x = peak_time/60, y = auc/60)) +
-      geom_point() +
-      theme_bw() +
-      # geom_line(data = data.frame(
-      #   x = 0:540,
-      #   y = logis_def_integral(S_0 = 10**6, u_S = 0.0179,
-      #                          k = 10**9, times = 0:540)),
-      #   aes(x = x/60, y = y/60), lty = 2) +
-      scale_y_log10() +
-      labs(x = "Peak Time (hr)", y = "Area Under the Curve\n(hr cfu/mL)") +
-      theme(axis.title = element_text(size = 20)) +
-      NULL
-  
-  f3c <- ggplot(data = filter(ysum1, extin_flag == "none"),
-           aes(x = peak_time/60, y = extin_time_4/60)) +
-      geom_point() +
-      theme_bw() +
-      #geom_abline(slope = 1, intercept = 0, alpha = 0.5) +
-      labs(x = "Peak Time (hr)", y = "Extinction Time (hr)") +
-      theme(axis.title = element_text(size = 20)) +
-      NULL
-  
-  warning("add pca here!")
-  ggplot(data = ybig1_PCA_wide,
-         aes(x = PC1, y = peak_time)) +
-    geom_point(aes(color = peak_time))
-  
-  png("./statplots/fig3_run1_metricvmetric_subset.png",
-      width = 15, height = 5, units = "in", res = 150)
-  print(plot_grid(f3a, f3b, f3c, nrow = 1, align = "hv", axis = "tb",
-                  labels = "AUTO", label_size = 20))
+    theme_bw() +
+    theme(strip.text = element_text(size = 14),
+          axis.text.x = element_text(size = 12, angle = 45, hjust = 1))
   dev.off()
   
-  fs1a <-
-    ggplot(data = ysum1,
-           aes(x = peak_time/60, y = peak_dens)) +
-    geom_point(aes(shape = extin_flag)) +
+  png("./statplots/figS3_run1_allmetricsvmetrics_alldata.png",
+      width = 9, height = 9, units = "in", res = 150)
+  GGally::ggpairs(
+    data = mutate(ungroup(ybig1_PCA_wide),
+                  peak_time_hr = peak_time/60,
+                  extin_time_4_hr = extin_time_4/60,
+                  auc_hr = auc/60),
+    aes(shape = extin_flag),
+    columns = c("peak_dens", "peak_time_hr", "extin_time_4_hr", "auc_hr", "PC1"),
+    columnLabels = c("Peak Bacterial\nDensity (cfu/mL)",
+                     "Time of Peak\nBacterial\nDensity (hr)",
+                     "Extinction\nTime (hr)",
+                     "Area Under\nthe Curve\n(hr cfu/mL)",
+                     "PC1"),
+    upper = list(continuous = "points"), lower = list(continuous = "points"),
+    diag = list(continuous = "autopointDiag")) +
     scale_shape_manual(breaks = c("none", "neark", "noextin"),
                        values = c(16, 4, 3)) +
-    guides(shape = "none") +    theme_bw() +
-    labs(x = "Peak Time (hr)", y = "Peak Density (cfu/mL)") +
-    geom_line(data = data.frame(x = 0:1440,
-                                y = logis_func(S_0 = 10**6, u_S = 0.0179,
-                                               k = 10**9, times = 0:1440)),
-              aes(x = x/60, y = y), lty = 2) +
-    theme(axis.title = element_text(size = 20)) +
-    NULL
-  
-  fs1b <-
-    ggplot(data = ysum1,
-           aes(x = peak_time/60, y = auc/60)) +
-    geom_point(aes(shape = extin_flag)) +
-    scale_shape_manual(breaks = c("none", "neark", "noextin"),
-                       values = c(16, 4, 3)) +
-    guides(shape = "none") +
     theme_bw() +
-    geom_line(data = data.frame(
-      x = 0:1080,
-      y = logis_def_integral(S_0 = 10**6, u_S = 0.0179,
-                             k = 10**9, times = 0:1080)),
-      aes(x = x/60, y = y/60), lty = 2) +
-    scale_y_log10() +
-    labs(x = "Peak Time (hr)", y = "Area Under the Curve\n(hr cfu/mL)") +
-    theme(axis.title = element_text(size = 20)) +
-    NULL
-  
-  fs1c <-
-    ggplot(data = ysum1,
-           aes(x = peak_time/60, y = extin_time_4/60)) +
-    geom_point(aes(shape = extin_flag)) +
-    scale_shape_manual(breaks = c("none", "neark", "noextin"),
-                       values = c(16, 4, 3)) +
-    guides(shape = "none") +
-    theme_bw() +
-    geom_abline(slope = 1, intercept = 0, alpha = 0.5) +
-    labs(x = "Peak Time (hr)", y = "Extinction Time (hr)") +
-    theme(axis.title = element_text(size = 20)) +
-    NULL
-  
-  png("./statplots/figS1_run1_metricvmetric_alldata.png",
-      width = 15, height = 5, units = "in", res = 150)
-  print(plot_grid(fs1a, fs1b, fs1c, nrow = 1, align = "hv", axis = "tb",
-                  labels = "AUTO", label_size = 20))
+    theme(strip.text = element_text(size = 14),
+          axis.text.x = element_text(size = 12, angle = 45, hjust = 1)) +
+    guides(shape = "none")
   dev.off()
   
-  f2a <-
-    ggplot(data = filter(ybig1, Pop == "B", b == 50, tau == 31.6),
-           aes(x = time/60, y = Density)) +
-      geom_line(aes(color = as.factor(a_S1), group = interaction(a_S1, b, tau)),
-                lwd = 1.5) +
-      labs(x = "Time (hr)", y = "Density (cfu/mL)") +
-      scale_x_continuous(limits = c(NA, 24), breaks = c(0, 6, 12, 18, 24)) +
-      geom_line(data = data.frame(x = 0:1440,
-                                  y = logis_func(S_0 = 10**6, u_S = 0.0179,
-                                                 k = 10**9, times = 0:1440)),
-                aes(x = x/60, y = y), lty = 2) +
-      scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
-                         name = "Infection rate\n(/cfu/pfu/min)") +
-    theme_bw() +
-    theme(axis.title = element_text(size = 17),
-          legend.title = element_text(size = 14),
-          legend.text = element_text(size = 12)) +
-    NULL
   
-  f2b <-
-    ggplot(data = filter(ybig1, Pop == "B", a_S1 == 10**-10, tau == 31.6),
-           aes(x = time/60, y = Density)) +
-    geom_line(aes(color = as.factor(b), group = interaction(a_S1, b, tau)),
-              lwd = 1.5) +
-    labs(x = "Time (hr)", y = "Density (cfu/mL)") +
-    scale_x_continuous(limits = c(NA, 12), breaks = c(0, 6, 12)) +
-    geom_line(data = data.frame(x = 0:1440,
-                                y = logis_func(S_0 = 10**6, u_S = 0.0179,
-                                               k = 10**9, times = 0:1440)),
-              aes(x = x/60, y = y), lty = 2) +
-    scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
-                       name = "Burst size") +
-    theme_bw() +
-    theme(axis.title = element_text(size = 17),
-          legend.title = element_text(size = 14),
-          legend.text = element_text(size = 12))
-  
-  f2c <-
-    ggplot(data = filter(ybig1, Pop == "B", a_S1 == 10**-10, b == 50),
-           aes(x = time/60, y = Density)) +
-    geom_line(aes(color = as.factor(tau), group = interaction(a_S1, b, tau)),
-              lwd = 1.5) +
-    theme_bw() +
-    labs(x = "Time (hr)", y = "Density (cfu/mL)") +
-    scale_x_continuous(limits = c(NA, 13), breaks = c(0, 6, 12)) +
-    geom_line(data = data.frame(x = 0:1440,
-                                y = logis_func(S_0 = 10**6, u_S = 0.0179,
-                                               k = 10**9, times = 0:1440)),
-              aes(x = x/60, y = y), lty = 2) +
-    scale_color_manual(values = colorRampPalette(c("darkblue", "gray70"))(5),
-                       name = "Lysis time (min)") +
-    theme_bw() +
-    theme(axis.title = element_text(size = 17),
-          legend.title = element_text(size = 14),
-          legend.text = element_text(size = 12))
-  
-  png("./statplots/fig2_run1_Bcurves_a_b_tau.png",
-      width = 5, height = 9, units = "in", res = 150)
-  print(plot_grid(f2a, f2b, f2c, ncol = 1, labels = "AUTO",
-                  label_size = 20, align = "hv", axis = "tb"))
-  dev.off()
   
   png("./statplots/figS5_run1_deathslope_peakdens_alldata.png",
       width = 5, height = 4, units = "in", res = 150)
