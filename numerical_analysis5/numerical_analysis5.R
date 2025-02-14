@@ -1564,6 +1564,126 @@ if(glob_make_statplots) {
                   ncol = 2, align = 'hv', axis = 'lr',
                   labels = "AUTO", label_size = 16))
   dev.off()
+  
+  #tau x-axis (Fig S3)
+  set.seed(1)
+  fs3a <- ggplot(data = ysum1,
+                 aes(x = log10(tau), y = max_percap)) +
+    geom_line(aes(group = paste(a_S1, b)),
+              alpha = 0.5,
+              position = position_jitter(width = 0.01, height = 0.000008)) +
+    scale_x_continuous(breaks = c(1, 1.25, 1.5, 1.75, 2),
+                       labels = math_format(10^.x)) +
+    labs(x = "Lysis time (min)", 
+         y = "Maximum cellular\ngrowth rate (/min)") +
+    #geom_hline(yintercept = 0.0179, lty = 2) +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12))
+  
+  set.seed(1)
+  fs3b <- ggplot(data = ysum1,
+                 aes(x = log10(tau), y = first_above_15106)) +
+    geom_line(aes(group = paste(a_S1, b)),
+              alpha = 0.5,
+              position = position_jitter(width = 0.01, height = 0.01)) +
+    scale_x_continuous(breaks = c(1, 1.25, 1.5, 1.75, 2),
+                       labels = math_format(10^.x)) +
+    labs(x = "Lysis time (min)", 
+         y = expression(atop("Time to reach",
+                             paste("1.5×", 10^6, " cfu/mL (min)")))) +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12))
+  
+  fs3c <- ggplot(data = ysum1,
+                 aes(x = log10(tau), y = peak_dens)) +
+    geom_line(aes(group = paste(a_S1, b))) +
+    scale_x_continuous(breaks = c(1, 1.25, 1.5, 1.75, 2),
+                       labels = math_format(10^.x)) +
+    scale_y_continuous(labels = c("0", 
+                                  "2.5×10<sup>8</sup>", 
+                                  "5×10<sup>8</sup>",
+                                  "7.5×10<sup>8</sup>", 
+                                  "10<sup>9</sup>")) +
+    labs(x = "Lysis time (min)",
+         y = "Peak Bacterial\nDensity (cfu/mL)") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12),
+          axis.text.y = element_markdown())
+  
+  fs3d <- ggplot(data = ysum1,
+                 aes(x = log10(tau), y = peak_time/60)) +
+    geom_line(aes(group = paste(a_S1, b))) +
+    scale_x_continuous(breaks = c(1, 1.25, 1.5, 1.75, 2),
+                       labels = math_format(10^.x)) +
+    labs(x = "Lysis time (min)", 
+         y = "Time of Peak\nBacterial Density (hr)") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12))
+  
+  fs3e <- ggplot(data = ysum1,
+                 aes(x = log10(tau), y = death_slope)) +
+    geom_line(aes(group = paste(a_S1, b))) +
+    scale_x_continuous(breaks = c(1, 1.25, 1.5, 1.75, 2),
+                       labels = math_format(10^.x)) +
+    scale_y_continuous(breaks = c(0, -5*10**8, -10**9, -1.5*10**9),
+                       labels = c(0, -5, -10, -15)) +
+    labs(x = "Lysis time (min)", 
+         y = expression(atop("Maximum rate of",
+                             paste("decline (", 10^8, " cfu/hr)")))) +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12))
+  
+  fs3f <- ggplot(data = ysum1,
+                 aes(x = log10(tau), y = extin_time_4/60)) +
+    geom_line(aes(group = paste(a_S1, b))) +
+    scale_x_continuous(breaks = c(1, 1.25, 1.5, 1.75, 2),
+                       labels = math_format(10^.x)) +
+    labs(x = "Lysis time (min)", 
+         y = "Extinction Time (hr)") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12))
+  
+  fs3g <- ggplot(data = ysum1,
+                 aes(x = log10(tau), y = auc/60)) +
+    geom_line(aes(group = paste(a_S1, b))) +
+    scale_x_continuous(breaks = c(1, 1.25, 1.5, 1.75, 2),
+                       labels = math_format(10^.x)) +
+    scale_y_continuous(breaks = 0:4*10**10,
+                       labels = c("0",
+                                  "1×10<sup>10</sup>",
+                                  "2×10<sup>10</sup>",
+                                  "3×10<sup>10</sup>",
+                                  "4×10<sup>10</sup>")) +
+    labs(x = "Lysis time (min)", 
+         y = "Area Under the\nCurve (hr cfu/mL)") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12),
+          axis.text.y = element_markdown())
+  
+  fs3h <- ggplot(data = ybig1_PCA_wide,
+                 aes(x = log10(tau), y = PC1)) +
+    geom_line(aes(group = paste(a_S1, b))) +
+    scale_x_continuous(breaks = c(1, 1.25, 1.5, 1.75, 2),
+                       labels = math_format(10^.x)) +
+    labs(x = "Lysis time (min)", 
+         y = "PC1") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12))
+  
+  png("./statplots/figS3_run1_metricvtau.png",
+      width = 9, height = 14, units = "in", res = 150)
+  print(plot_grid(fs3a, fs3b, fs3c, fs3d, fs3e, fs3f, fs3g, fs3h,
+                  ncol = 2, align = 'hv', axis = 'lr',
+                  labels = "AUTO", label_size = 16))
+  dev.off()
 }
   
   
