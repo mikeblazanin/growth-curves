@@ -7,6 +7,7 @@ library(cowplot)
 library(ggh4x)
 library(scales)
 library(ggtext)
+library(tidyr)
 
 #Setwd
 mywd_split <- strsplit(getwd(), split = "/")
@@ -1096,6 +1097,7 @@ ybig1 <- mutate(group_by(ybig1, uniq_run, Pop),
                 percap_deriv = calc_deriv(y = Density, x = time, percapita = TRUE,
                                           blank = 0, window_width_n = 5))
 
+#Main summarization
 ysum1_1 <- summarize(group_by(filter(ybig1, Pop == "B"),
                           uniq_run, u_S1, u_S2, k, a_S1, a_S2,
                           tau, b, z, f_a, f_b, d, h, g1, g2,
@@ -1124,6 +1126,7 @@ ysum1_3 <- summarize(group_by(filter(ybig1, Pop %in% c("B", "P")),
 
 ysum1 <- full_join(full_join(ysum1_1, ysum1_2), ysum1_3)
 
+#Add phage growth
 ysum1 <- mutate(
   ysum1,
   extin_flag = ifelse(is.na(extin_time_4), "noextin",
@@ -1132,6 +1135,7 @@ ysum1 <- mutate(
   phage_r = (log(phage_final)-log(init_moi*(init_S1+init_S2)))/
     extin_time_4)
 
+#Run PCA
 ybig1_PCA <- filter(ybig1, Pop == "B")
 ybig1_PCA <- interp_data(df = ybig1_PCA,
                          x = "time", y = "Density",
@@ -1156,7 +1160,7 @@ mypcanorm <- prcomp(
   ybig1_PCA_wide[, grep("Dens_norm", colnames(ybig1_PCA_wide))[-1]],
   center = TRUE, scale = TRUE, retx = TRUE)
 
-#Merge with orig data
+#Merge PCA with orig data
 colnames(mypcanorm$x) <- paste0("norm_", colnames(mypcanorm$x))
 ybig1_PCA_wide <- cbind(ybig1_PCA_wide,
                         as.data.frame(mypca$x),
@@ -1164,11 +1168,43 @@ ybig1_PCA_wide <- cbind(ybig1_PCA_wide,
 ybig1_PCA_wide <- inner_join(ybig1_PCA_wide,
                              ysum1)
 
-#Add PC1 to ysum1
 ysum1 <- left_join(
   ysum1,
   select(ybig1_PCA_wide, 
          !starts_with("Dens") & !(PC6:PC125) & !(norm_PC6:norm_PC125)))
+
+#Add gradients
+ysum1 <- mutate(ungroup(ysum1),
+                loga = log10(a_S1),
+                logb = log10(b),
+                logtau = log10(tau),
+                norma = as.vector(scale(loga, center = -10, scale = 4)),
+                normb = as.vector(scale(logb, center = 1 + log10(5),
+                                        scale = 2)),
+                normtau = as.vector(scale(logtau, scale = FALSE)))
+
+central_diff <- function(x, y, end_behavior = "NA"){
+  stopifnot(end_behavior %in% c("NA", "back-forwards"))
+  res <- pracma::gradient(F = y, h1 = x)
+  if(end_behavior == "NA") {res[1] <- NA; res[length(res)] <- NA}
+  return(res)
+}
+
+ysum1 <- 
+  mutate(group_by(ysum1, logb, logtau),
+         across(.cols = c(peak_dens, peak_time, auc, extin_time_4, PC1),
+                list("dloga" = ~central_diff(y = .x, x = loga),
+                     "dnorma" = ~central_diff(y = .x, x = norma))))
+ysum1 <- 
+  mutate(group_by(ysum1, loga, logtau),
+         across(.cols = c(peak_dens, peak_time, auc, extin_time_4, PC1),
+                list("dlogb" = ~central_diff(y = .x, x = logb),
+                     "dnormb" = ~central_diff(y = .x, x = normb))))
+ysum1 <- 
+  mutate(group_by(ysum1, loga, logb),
+         across(.cols = c(peak_dens, peak_time, auc, extin_time_4, PC1),
+                list("dlogtau" = ~central_diff(y = .x, x = logtau),
+                     "dnormtau" = ~central_diff(y = .x, x = normtau))))
 
 # Run 1: example curves for conceptual figure ----
 if(glob_make_statplots) {
@@ -1753,30 +1789,9 @@ if(glob_make_statplots) {
   }
   print(fs4)
   dev.off()
-  
-  
-  
-  png("./statplots/figS5_run1_deathslope_peakdens_alldata.png",
-      width = 5, height = 4, units = "in", res = 150)
-  print(ggplot(data = ysum1,
-               aes(x = peak_dens, y = -death_slope, shape = extin_flag)) +
-          geom_point() +
-          scale_shape_manual(breaks = c("none", "neark", "noextin"),
-                             values = c(16, 4, 3)) +
-          scale_y_log10() +
-          scale_x_log10() +
-          labs(x = "Peak Density (cfu/mL)", 
-               y = "Maximum death rate\n(cfu/mL/hr)") +
-          guides(shape = "none") +
-          theme_bw() +
-          theme(axis.title = element_text(size = 20)) +
-          NULL)
-  dev.off()
-}
 
-# Run 1: maxtime extintime supp plots ----
-if(glob_make_statplots) {
-  fs2a <- ggplot(data = ysum1,
+  # maxtime extintime extra plots
+  fexa <- ggplot(data = ysum1,
                aes(x = peak_time/60, y = extin_time_4/60 - peak_time/60,
                    color = as.factor(a_S1), shape = extin_flag)) +
           geom_point() +
@@ -1796,7 +1811,7 @@ if(glob_make_statplots) {
                 legend.title = element_text(size = 20),
                 legend.text = element_text(size = 16))
   
-  fs2b <- ggplot(data = ysum1,
+  fexb <- ggplot(data = ysum1,
                  aes(x = peak_time/60, y = extin_time_4/peak_time,
                      color = as.factor(a_S1), shape = extin_flag)) +
     geom_point() +
@@ -1815,7 +1830,7 @@ if(glob_make_statplots) {
           legend.title = element_text(size = 20),
           legend.text = element_text(size = 16))
   
-  fs2c <- ggplot(data = ysum1,
+  fexc <- ggplot(data = ysum1,
                  aes(x = phage_bactpeak, y = extin_time_4/peak_time,
                      color = as.factor(a_S1), shape = extin_flag)) +
     geom_point() +
@@ -1835,11 +1850,11 @@ if(glob_make_statplots) {
           legend.title = element_text(size = 20),
           legend.text = element_text(size = 16))
   
-  png("./statplots/figS2_run1_extintime_peaktime_relationships.png",
+  png("./statplots/extrafigure_run1_extintime_peaktime_relationships.png",
       width = 15, height = 5, units = "in", res = 150)
-  print(plot_grid(fs2a + guides(shape = "none", color = "none"),
-                  fs2b + guides(shape = "none", color = "none"), 
-                  fs2c, 
+  print(plot_grid(fexa + guides(shape = "none", color = "none"),
+                  fexb + guides(shape = "none", color = "none"), 
+                  fexc, 
                   nrow = 1, labels = "AUTO", rel_widths = c(1, 1, 1.4),
                   label_size = 20, align = "hv", axis = "tb"))
   dev.off()
@@ -1849,12 +1864,12 @@ if(glob_make_statplots) {
 if (glob_make_statplots) {
   f4a <- 
     ggplot(data = filter(ysum1, extin_flag == "none"),
-           aes(x = phage_r*60, y = peak_dens)) +
+           aes(x = phage_r*60, y = log10(peak_dens))) +
     geom_point() +
     scale_x_log10() + 
-    scale_y_log10() +
+    scale_y_continuous(labels = math_format(10^.x)) +
     labs(x = "Average phage\n growth rate", 
-         y = "Peak Density (cfu/mL)") +
+         y = "Peak Bacterial\nDensity (cfu/mL)") +
     theme_bw() +
     guides(shape = "none") +
     theme(axis.title = element_text(size = 16))
@@ -1866,7 +1881,7 @@ if (glob_make_statplots) {
     scale_x_log10() + 
     scale_y_log10() +
     labs(x = "Average phage\n growth rate", 
-         y = "Peak Time (hr)") +
+         y = "Time of Peak\nBacterial Density (hr)") +
     theme_bw() +
     guides(shape = "none") +
     theme(axis.title = element_text(size = 16))
@@ -1882,23 +1897,22 @@ if (glob_make_statplots) {
     theme_bw() +
     guides(shape = "none") +
     theme(axis.title = element_text(size = 16))
-  png("./statplots/run1_phager_extintime_subset_nocol.png", width = 5, height = 4,
+  png("./statplots/extrafigure_run1_phager_extintime_subset_nocol.png", width = 5, height = 4,
       units = "in", res = 300)
   print(f4c)
   dev.off()
   
   f4d <- 
     ggplot(data = filter(ysum1, extin_flag == "none"),
-           aes(x = phage_r*60, y = auc/60)) +
+           aes(x = phage_r*60, y = log10(auc/60))) +
     geom_point() +
     scale_x_log10() + 
-    scale_y_log10() +
+    scale_y_continuous(labels = math_format(10^.x)) +
     labs(x = "Average phage\n growth rate", 
          y = "Area Under the\nCurve (hr cfu/mL)") +
     theme_bw() +
     guides(shape = "none") +
-    theme(axis.title = element_text(size = 16),
-          axis.text.y = element_markdown())
+    theme(axis.title = element_text(size = 16))
   
   f4e <- 
     ggplot(data = filter(ysum1, extin_flag == "none"),
@@ -1911,7 +1925,6 @@ if (glob_make_statplots) {
     guides(shape = "none") +
     theme(axis.title = element_text(size = 16))
   
-  
   png("./statplots/fig4_run1_phager_metrics_subset.png", 
       width = 11, height = 7, units = "in", res = 300)
   print(plot_grid(f4a, f4b, f4c, f4d, f4e,
@@ -1921,89 +1934,81 @@ if (glob_make_statplots) {
   
   fs5a <- 
     ggplot(data = ysum1,
-           aes(x = peak_dens, y = phage_r*60, color = as.factor(b),
-               shape = extin_flag)) +
+           aes(x = phage_r*60, y = log10(peak_dens), shape = extin_flag)) +
     geom_point() +
-    scale_color_viridis_d(end = 0.95, name = "Burst size") +
+    scale_x_log10() + 
+    scale_y_continuous(labels = math_format(10^.x)) +
     scale_shape_manual(breaks = c("none", "neark", "noextin"),
                        values = c(16, 4, 3)) +
-    scale_x_log10() + 
-    scale_y_log10() +
-    labs(x = "Peak Density (cfu/mL)", 
-         y = "Average phage\ngrowth rate (e-fold/hr)") +
+    labs(x = "Average phage\n growth rate", 
+         y = "Peak Density (cfu/mL)") +
     theme_bw() +
     guides(shape = "none") +
-    theme(axis.title = element_text(size = 20),
-          legend.title = element_text(size = 18),
-          legend.text = element_text(size = 14))
+    theme(axis.title = element_text(size = 16))
   
   fs5b <- 
     ggplot(data = ysum1,
-           aes(x = peak_time/60, y = phage_r*60, color = as.factor(b),
-               shape = extin_flag)) +
+           aes(x = phage_r*60, y = peak_time/60, shape = extin_flag)) +
     geom_point() +
-    scale_color_viridis_d(end = 0.95, name = "Burst size") +
-    scale_shape_manual(breaks = c("none", "neark", "noextin"),
-                       values = c(16, 4, 3)) +
     scale_x_log10() + 
     scale_y_log10() +
-    labs(x = "Peak Time (hr)", 
-         y = "Average phage\ngrowth rate (e-fold/hr)") +
+    scale_shape_manual(breaks = c("none", "neark", "noextin"),
+                       values = c(16, 4, 3)) +
+    labs(x = "Average phage\n growth rate", 
+         y = "Peak Time (hr)") +
     theme_bw() +
     guides(shape = "none") +
-    theme(axis.title = element_text(size = 20),
-          legend.title = element_text(size = 18),
-          legend.text = element_text(size = 14))
+    theme(axis.title = element_text(size = 16))
   
   fs5c <- 
     ggplot(data = ysum1,
-           aes(x = auc, y = phage_r*60, color = as.factor(b),
-               shape = extin_flag)) +
+           aes(x = phage_r*60, y = extin_time_4/60, shape = extin_flag)) +
     geom_point() +
-    scale_color_viridis_d(end = 0.95, name = "Burst size") +
-    scale_shape_manual(breaks = c("none", "neark", "noextin"),
-                       values = c(16, 4, 3)) +
     scale_x_log10() + 
     scale_y_log10() +
-    labs(x = "Area Under the Curve\n(hr cfu/mL)", 
-         y = "Average phage\ngrowth rate (e-fold/hr)") +
+    scale_shape_manual(breaks = c("none", "neark", "noextin"),
+                       values = c(16, 4, 3)) +
+    labs(x = "Average phage\ngrowth rate", 
+         y = "Extinction time (hr)") +
     theme_bw() +
     guides(shape = "none") +
-    theme(axis.title = element_text(size = 20),
-          legend.title = element_text(size = 18),
-          legend.text = element_text(size = 14))
+    theme(axis.title = element_text(size = 16))
   
   fs5d <- 
     ggplot(data = ysum1,
-           aes(x = extin_time_4/60, y = phage_r*60, color = as.factor(b),
-               shape = extin_flag)) +
+           aes(x = phage_r*60, y = log10(auc/60), shape = extin_flag)) +
     geom_point() +
-    scale_color_viridis_d(end = 0.95, name = "Burst size") +
+    scale_x_log10() + 
+    scale_y_continuous(labels = math_format(10^.x)) +
     scale_shape_manual(breaks = c("none", "neark", "noextin"),
                        values = c(16, 4, 3)) +
-    scale_x_log10() + 
-    scale_y_log10() +
-    labs(x = "Extinction time (hr)", 
-         y = "Average phage\ngrowth rate (e-fold/hr)") +
+    labs(x = "Average phage\n growth rate", 
+         y = "Area Under the\nCurve (hr cfu/mL)") +
     theme_bw() +
     guides(shape = "none") +
-    theme(axis.title = element_text(size = 20),
-          legend.title = element_text(size = 18),
-          legend.text = element_text(size = 14))
+    theme(axis.title = element_text(size = 16))
   
-  png("./statplots/figS5_run1_phager_peakextinauc_alldata.png", 
-      width = 10, height = 8, units = "in", res = 300)
-  print(plot_grid(
-    plot_grid(fs5a + guides(color = "none"), 
-              fs5b + guides(color = "none"), 
-              fs5c + guides(color = "none"),
-              fs5d + guides(color = "none"),
-              ncol = 2, labels = c("A", "B", "C", "D"),
-              align = "hv", axis = "tb", label_size = 20),
-    get_legend(fs5a), rel_widths = c(1, 0.2)))
+  fs5e <- 
+    ggplot(data = ysum1,
+           aes(x = phage_r*60, y = PC1, shape = extin_flag)) +
+    geom_point() +
+    scale_x_log10() + 
+    scale_shape_manual(breaks = c("none", "neark", "noextin"),
+                       values = c(16, 4, 3)) +
+    labs(x = "Average phage\n growth rate", 
+         y = "PC1") +
+    theme_bw() +
+    guides(shape = "none") +
+    theme(axis.title = element_text(size = 16))
+  
+  png("./statplots/figS5_run1_phager_metrics_alldata.png", 
+      width = 11, height = 7, units = "in", res = 300)
+  print(plot_grid(fs5a, fs5b, fs5c, fs5d, fs5e,
+                  nrow = 2, labels = c("A", "B", "C", "D", "E"),
+                  align = "hv", axis = "lr", label_size = 20))
   dev.off()
   
-  png("./statplots/figS6_run1_finalphagevpeakdens_alldata.png", 
+  png("./statplots/extrafigure_run1_finalphagevpeakdens_alldata.png", 
       width = 5.5, height = 3.5, units = "in", res = 300)
   print(
     ggplot(data = ysum1,
@@ -2027,86 +2032,6 @@ if (glob_make_statplots) {
 }
 
 #Run 1: contour plots ----
-ysum1 <- mutate(ungroup(ysum1),
-                loga = log10(a_S1),
-                logb = log10(b),
-                logtau = log10(tau),
-                norma = as.vector(scale(loga)),
-                normb = as.vector(scale(logb)),
-                normtau = as.vector(scale(logtau)))
-
-central_diff <- function(x, y, end_behavior = "NA"){
-  stopifnot(end_behavior %in% c("NA", "back-forwards"))
-  res <- pracma::gradient(F = y, h1 = x)
-  if(end_behavior == "NA") {res[1] <- NA; res[length(res)] <- NA}
-  return(res)
-}
-
-ysum1 <- 
-  mutate(group_by(ysum1, logb, logtau),
-         dpeaktime_dloga = central_diff(y = peak_time, x = loga))
-ysum1 <- 
-  mutate(group_by(ysum1, loga, logtau),
-         dpeaktime_dlogb = central_diff(y = peak_time, x = logb))
-ysum1 <- 
-  mutate(group_by(ysum1, loga, logb),
-         dpeaktime_dlogtau = central_diff(y = peak_time, x = logtau))
-
-ggplot(data = ysum1,
-       aes(x = loga, y = dpeaktime_dloga)) +
-  geom_line(aes(group = paste(logb, logtau)))
-ggplot(data = ysum1,
-       aes(x = logb, y = dpeaktime_dlogb)) +
-  geom_line(aes(group = paste(loga, logtau)))
-ggplot(data = ysum1,
-       aes(x = logtau, y = dpeaktime_dlogtau)) +
-  geom_line(aes(group = paste(loga, logb)))
-
-
-ggplot(data = ysum1,
-       aes(x = loga, y = logtau)) +
-  facet_wrap(~b) +
-  geom_contour_filled(aes(z = dpeaktime_dlogtau))
-ggplot(data = ysum1,
-       aes(x = loga, y = logtau)) +
-  facet_wrap(~b) +
-  geom_contour_filled(aes(z = peak_time))
-ggplot(data = ysum1,
-       aes(x = logb, y = logtau)) +
-  facet_wrap(~loga) +
-  geom_contour_filled(aes(z = dpeaktime_dlogb))
-ggplot(data = ysum1,
-       aes(x = logb, y = logtau)) +
-  facet_wrap(~loga) +
-  geom_contour_filled(aes(z = peak_time))
-
-
-# #y = mx + (y1 - m x1)
-# ggplot(data = temp,
-#        aes(x = loga, y = logb)) +
-#   geom_contour_filled(aes(z = peak_time)) +
-#   facet_grid(~logtau) +
-#   geom_point(aes(color = peak_time)) +
-#   scale_color_viridis_c(name = "Peak\ntime (hr)") +
-#   geom_abline(slope = -1, intercept = 1.7 - 10)
-# ggplot(data = temp,
-#        aes(x = loga, y = logtau)) +
-#   geom_contour_filled(aes(z = peak_time)) +
-#   facet_grid(~logb) +
-#   geom_point(aes(color = peak_time)) +
-#   scale_color_viridis_c(name = "Peak\ntime (hr)")  +
-#   geom_abline(slope = 1, intercept = 1.5 + 10) +
-#   #geom_abline(slope = 2, intercept = 1.5 + 20) +
-#   NULL
-# ggplot(data = temp,
-#        aes(x = logb, y = logtau)) +
-#   geom_contour_filled(aes(z = peak_time)) +
-#   facet_grid(~loga) +
-#   geom_point(aes(color = peak_time)) +
-#   scale_color_viridis_c(name = "Peak\ntime (hr)")   +
-#   geom_abline(slope = 1, intercept = 1.5 - 1.7)
-
-
 if (glob_make_statplots) {
   png("./statplots/fig4_run1_maxtime_a_tau_contour.png", width = 5, height = 4,
       units = "in", res = 300)
@@ -2394,6 +2319,65 @@ if (glob_make_statplots) {
     rel_widths = c(1, .33),
     ncol = 2))
   dev.off()
+  
+  #Gradient plots
+  ggplot(data = ysum1,
+         aes(x = loga, y = dpeaktime_dloga)) +
+    geom_line(aes(group = paste(logb, logtau)))
+  ggplot(data = ysum1,
+         aes(x = logb, y = dpeaktime_dlogb)) +
+    geom_line(aes(group = paste(loga, logtau)))
+  ggplot(data = ysum1,
+         aes(x = logtau, y = dpeaktime_dlogtau)) +
+    geom_line(aes(group = paste(loga, logb)))
+  
+  ggplot(data = pivot_longer(ysum1,
+                             cols = starts_with("dpeaktime_dlog"),
+                             names_to = "wrt",
+                             values_to = "derivative"),
+         aes(x = abs(derivative))) +
+    geom_histogram() +
+    facet_grid(wrt ~ .)
+  ggplot(data = pivot_longer(ysum1,
+                             cols = starts_with("dpeaktime_dnorm"),
+                             names_to = "wrt",
+                             names_prefix = "dpeaktime_dnorm",
+                             values_to = "derivative"),
+         aes(x = abs(derivative))) +
+    geom_histogram() +
+    facet_grid(wrt ~ .)
+  
+  ggplot(data = ysum1,
+         aes(x = norma, y = dpeaktime_dnorma)) +
+    geom_line(aes(group = paste(logb, logtau)))
+  ggplot(data = ysum1,
+         aes(x = normb, y = dpeaktime_dnormb)) +
+    geom_line(aes(group = paste(loga, logtau)))
+  ggplot(data = ysum1,
+         aes(x = normtau, y = dpeaktime_dnormtau)) +
+    geom_line(aes(group = paste(loga, logb)))
+  
+  
+  
+  ggplot(data = ysum1,
+         aes(x = loga, y = logtau)) +
+    facet_wrap(~b) +
+    geom_contour_filled(aes(z = dpeaktime_dlogtau))
+  ggplot(data = ysum1,
+         aes(x = loga, y = logtau)) +
+    facet_wrap(~b) +
+    geom_contour_filled(aes(z = peak_time))
+  ggplot(data = ysum1,
+         aes(x = logb, y = logtau)) +
+    facet_wrap(~loga) +
+    geom_contour_filled(aes(z = dpeaktime_dlogb))
+  ggplot(data = ysum1,
+         aes(x = logb, y = logtau)) +
+    facet_wrap(~loga) +
+    geom_contour_filled(aes(z = peak_time))
+  
+  
+  
 }
 
 # Run 2: bact traits ----
