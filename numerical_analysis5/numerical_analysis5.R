@@ -1347,7 +1347,8 @@ if(glob_make_statplots) {
          aes(x = log10(a_S1), y = max_percap)) +
     geom_line(aes(group = paste(b, tau)),
               alpha = 0.5,
-              position = position_jitter(width = 0.05, height = 0.000015)) +
+              position = position_jitter(width = 0.05, height = 0.0001)) +
+    scale_y_continuous(limits = c(0, 0.018), breaks = c(0, 0.009, 0.018)) +
     scale_x_continuous(labels = math_format(10^.x)) +
     labs(x = "Infection rate\n(/cfu/pfu/min)", 
          y = "Maximum cellular\ngrowth rate (/min)") +
@@ -1361,7 +1362,8 @@ if(glob_make_statplots) {
          aes(x = log10(a_S1), y = first_above_15106)) +
     geom_line(aes(group = paste(b, tau)),
               alpha = 0.5,
-              position = position_jitter(width = 0.05, height = 0.01)) +
+              position = position_jitter(width = 0.05, height = 0.2)) +
+    ylim(0, NA) +
     scale_x_continuous(labels = math_format(10^.x)) +
     labs(x = "Infection rate\n(/cfu/pfu/min)", 
          y = expression(atop("Time to reach",
@@ -1459,7 +1461,8 @@ if(glob_make_statplots) {
                 aes(x = log10(b/5), y = max_percap)) +
     geom_line(aes(group = paste(a_S1, tau)),
               alpha = 0.5,
-              position = position_jitter(width = 0.05, height = 0.000015)) +
+              position = position_jitter(width = 0.05, height = 0.0001)) +
+    scale_y_continuous(limits = c(0, 0.018), breaks = c(0, 0.009, 0.018)) +
     scale_x_continuous(labels = math_format(5%*%10^.x)) +
     labs(x = "Burst size", 
          y = "Maximum cellular\ngrowth rate (/min)") +
@@ -1473,7 +1476,8 @@ if(glob_make_statplots) {
                 aes(x = log10(b/5), y = first_above_15106)) +
     geom_line(aes(group = paste(a_S1, tau)),
               alpha = 0.5,
-              position = position_jitter(width = 0.05, height = 0.01)) +
+              position = position_jitter(width = 0.05, height = 0.2)) +
+    ylim(0, NA) +
     scale_x_continuous(labels = math_format(5%*%10^.x)) +
     labs(x = "Burst size", 
          y = expression(atop("Time to reach",
@@ -1571,7 +1575,8 @@ if(glob_make_statplots) {
                  aes(x = log10(tau), y = max_percap)) +
     geom_line(aes(group = paste(a_S1, b)),
               alpha = 0.5,
-              position = position_jitter(width = 0.01, height = 0.000008)) +
+              position = position_jitter(width = 0.05, height = 0.0001)) +
+    scale_y_continuous(limits = c(0, 0.018), breaks = c(0, 0.009, 0.018)) +
     scale_x_continuous(breaks = c(1, 1.25, 1.5, 1.75, 2),
                        labels = math_format(10^.x)) +
     labs(x = "Lysis time (min)", 
@@ -1586,7 +1591,8 @@ if(glob_make_statplots) {
                  aes(x = log10(tau), y = first_above_15106)) +
     geom_line(aes(group = paste(a_S1, b)),
               alpha = 0.5,
-              position = position_jitter(width = 0.01, height = 0.01)) +
+              position = position_jitter(width = 0.05, height = 0.2)) +
+    ylim(0, NA) +
     scale_x_continuous(breaks = c(1, 1.25, 1.5, 1.75, 2),
                        labels = math_format(10^.x)) +
     labs(x = "Lysis time (min)", 
@@ -1709,20 +1715,25 @@ if(glob_make_statplots) {
           axis.text.x = element_text(size = 12, angle = 45, hjust = 1))
   dev.off()
   
-  png("./statplots/figS3_run1_allmetricsvmetrics_alldata.png",
-      width = 9, height = 9, units = "in", res = 150)
-  GGally::ggpairs(
+  png("./statplots/figS4_run1_allmetricsvmetrics_alldata.png",
+      width = 14, height = 14, units = "in", res = 150)
+  fs4 <- GGally::ggpairs(
     data = mutate(ungroup(ybig1_PCA_wide),
                   peak_time_hr = peak_time/60,
                   extin_time_4_hr = extin_time_4/60,
                   auc_hr = auc/60),
     aes(shape = extin_flag),
-    columns = c("peak_dens", "peak_time_hr", "extin_time_4_hr", "auc_hr", "PC1"),
+    columns = c("peak_dens", "peak_time_hr", 
+                "extin_time_4_hr", "auc_hr", "PC1",
+                "max_percap", "first_above_15106", "death_slope"),
     columnLabels = c("Peak Bacterial\nDensity (cfu/mL)",
                      "Time of Peak\nBacterial\nDensity (hr)",
                      "Extinction\nTime (hr)",
                      "Area Under\nthe Curve\n(hr cfu/mL)",
-                     "PC1"),
+                     "PC1",
+                     "Maximum\ncellular\ngrowth rate\n(/min)",
+                     "Time to reach\n1.5×10^6 cfu/mL\n(min)",
+                     "Maximum rate\nof decline\n(10^8 cfu/hr)"),
     upper = list(continuous = "points"), lower = list(continuous = "points"),
     diag = list(continuous = "autopointDiag")) +
     scale_shape_manual(breaks = c("none", "neark", "noextin"),
@@ -1731,6 +1742,16 @@ if(glob_make_statplots) {
     theme(strip.text = element_text(size = 14),
           axis.text.x = element_text(size = 12, angle = 45, hjust = 1)) +
     guides(shape = "none")
+  #Modify x and y limits
+  for (i in 1:8) {
+    fs4[6, i] <- fs4[6, i] + 
+      scale_y_continuous(limits = c(0, 0.018), breaks = c(0, 0.009, 0.018))
+    fs4[i, 6] <- fs4[i, 6] +
+        scale_x_continuous(limits = c(0, 0.018), breaks = c(0, 0.009, 0.018))
+    fs4[7, i] <- fs4[7, i] + scale_y_continuous(limits = c(0, NA))
+    fs4[i, 7] <- fs4[i, 7] + scale_x_continuous(limits = c(0, NA))
+  }
+  print(fs4)
   dev.off()
   
   
@@ -1824,6 +1845,188 @@ if(glob_make_statplots) {
   dev.off()
 }
 
+# Run 1: phage growth plots ----
+if (glob_make_statplots) {
+  f4a <- 
+    ggplot(data = filter(ysum1, extin_flag == "none"),
+           aes(x = phage_r*60, y = peak_dens)) +
+    geom_point() +
+    scale_x_log10() + 
+    scale_y_log10() +
+    labs(x = "Average phage\n growth rate", 
+         y = "Peak Density (cfu/mL)") +
+    theme_bw() +
+    guides(shape = "none") +
+    theme(axis.title = element_text(size = 16))
+  
+  f4b <- 
+    ggplot(data = filter(ysum1, extin_flag == "none"),
+           aes(x = phage_r*60, y = peak_time/60)) +
+    geom_point() +
+    scale_x_log10() + 
+    scale_y_log10() +
+    labs(x = "Average phage\n growth rate", 
+         y = "Peak Time (hr)") +
+    theme_bw() +
+    guides(shape = "none") +
+    theme(axis.title = element_text(size = 16))
+  
+  f4c <- 
+    ggplot(data = filter(ysum1, extin_flag == "none"),
+           aes(x = phage_r*60, y = extin_time_4/60)) +
+    geom_point() +
+    scale_x_log10() + 
+    scale_y_log10() +
+    labs(x = "Average phage\ngrowth rate", 
+         y = "Extinction time (hr)") +
+    theme_bw() +
+    guides(shape = "none") +
+    theme(axis.title = element_text(size = 16))
+  png("./statplots/run1_phager_extintime_subset_nocol.png", width = 5, height = 4,
+      units = "in", res = 300)
+  print(f4c)
+  dev.off()
+  
+  f4d <- 
+    ggplot(data = filter(ysum1, extin_flag == "none"),
+           aes(x = phage_r*60, y = auc/60)) +
+    geom_point() +
+    scale_x_log10() + 
+    scale_y_log10() +
+    labs(x = "Average phage\n growth rate", 
+         y = "Area Under the\nCurve (hr cfu/mL)") +
+    theme_bw() +
+    guides(shape = "none") +
+    theme(axis.title = element_text(size = 16),
+          axis.text.y = element_markdown())
+  
+  f4e <- 
+    ggplot(data = filter(ysum1, extin_flag == "none"),
+           aes(x = phage_r*60, y = PC1)) +
+    geom_point() +
+    scale_x_log10() + 
+    labs(x = "Average phage\n growth rate", 
+         y = "PC1") +
+    theme_bw() +
+    guides(shape = "none") +
+    theme(axis.title = element_text(size = 16))
+  
+  
+  png("./statplots/fig4_run1_phager_metrics_subset.png", 
+      width = 11, height = 7, units = "in", res = 300)
+  print(plot_grid(f4a, f4b, f4c, f4d, f4e,
+                  nrow = 2, labels = c("A", "B", "C", "D", "E"),
+                  align = "hv", axis = "lr", label_size = 20))
+  dev.off()
+  
+  fs5a <- 
+    ggplot(data = ysum1,
+           aes(x = peak_dens, y = phage_r*60, color = as.factor(b),
+               shape = extin_flag)) +
+    geom_point() +
+    scale_color_viridis_d(end = 0.95, name = "Burst size") +
+    scale_shape_manual(breaks = c("none", "neark", "noextin"),
+                       values = c(16, 4, 3)) +
+    scale_x_log10() + 
+    scale_y_log10() +
+    labs(x = "Peak Density (cfu/mL)", 
+         y = "Average phage\ngrowth rate (e-fold/hr)") +
+    theme_bw() +
+    guides(shape = "none") +
+    theme(axis.title = element_text(size = 20),
+          legend.title = element_text(size = 18),
+          legend.text = element_text(size = 14))
+  
+  fs5b <- 
+    ggplot(data = ysum1,
+           aes(x = peak_time/60, y = phage_r*60, color = as.factor(b),
+               shape = extin_flag)) +
+    geom_point() +
+    scale_color_viridis_d(end = 0.95, name = "Burst size") +
+    scale_shape_manual(breaks = c("none", "neark", "noextin"),
+                       values = c(16, 4, 3)) +
+    scale_x_log10() + 
+    scale_y_log10() +
+    labs(x = "Peak Time (hr)", 
+         y = "Average phage\ngrowth rate (e-fold/hr)") +
+    theme_bw() +
+    guides(shape = "none") +
+    theme(axis.title = element_text(size = 20),
+          legend.title = element_text(size = 18),
+          legend.text = element_text(size = 14))
+  
+  fs5c <- 
+    ggplot(data = ysum1,
+           aes(x = auc, y = phage_r*60, color = as.factor(b),
+               shape = extin_flag)) +
+    geom_point() +
+    scale_color_viridis_d(end = 0.95, name = "Burst size") +
+    scale_shape_manual(breaks = c("none", "neark", "noextin"),
+                       values = c(16, 4, 3)) +
+    scale_x_log10() + 
+    scale_y_log10() +
+    labs(x = "Area Under the Curve\n(hr cfu/mL)", 
+         y = "Average phage\ngrowth rate (e-fold/hr)") +
+    theme_bw() +
+    guides(shape = "none") +
+    theme(axis.title = element_text(size = 20),
+          legend.title = element_text(size = 18),
+          legend.text = element_text(size = 14))
+  
+  fs5d <- 
+    ggplot(data = ysum1,
+           aes(x = extin_time_4/60, y = phage_r*60, color = as.factor(b),
+               shape = extin_flag)) +
+    geom_point() +
+    scale_color_viridis_d(end = 0.95, name = "Burst size") +
+    scale_shape_manual(breaks = c("none", "neark", "noextin"),
+                       values = c(16, 4, 3)) +
+    scale_x_log10() + 
+    scale_y_log10() +
+    labs(x = "Extinction time (hr)", 
+         y = "Average phage\ngrowth rate (e-fold/hr)") +
+    theme_bw() +
+    guides(shape = "none") +
+    theme(axis.title = element_text(size = 20),
+          legend.title = element_text(size = 18),
+          legend.text = element_text(size = 14))
+  
+  png("./statplots/figS5_run1_phager_peakextinauc_alldata.png", 
+      width = 10, height = 8, units = "in", res = 300)
+  print(plot_grid(
+    plot_grid(fs5a + guides(color = "none"), 
+              fs5b + guides(color = "none"), 
+              fs5c + guides(color = "none"),
+              fs5d + guides(color = "none"),
+              ncol = 2, labels = c("A", "B", "C", "D"),
+              align = "hv", axis = "tb", label_size = 20),
+    get_legend(fs5a), rel_widths = c(1, 0.2)))
+  dev.off()
+  
+  png("./statplots/figS6_run1_finalphagevpeakdens_alldata.png", 
+      width = 5.5, height = 3.5, units = "in", res = 300)
+  print(
+    ggplot(data = ysum1,
+           aes(x = peak_dens, y = phage_final, shape = extin_flag,
+               color = as.factor(b))) +
+      geom_point(size = 2) +
+      scale_y_log10() + scale_x_log10() +
+      scale_color_viridis_d(end = 0.95, name = "Burst size") +
+      scale_shape_manual(breaks = c("none", "neark", "noextin"),
+                         values = c(16, 4, 3)) +
+      labs(x = "Peak bacterial density (cfu/mL)", 
+           y = "Final phage density\n(pfu/mL)") +
+      guides(shape = "none") +
+      geom_line(aes(y = peak_dens*b)) +
+      theme_bw() +
+      theme(axis.title = element_text(size = 20),
+            legend.title = element_text(size = 18),
+            legend.text = element_text(size = 14))
+  )
+  dev.off()
+}
+
+#Run 1: contour plots ----
 ysum1 <- mutate(ungroup(ysum1),
                 loga = log10(a_S1),
                 logb = log10(b),
@@ -1904,8 +2107,6 @@ ggplot(data = ysum1,
 #   geom_abline(slope = 1, intercept = 1.5 - 1.7)
 
 
-
-#Run 1: contour plots ----
 if (glob_make_statplots) {
   png("./statplots/fig4_run1_maxtime_a_tau_contour.png", width = 5, height = 4,
       units = "in", res = 300)
@@ -2192,193 +2393,6 @@ if (glob_make_statplots) {
     cowplot::get_legend(p1),
     rel_widths = c(1, .33),
     ncol = 2))
-  dev.off()
-}
-
-# Run 1: phage growth plots ----
-if (glob_make_statplots) {
-  png("./statplots/run1_phager_extintime_subset_nocol.png", width = 5, height = 4,
-      units = "in", res = 300)
-  print(
-    ggplot(data = filter(ysum1, extin_flag == "none"),
-           aes(x = extin_time_4/60, y = phage_r*60)) +
-      geom_point() +
-      scale_x_log10() + 
-      scale_y_log10() +
-      labs(x = "Extinction time (hr)", 
-           y = "Average phage growth rate") +
-      theme_bw() +
-      theme(axis.title = element_text(size = 20)) +
-      NULL)
-  dev.off()
-  
-  f4a <- 
-    ggplot(data = filter(ysum1, extin_flag == "none"),
-           aes(x = peak_dens, y = phage_r*60)) +
-    geom_point() +
-    scale_x_log10() + 
-    scale_y_log10() +
-    labs(x = "Peak Density (cfu/mL)", 
-         y = "Average phage\ngrowth rate (e-fold/hr)") +
-    theme_bw() +
-    guides(shape = "none") +
-    theme(axis.title = element_text(size = 20),
-          legend.title = element_text(size = 18),
-          legend.text = element_text(size = 14))
-  
-  f4b <- 
-    ggplot(data = filter(ysum1, extin_flag == "none"),
-           aes(x = peak_time/60, y = phage_r*60)) +
-    geom_point() +
-    scale_x_log10() + 
-    scale_y_log10() +
-    labs(x = "Peak Time (hr)", 
-         y = "Average phage\ngrowth rate (e-fold/hr)") +
-    theme_bw() +
-    guides(shape = "none") +
-    theme(axis.title = element_text(size = 20),
-          legend.title = element_text(size = 18),
-          legend.text = element_text(size = 14))
-  
-  f4c <- 
-    ggplot(data = filter(ysum1, extin_flag == "none"),
-           aes(x = auc, y = phage_r*60)) +
-    geom_point() +
-    scale_x_log10() + 
-    scale_y_log10() +
-    labs(x = "Area Under the Curve\n(hr cfu/mL)", 
-         y = "Average phage\ngrowth rate (e-fold/hr)") +
-    theme_bw() +
-    guides(shape = "none") +
-    theme(axis.title = element_text(size = 20),
-          legend.title = element_text(size = 18),
-          legend.text = element_text(size = 14))
-  
-  f4d <- 
-    ggplot(data = filter(ysum1, extin_flag == "none"),
-           aes(x = extin_time_4/60, y = phage_r*60)) +
-    geom_point() +
-    scale_x_log10() + 
-    scale_y_log10() +
-    labs(x = "Extinction time (hr)", 
-         y = "Average phage\ngrowth rate (e-fold/hr)") +
-    theme_bw() +
-    guides(shape = "none") +
-    theme(axis.title = element_text(size = 20),
-          legend.title = element_text(size = 18),
-          legend.text = element_text(size = 14))
-  
-  png("./statplots/fig4_run1_phager_peakextinauc_subset.png", 
-      width = 8, height = 8, units = "in", res = 300)
-  print(plot_grid(f4a, f4b, f4c, f4d,
-                  ncol = 2, labels = c("A", "B", "C", "D"),
-                  align = "hv", axis = "tb", label_size = 20))
-  dev.off()
-  
-  fs5a <- 
-    ggplot(data = ysum1,
-           aes(x = peak_dens, y = phage_r*60, color = as.factor(b),
-               shape = extin_flag)) +
-      geom_point() +
-      scale_color_viridis_d(end = 0.95, name = "Burst size") +
-      scale_shape_manual(breaks = c("none", "neark", "noextin"),
-                         values = c(16, 4, 3)) +
-      scale_x_log10() + 
-      scale_y_log10() +
-      labs(x = "Peak Density (cfu/mL)", 
-           y = "Average phage\ngrowth rate (e-fold/hr)") +
-      theme_bw() +
-      guides(shape = "none") +
-      theme(axis.title = element_text(size = 20),
-            legend.title = element_text(size = 18),
-            legend.text = element_text(size = 14))
-  
-  fs5b <- 
-    ggplot(data = ysum1,
-           aes(x = peak_time/60, y = phage_r*60, color = as.factor(b),
-               shape = extin_flag)) +
-    geom_point() +
-    scale_color_viridis_d(end = 0.95, name = "Burst size") +
-    scale_shape_manual(breaks = c("none", "neark", "noextin"),
-                       values = c(16, 4, 3)) +
-    scale_x_log10() + 
-    scale_y_log10() +
-    labs(x = "Peak Time (hr)", 
-         y = "Average phage\ngrowth rate (e-fold/hr)") +
-    theme_bw() +
-    guides(shape = "none") +
-    theme(axis.title = element_text(size = 20),
-          legend.title = element_text(size = 18),
-          legend.text = element_text(size = 14))
-  
-  fs5c <- 
-    ggplot(data = ysum1,
-           aes(x = auc, y = phage_r*60, color = as.factor(b),
-               shape = extin_flag)) +
-    geom_point() +
-    scale_color_viridis_d(end = 0.95, name = "Burst size") +
-    scale_shape_manual(breaks = c("none", "neark", "noextin"),
-                       values = c(16, 4, 3)) +
-    scale_x_log10() + 
-    scale_y_log10() +
-    labs(x = "Area Under the Curve\n(hr cfu/mL)", 
-         y = "Average phage\ngrowth rate (e-fold/hr)") +
-    theme_bw() +
-    guides(shape = "none") +
-    theme(axis.title = element_text(size = 20),
-          legend.title = element_text(size = 18),
-          legend.text = element_text(size = 14))
-  
-  fs5d <- 
-    ggplot(data = ysum1,
-           aes(x = extin_time_4/60, y = phage_r*60, color = as.factor(b),
-               shape = extin_flag)) +
-    geom_point() +
-    scale_color_viridis_d(end = 0.95, name = "Burst size") +
-    scale_shape_manual(breaks = c("none", "neark", "noextin"),
-                       values = c(16, 4, 3)) +
-    scale_x_log10() + 
-    scale_y_log10() +
-    labs(x = "Extinction time (hr)", 
-         y = "Average phage\ngrowth rate (e-fold/hr)") +
-    theme_bw() +
-    guides(shape = "none") +
-    theme(axis.title = element_text(size = 20),
-          legend.title = element_text(size = 18),
-          legend.text = element_text(size = 14))
-  
-  png("./statplots/figS5_run1_phager_peakextinauc_alldata.png", 
-      width = 10, height = 8, units = "in", res = 300)
-  print(plot_grid(
-    plot_grid(fs5a + guides(color = "none"), 
-              fs5b + guides(color = "none"), 
-              fs5c + guides(color = "none"),
-              fs5d + guides(color = "none"),
-              ncol = 2, labels = c("A", "B", "C", "D"),
-              align = "hv", axis = "tb", label_size = 20),
-    get_legend(fs5a), rel_widths = c(1, 0.2)))
-  dev.off()
-  
-  png("./statplots/figS6_run1_finalphagevpeakdens_alldata.png", 
-      width = 5.5, height = 3.5, units = "in", res = 300)
-  print(
-    ggplot(data = ysum1,
-           aes(x = peak_dens, y = phage_final, shape = extin_flag,
-               color = as.factor(b))) +
-      geom_point(size = 2) +
-      scale_y_log10() + scale_x_log10() +
-      scale_color_viridis_d(end = 0.95, name = "Burst size") +
-      scale_shape_manual(breaks = c("none", "neark", "noextin"),
-                         values = c(16, 4, 3)) +
-      labs(x = "Peak bacterial density (cfu/mL)", 
-           y = "Final phage density\n(pfu/mL)") +
-      guides(shape = "none") +
-      geom_line(aes(y = peak_dens*b)) +
-      theme_bw() +
-      theme(axis.title = element_text(size = 20),
-            legend.title = element_text(size = 18),
-            legend.text = element_text(size = 14))
-  )
   dev.off()
 }
 
