@@ -1494,12 +1494,12 @@ if(glob_make_statplots) {
   #b x-axis (Fig S2)
   set.seed(1)
   fs2a <- ggplot(data = ysum1,
-                aes(x = log10(b/5), y = max_percap)) +
+                aes(x = b, y = max_percap)) +
     geom_line(aes(group = paste(a_S1, tau)),
               alpha = 0.5,
               position = position_jitter(width = 0.05, height = 0.0001)) +
     scale_y_continuous(limits = c(0, 0.018), breaks = c(0, 0.009, 0.018)) +
-    scale_x_continuous(labels = math_format(5%*%10^.x)) +
+    scale_x_continuous(trans = "log10", breaks = c(5, 50, 500)) +
     labs(x = "Burst size", 
          y = "Maximum cellular\ngrowth rate (/min)") +
     #geom_hline(yintercept = 0.0179, lty = 2) +
@@ -1509,12 +1509,12 @@ if(glob_make_statplots) {
   
   set.seed(1)
   fs2b <- ggplot(data = ysum1,
-                aes(x = log10(b/5), y = first_above_15106)) +
+                aes(x = b, y = first_above_15106)) +
     geom_line(aes(group = paste(a_S1, tau)),
               alpha = 0.5,
               position = position_jitter(width = 0.05, height = 0.2)) +
     ylim(0, NA) +
-    scale_x_continuous(labels = math_format(5%*%10^.x)) +
+    scale_x_continuous(trans = "log10", breaks = c(5, 50, 500)) +
     labs(x = "Burst size", 
          y = expression(atop("Time to reach",
                              paste("1.5×", 10^6, " cfu/mL (min)")))) +
@@ -1523,9 +1523,9 @@ if(glob_make_statplots) {
           axis.text = element_text(size = 12))
   
   fs2c <- ggplot(data = ysum1,
-                aes(x = log10(b/5), y = peak_dens)) +
+                aes(x = b, y = peak_dens)) +
     geom_line(aes(group = paste(a_S1, tau))) +
-    scale_x_continuous(labels = math_format(5%*%10^.x)) +
+    scale_x_continuous(trans = "log10", breaks = c(5, 50, 500)) +
     scale_y_continuous(labels = c("0", 
                                   "2.5×10<sup>8</sup>", 
                                   "5×10<sup>8</sup>",
@@ -1539,9 +1539,9 @@ if(glob_make_statplots) {
           axis.text.y = element_markdown())
   
   fs2d <- ggplot(data = ysum1,
-                aes(x = log10(b/5), y = peak_time/60)) +
+                aes(x = b, y = peak_time/60)) +
     geom_line(aes(group = paste(a_S1, tau))) +
-    scale_x_continuous(labels = math_format(5%*%10^.x)) +
+    scale_x_continuous(trans = "log10", breaks = c(5, 50, 500)) +
     labs(x = "Burst size", 
          y = "Time of Peak\nBacterial Density (hr)") +
     theme_bw() +
@@ -1549,9 +1549,9 @@ if(glob_make_statplots) {
           axis.text = element_text(size = 12))
   
   fs2e <- ggplot(data = ysum1,
-                aes(x = log10(b/5), y = death_slope)) +
+                aes(x = b, y = death_slope)) +
     geom_line(aes(group = paste(a_S1, tau))) +
-    scale_x_continuous(labels = math_format(5%*%10^.x)) +
+    scale_x_continuous(trans = "log10", breaks = c(5, 50, 500)) +
     scale_y_continuous(breaks = c(0, -5*10**8, -10**9, -1.5*10**9),
                        labels = c(0, -5, -10, -15)) +
     labs(x = "Burst size", 
@@ -1562,9 +1562,9 @@ if(glob_make_statplots) {
           axis.text = element_text(size = 12))
   
   fs2f <- ggplot(data = ysum1,
-                aes(x = log10(b/5), y = extin_time_4/60)) +
+                aes(x = b, y = extin_time_4/60)) +
     geom_line(aes(group = paste(a_S1, tau))) +
-    scale_x_continuous(labels = math_format(5%*%10^.x)) +
+    scale_x_continuous(trans = "log10", breaks = c(5, 50, 500)) +
     labs(x = "Burst size", 
          y = "Extinction Time (hr)") +
     theme_bw() +
@@ -1572,9 +1572,9 @@ if(glob_make_statplots) {
           axis.text = element_text(size = 12))
   
   fs2g <- ggplot(data = ysum1,
-                aes(x = log10(b/5), y = auc/60)) +
+                aes(x = b, y = auc/60)) +
     geom_line(aes(group = paste(a_S1, tau))) +
-    scale_x_continuous(labels = math_format(5%*%10^.x)) +
+    scale_x_continuous(trans = "log10", breaks = c(5, 50, 500)) +
     scale_y_continuous(breaks = 0:4*10**10,
                        labels = c("0",
                                   "1×10<sup>10</sup>",
@@ -1589,9 +1589,9 @@ if(glob_make_statplots) {
           axis.text.y = element_markdown())
   
   fs2h <- ggplot(data = ybig1_PCA_wide,
-                aes(x = log10(b/5), y = PC1)) +
+                aes(x = b, y = PC1)) +
     geom_line(aes(group = paste(a_S1, tau))) +
-    scale_x_continuous(labels = math_format(5%*%10^.x)) +
+    scale_x_continuous(trans = "log10", breaks = c(5, 50, 500)) +
     labs(x = "Burst size", 
          y = "PC1") +
     theme_bw() +
@@ -1608,13 +1608,12 @@ if(glob_make_statplots) {
   #tau x-axis (Fig S3)
   set.seed(1)
   fs3a <- ggplot(data = ysum1,
-                 aes(x = log10(tau), y = max_percap)) +
+                 aes(x = tau, y = max_percap)) +
     geom_line(aes(group = paste(a_S1, b)),
               alpha = 0.5,
               position = position_jitter(width = 0.05, height = 0.0001)) +
     scale_y_continuous(limits = c(0, 0.018), breaks = c(0, 0.009, 0.018)) +
-    scale_x_continuous(breaks = c(1, 1.25, 1.5, 1.75, 2),
-                       labels = math_format(10^.x)) +
+    scale_x_continuous(trans = "log10", breaks = c(10, 32, 100)) +
     labs(x = "Lysis time (min)", 
          y = "Maximum cellular\ngrowth rate (/min)") +
     #geom_hline(yintercept = 0.0179, lty = 2) +
@@ -1624,13 +1623,12 @@ if(glob_make_statplots) {
   
   set.seed(1)
   fs3b <- ggplot(data = ysum1,
-                 aes(x = log10(tau), y = first_above_15106)) +
+                 aes(x = tau, y = first_above_15106)) +
     geom_line(aes(group = paste(a_S1, b)),
               alpha = 0.5,
               position = position_jitter(width = 0.05, height = 0.2)) +
     ylim(0, NA) +
-    scale_x_continuous(breaks = c(1, 1.25, 1.5, 1.75, 2),
-                       labels = math_format(10^.x)) +
+    scale_x_continuous(trans = "log10", breaks = c(10, 32, 100)) +
     labs(x = "Lysis time (min)", 
          y = expression(atop("Time to reach",
                              paste("1.5×", 10^6, " cfu/mL (min)")))) +
@@ -1639,10 +1637,9 @@ if(glob_make_statplots) {
           axis.text = element_text(size = 12))
   
   fs3c <- ggplot(data = ysum1,
-                 aes(x = log10(tau), y = peak_dens)) +
+                 aes(x = tau, y = peak_dens)) +
     geom_line(aes(group = paste(a_S1, b))) +
-    scale_x_continuous(breaks = c(1, 1.25, 1.5, 1.75, 2),
-                       labels = math_format(10^.x)) +
+    scale_x_continuous(trans = "log10", breaks = c(10, 32, 100)) +
     scale_y_continuous(labels = c("0", 
                                   "2.5×10<sup>8</sup>", 
                                   "5×10<sup>8</sup>",
@@ -1656,10 +1653,9 @@ if(glob_make_statplots) {
           axis.text.y = element_markdown())
   
   fs3d <- ggplot(data = ysum1,
-                 aes(x = log10(tau), y = peak_time/60)) +
+                 aes(x = tau, y = peak_time/60)) +
     geom_line(aes(group = paste(a_S1, b))) +
-    scale_x_continuous(breaks = c(1, 1.25, 1.5, 1.75, 2),
-                       labels = math_format(10^.x)) +
+    scale_x_continuous(trans = "log10", breaks = c(10, 32, 100)) +
     labs(x = "Lysis time (min)", 
          y = "Time of Peak\nBacterial Density (hr)") +
     theme_bw() +
@@ -1667,10 +1663,9 @@ if(glob_make_statplots) {
           axis.text = element_text(size = 12))
   
   fs3e <- ggplot(data = ysum1,
-                 aes(x = log10(tau), y = death_slope)) +
+                 aes(x = tau, y = death_slope)) +
     geom_line(aes(group = paste(a_S1, b))) +
-    scale_x_continuous(breaks = c(1, 1.25, 1.5, 1.75, 2),
-                       labels = math_format(10^.x)) +
+    scale_x_continuous(trans = "log10", breaks = c(10, 32, 100)) +
     scale_y_continuous(breaks = c(0, -5*10**8, -10**9, -1.5*10**9),
                        labels = c(0, -5, -10, -15)) +
     labs(x = "Lysis time (min)", 
@@ -1681,10 +1676,9 @@ if(glob_make_statplots) {
           axis.text = element_text(size = 12))
   
   fs3f <- ggplot(data = ysum1,
-                 aes(x = log10(tau), y = extin_time_4/60)) +
+                 aes(x = tau, y = extin_time_4/60)) +
     geom_line(aes(group = paste(a_S1, b))) +
-    scale_x_continuous(breaks = c(1, 1.25, 1.5, 1.75, 2),
-                       labels = math_format(10^.x)) +
+    scale_x_continuous(trans = "log10", breaks = c(10, 32, 100)) +
     labs(x = "Lysis time (min)", 
          y = "Extinction Time (hr)") +
     theme_bw() +
@@ -1692,10 +1686,9 @@ if(glob_make_statplots) {
           axis.text = element_text(size = 12))
   
   fs3g <- ggplot(data = ysum1,
-                 aes(x = log10(tau), y = auc/60)) +
+                 aes(x = tau, y = auc/60)) +
     geom_line(aes(group = paste(a_S1, b))) +
-    scale_x_continuous(breaks = c(1, 1.25, 1.5, 1.75, 2),
-                       labels = math_format(10^.x)) +
+    scale_x_continuous(trans = "log10", breaks = c(10, 32, 100)) +
     scale_y_continuous(breaks = 0:4*10**10,
                        labels = c("0",
                                   "1×10<sup>10</sup>",
@@ -1710,10 +1703,9 @@ if(glob_make_statplots) {
           axis.text.y = element_markdown())
   
   fs3h <- ggplot(data = ybig1_PCA_wide,
-                 aes(x = log10(tau), y = PC1)) +
+                 aes(x = tau, y = PC1)) +
     geom_line(aes(group = paste(a_S1, b))) +
-    scale_x_continuous(breaks = c(1, 1.25, 1.5, 1.75, 2),
-                       labels = math_format(10^.x)) +
+    scale_x_continuous(trans = "log10", breaks = c(10, 32, 100)) +
     labs(x = "Lysis time (min)", 
          y = "PC1") +
     theme_bw() +
