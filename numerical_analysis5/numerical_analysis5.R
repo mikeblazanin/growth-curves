@@ -2494,73 +2494,54 @@ if (glob_make_statplots) {
                            labels = "AUTO",
                            nrow = 5, align = "hv", axis = "tblr"))
   dev.off()
-  stop("do we need to flip some y-axes?")
-    
   
+  #Supplemental derivative magnitudes plots
+  plotlist <- list()
+  metrics <- c("logpeakdens", "peaktimehr", "logauc", "extintimehr", "PC1")
+  metrics_labels <- c("peak\nbacterial density\n[log10(cfu/mL)\n",
+                      "time\nof peak bacterial density\n[hr",
+                      "\nlog10(area under the curve)\n[log10(hr cfu/mL)\n",
+                      "extinction time\n[hr",
+                      "PC1\n[")
+  for(metric_i in 1:length(metrics)) {
+    metric <- metrics[metric_i]
+    forms <- c("log", "norm")
+    form_labels <- c("/10-fold change]", "/full range]")
+    for(form_i in 1:length(forms)) {
+      form <- forms[form_i]
+      #Build base graph
+      p <- ggplot(
+        data = pivot_longer(
+          ysum1,
+          cols = starts_with(paste0(metric, "_d", form)),
+          names_to = "wrt",
+          names_prefix = paste0(metric, "_d", form),
+          values_to = "derivative"),
+        aes(x = wrt, y = abs(derivative), shape = extin_flag)) +
+        geom_point(position = position_jitter(width = 0.1, seed = 1),
+                   alpha = 0.5) +
+        scale_shape_manual(breaks = c("none", "neark", "noextin"),
+                           values = c(16, 4, 3)) +
+        guides(shape = "none") +
+        labs(y = paste0("Magnitude of\nderivative of ",
+                        metrics_labels[metric_i],
+                        form_labels[form_i]),
+             x = "With respect to") +
+        scale_x_discrete(breaks = c("a", "b", "tau"),
+                         labels = c("Infection rate", "Burst size", "Lysis time")) +
+        theme_bw() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+      
+      plotlist[[length(plotlist)+1]] <- p
+    }
+  }
   
-  
-  
-  ##Supplemental gradient plots
-  p4 <- ggplot(data = pivot_longer(ysum1,
-                                   cols = starts_with("peaktimehr_dlog"),
-                                   names_to = "wrt",
-                                   names_prefix = "peaktimehr_dlog",
-                                   values_to = "derivative"),
-               aes(x = wrt, y = abs(derivative), shape = extin_flag)) +
-    geom_point(position = position_jitter(width = 0.1, seed = 1), alpha = 0.5) +
-    scale_shape_manual(breaks = c("none", "neark", "noextin"),
-                       values = c(16, 4, 3)) +
-    guides(shape = "none") +
-    labs(y = "Magnitude of derivative\nof peak time (hr/10-fold change)", 
-         x = "With respect to") +
-    scale_x_discrete(breaks = c("a", "b", "tau"),
-                     labels = c("Infection rate", "Burst size", "Lysis time")) +
-    theme_bw() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
-  
-  p5 <- ggplot(data = pivot_longer(ysum1,
-                                   cols = starts_with("peaktimehr_dnorm"),
-                                   names_to = "wrt",
-                                   names_prefix = "peaktimehr_dnorm",
-                                   values_to = "derivative"),
-               aes(x = wrt, y = abs(derivative), shape = extin_flag)) +
-    geom_point(position = position_jitter(width = 0.1, seed = 1), alpha = 0.5) +
-    scale_shape_manual(breaks = c("none", "neark", "noextin"),
-                       values = c(16, 4, 3)) +
-    guides(shape = "none") +
-    labs(y = "Magnitude of derivative\nof peak time (hr/full range)", 
-         x = "With respect to") +
-    scale_x_discrete(breaks = c("a", "b", "tau"),
-                     labels = c("Infection rate", "Burst size", "Lysis time")) +
-    theme_bw() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
-  
-  
-  
-  #Gradient plots
-  
-  
-  
-  
-  ggplot(data = ysum1,
-         aes(x = loga, y = logtau)) +
-    facet_wrap(~b) +
-    geom_contour_filled(aes(z = dpeaktime_dlogtau))
-  ggplot(data = ysum1,
-         aes(x = loga, y = logtau)) +
-    facet_wrap(~b) +
-    geom_contour_filled(aes(z = peak_time))
-  ggplot(data = ysum1,
-         aes(x = logb, y = logtau)) +
-    facet_wrap(~loga) +
-    geom_contour_filled(aes(z = dpeaktime_dlogb))
-  ggplot(data = ysum1,
-         aes(x = logb, y = logtau)) +
-    facet_wrap(~loga) +
-    geom_contour_filled(aes(z = peak_time))
-  
-  
-  
+  png("./statplots/figS12_run1_gradient_magnitudes.png", width = 8, height = 14,
+      units = "in", res = 300)
+  print(cowplot::plot_grid(plotlist = plotlist,
+                           labels = "AUTO",
+                           nrow = 5, align = "hv", axis = "tblr"))
+  dev.off()
 }
 
 # Run 2: bact traits ----
