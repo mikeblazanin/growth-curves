@@ -3032,19 +3032,21 @@ run7 <- run_sims_filewrapper(
   name = "run7",
   u_S1 = signif(0.04*10**-0.35, 3), u_S2 = 0,
   k = 10**9,
-  a_S1 = 10**seq(from = -12, to = -8, length.out = 5),
+  a_S1 = rep(10**seq(from = -12, to = -8, length.out = 5), each = 25),
   a_S2 = 0,
   tau = 31.6,
   b = 50,
   z = 1,
   d = 0,
-  init_S1 = 10**(4:8),
-  init_moi = 10**(-4:0),
+  init_S1 = rep(10**c(6, 6.5, 7, 7.5, 8), times = 5, each = 5),
+  init_moi = rep(10**c(4, 4.5, 5, 5.5, 6), times = 25)/
+    rep(10**c(6, 6.5, 7, 7.5, 8), times = 5, each = 5),
   equil_cutoff_dens = 0.1,
   init_time = 12*60,
   max_time = 48*60,
   init_stepsize = 5,
-  print_info = TRUE, read_file = glob_read_files)
+  print_info = TRUE, read_file = glob_read_files,
+  combinatorial = FALSE)
 
 ybig7 <- run7[[1]]
 
