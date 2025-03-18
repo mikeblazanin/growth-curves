@@ -1069,6 +1069,13 @@ interp_data <- function(df, x, y, subset_by) {
   return(out)
 }
 
+central_diff <- function(x, y, end_behavior = "NA"){
+  stopifnot(end_behavior %in% c("NA", "back-forwards"))
+  res <- pracma::gradient(F = y, h1 = x)
+  if(end_behavior == "NA") {res[1] <- NA; res[length(res)] <- NA}
+  return(res)
+}
+
 ## Run 1: phage traits ----
 run1 <- run_sims_filewrapper(
   name = "run1",
@@ -1186,13 +1193,6 @@ ysum1 <- mutate(ungroup(ysum1),
                 peaktimehr = peak_time/60,
                 logauc = log10(auc/60),
                 extintimehr = extin_time_4/60)
-
-central_diff <- function(x, y, end_behavior = "NA"){
-  stopifnot(end_behavior %in% c("NA", "back-forwards"))
-  res <- pracma::gradient(F = y, h1 = x)
-  if(end_behavior == "NA") {res[1] <- NA; res[length(res)] <- NA}
-  return(res)
-}
 
 ysum1 <- 
   mutate(group_by(ysum1, logb, logtau),
