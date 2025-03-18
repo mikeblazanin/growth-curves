@@ -487,8 +487,8 @@ run_sims_dede <- function(u_S1, u_S2,
     }
     
     #Save parameters into dataframe, replicating as needed
-    param_combos <- sapply(X = sim_vars,
-                           FUN = function(x) {rep_len(x, num_sims)})
+    param_combos <- as.data.frame(sapply(X = sim_vars,
+                           FUN = function(x) {rep_len(x, num_sims)}))
   }
   
   #if N is NA, N = k-S-R
