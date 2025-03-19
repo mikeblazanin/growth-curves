@@ -3074,9 +3074,32 @@ ysum7 <- mutate(
                       ifelse(peak_dens >= 0.9*k, "neark", "none")),
   extin_time_4 = ifelse(is.na(extin_time_4), run_time, extin_time_4))
 
+#Add gradients
+ysum7 <- mutate(ungroup(ysum7),
+                loga = log10(a_S1),
+                loginitS1 = log10(init_S1),
+                loginitP = log10(init_P),
+                logpeakdens = log10(peak_dens),
+                peaktimehr = peak_time/60,
+                logauc = log10(auc/60),
+                extintimehr = extin_time_4/60)
+
+ysum7 <- 
+  mutate(group_by(ysum7, loginitS1, loginitP),
+         across(.cols = c(logpeakdens, peaktimehr, logauc, extintimehr),
+                list("dloga" = ~central_diff(y = .x, x = loga))))
+ysum7 <- 
+  mutate(group_by(ysum7, loga, loginitP),
+         across(.cols = c(logpeakdens, peaktimehr, logauc, extintimehr),
+                list("dlogS1" = ~central_diff(y = .x, x = loginitS1))))
+ysum7 <- 
+  mutate(group_by(ysum7, loga, loginitS1),
+         across(.cols = c(logpeakdens, peaktimehr, logauc, extintimehr),
+                list("dlogP" = ~central_diff(y = .x, x = loginitP))))
+
 if (glob_make_statplots) {
   p1 <- ggplot(data = filter(ysum7, init_S1 == 10**6), 
-               aes(x = a_S1, y = init_P)) +
+               aes(x = log10(a_S1), y = log10(init_P))) +
           geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
           geom_point(aes(color = peak_time/60, shape = extin_flag),
                      size = 3) +
@@ -3084,8 +3107,8 @@ if (glob_make_statplots) {
                                 breaks = c(3, 6, 9, 12)) +
           scale_shape_manual(breaks = c("neark", "noextin", "none"), 
                              values = c(4, 4, 16)) +
-          scale_y_continuous(trans = "log10") +
-          scale_x_continuous(trans = "log10") +
+          scale_y_continuous(labels = math_format(10^.x)) +
+          scale_x_continuous(labels = math_format(10^.x)) +
           labs(x = "Infection rate (/min)",
                y = "Initial phage\ndensity (pfu/mL)") +
           guides(fill = "none", shape = "none") +
@@ -3095,7 +3118,7 @@ if (glob_make_statplots) {
           NULL
   
   p2 <- ggplot(data = filter(ysum7, init_P == 10**4), 
-               aes(x = a_S1, y = init_S1)) +
+               aes(x = log10(a_S1), y = log10(init_S1))) +
           geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
           geom_point(aes(color = peak_time/60, shape = extin_flag),
                      size = 3) +
@@ -3103,8 +3126,8 @@ if (glob_make_statplots) {
                                 breaks = c(4, 8, 12, 16)) +
           scale_shape_manual(breaks = c("neark", "noextin", "none"), 
                              values = c(4, 4, 16)) +
-          scale_y_continuous(trans = "log10") +
-          scale_x_continuous(trans = "log10") +
+          scale_y_continuous(labels = math_format(10^.x)) +
+          scale_x_continuous(labels = math_format(10^.x)) +
           labs(x = "Infection rate (/min)",
                y = "Initial bacterial\ndensity (cfu/mL)") +
           guides(fill = "none", shape = "none") +
@@ -3112,11 +3135,28 @@ if (glob_make_statplots) {
                 legend.title = element_text(size = 18),
                 legend.text = element_text(size = 16)) +
           NULL
+  
+  p3 <- ggplot(data = pivot_longer(filter(ysum7, extin_flag == "none"),
+                                          cols = starts_with("peaktimehr_dlog"),
+                                          names_to = "wrt",
+                                          names_prefix = "peaktimehr_dlog",
+                                          values_to = "derivative"),
+                      aes(x = wrt, y = derivative)) +
+    geom_point(position = position_jitter(width = 0.1, seed = 1), alpha = 0.5) +
+    labs(y = "Effect on peak time\n(hr/10-fold increase)", 
+         x = "") +
+    scale_x_discrete(limits = c("P", "S1", "a"),
+                     labels = c("Initial phage density", 
+                                "Initial bacterial density", 
+                                "Infection rate")) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-  png("./statplots/fig7_run7_inocdensity_a.png", width = 10, height = 3.2,
+  png("./statplots/fig6_run7_inocdensity_a.png", width = 11, height = 3.5,
       units = "in", res = 300)
-  print(cowplot::plot_grid(p1, p2, nrow = 1,
-                     labels = "AUTO", align = "hv", axis = "tb"))
+  print(cowplot::plot_grid(p1, p2, p3, nrow = 1,
+                           rel_widths = c(1, 1, 0.5),
+                     labels = "AUTO", align = "h", axis = "tb"))
   dev.off()
   
   png("./statplots/figS19_run7_maxtime_a_moiconst_contour_nobars.png", 
