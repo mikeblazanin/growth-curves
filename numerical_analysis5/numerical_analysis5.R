@@ -3415,7 +3415,43 @@ if (glob_make_statplots) {
   dev.off()
   
   
+  plating_num_colonies_dat <- data.frame(num_col = 1:200)
+  plating_num_colonies_dat <- 
+    mutate(plating_num_colonies_dat,
+           lower = 100*((qpois(0.025, num_col) - num_col)/num_col),
+           upper = 100*((qpois(0.955, num_col) - num_col)/num_col))
+  ggplot(data = pivot_longer(plating_num_colonies_dat,
+                             cols = c(lower, upper)),
+         aes(x = num_col, y = value, group = name)) +
+    geom_line()
+                                     
   
+  #At each point in the grid, we know how much a 10-fold change in initial
+  # bacterial density or in infection rate will shift the peak time
+  #We can calculate the amount of error up or down (at 95% confidence interval)
+  # we could expect based on a given number of colonies counted
+  #So we take the amount of e.g. upper error, calculate the amount that
+  # error in initS would shift peak time, then calculate the amount of
+  # error in a that would shift peak time equivalently.
+  
+  #Let's say a 10-fold change in initS changes peaktimehr by 1 and
+  # a 10-fold change in a_S1 changes peaktimehr by 2
+  #At counting 50 colonies, the errors are -26% and +24%
+  #That's a log10 change of initS of -0.131 and +0.093
+  #Which would cause a change in peaktimehr of -0.131 hr and +0.093 hr
+  #Which is the same effect as a log10 change of a_S1 of -0.0655 and +0.0465
+  #Which is a raw amount of change in a_S1 as 0.86 and 1.113
+  #So at 50 colonies using the average effects, the confidence interval of
+  # errors in a_S1 would be 0.86 and 1.113
+  
+  #So, for each point with gradients in both directions (27x), we just need to
+  # run these calculations but for all possible # of colonies
+  
+  
+  
+  plot(x = 1:200, y = 100*(qpois(c(0.025), 1:200)/(1:200) - 1), 
+       type = "l", ylim = c(-100, 300))
+  lines(x = 1:200, y = 100*(qpois(c(0.975), 1:200)/(1:200) - 1), type = "l")
   
   
   
