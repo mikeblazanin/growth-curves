@@ -3415,6 +3415,8 @@ if (glob_make_statplots) {
   dev.off()
   
   
+  
+  
   plating_num_colonies_dat <- data.frame(num_col = 1:200)
   plating_num_colonies_dat <- 
     mutate(plating_num_colonies_dat,
@@ -3425,7 +3427,6 @@ if (glob_make_statplots) {
          aes(x = num_col, y = value, group = name)) +
     geom_line()
                                      
-  
   #At each point in the grid, we know how much a 10-fold change in initial
   # bacterial density or in infection rate will shift the peak time
   #We can calculate the amount of error up or down (at 95% confidence interval)
@@ -3446,6 +3447,67 @@ if (glob_make_statplots) {
   
   #So, for each point with gradients in both directions (27x), we just need to
   # run these calculations but for all possible # of colonies
+  
+  #At each of 27 points, we have the slopes of peak time (and other metrics)
+  # against log10 changes in a, S1, and P
+  #We set the number of colonies picked and set the confidence interval
+  #We use qpois to calculate the amount up and down at those values
+  #Multiply by the density to get the density up and down
+  #Convert via slope of S1 or P to get change in metric
+  #Then back-convert via slope of a to get change in a
+  
+  ysum7_gradients <- dplyr::filter(ysum7,
+                                   !is.na(peaktimehr_dloga) &
+                                     !is.na(peaktimehr_dlogP) &
+                                     !is.na(peaktimehr_dlogS1))
+  
+  ysum7_gradients <- 
+    full_join(ysum7_gradients,
+              expand.grid(uniq_run = ysum7_gradients$uniq_run,
+                          num_colony = 1:200))
+  ysum7_gradients <- 
+    mutate(ungroup(ysum7_gradients),
+           lower_S =
+             (10**((log10(qpois(0.025, num_colony)/num_colony * init_S1) - loginitS1)
+                    * peaktimehr_dlogS1
+                    / peaktimehr_dloga
+                    + loga)
+              / a_S1),
+           upper_S =
+             (10**((log10(qpois(0.975, num_colony)/num_colony * init_S1) - loginitS1)
+                   * peaktimehr_dlogS1
+                   / peaktimehr_dloga
+                   + loga)
+              / a_S1),
+           lower_P =
+             (10**((log10(qpois(0.025, num_colony)/num_colony * init_P) - loginitP)
+                   * peaktimehr_dlogP
+                   / peaktimehr_dloga
+                   + loga)
+              / a_S1),
+           upper_P =
+             (10**((log10(qpois(0.975, num_colony)/num_colony * init_P) - loginitP)
+                   * peaktimehr_dlogP
+                   / peaktimehr_dloga
+                   + loga)
+              / a_S1)
+    )
+  
+  ggplot(data = pivot_longer(ysum7_gradients,
+                             cols = c("lower_S", "upper_S", "lower_P", "upper_P"),
+                             names_to = c("bound", "popgradient"),
+                             names_sep = "_",
+                             values_to = "change_in_a"),
+         aes(x = num_colony, y = change_in_a, color = bound)) +
+    geom_point() +
+    facet_grid(~popgradient)
+                   
+                   
+    
+                            
+  
+  
+  
   
   
   
