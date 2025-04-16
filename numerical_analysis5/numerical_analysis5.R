@@ -3097,6 +3097,135 @@ ysum7 <-
          across(.cols = c(logpeakdens, peaktimehr, logauc, extintimehr),
                 list("dlogP" = ~central_diff(y = .x, x = loginitP))))
 
+#Add calculations of stochastic noise
+#At each point in the init_S x init_P x a_S1 where we can estimate the
+# gradient in all three dimensions (so 27 points, since there are 5 levels
+# of each but we can't estimate any edge points so its 3x3x3), we get the
+# slope of peak time against log10 changes in a, S1, and P
+#We then calculate how Poisson noise at the colony-counting stage or
+# the pipetting to inoculate stage would change the initial density
+# For the colony counting stage, we set the number of colonies counted and
+# the number of replicate plates.
+#For both, we set the confidence interval (95%) and use qpois to calculate
+# the amount up and down at those 27 values
+#(For colony counting only) Multiply by the density to get the density up and down
+#Convert via slope of S1 or P to get change in metric
+#Then back-convert via slope of a to get change in a
+
+##Here's the original logic I wrote down, which is the same steps but I think
+##harder to follow than the new version written above:
+
+#At each point in the grid, we know how much a 10-fold change in initial
+# bacterial density or in infection rate will shift the peak time
+#We can calculate the amount of error up or down (at 95% confidence interval)
+# we could expect based on a given number of colonies counted
+#So we take the amount of e.g. upper error, calculate the amount that
+# error in initS would shift peak time, then calculate the amount of
+# error in a that would shift peak time equivalently.
+
+#Let's say a 10-fold change in initS changes peaktimehr by 1 and
+# a 10-fold change in a_S1 changes peaktimehr by 2
+#At counting 50 colonies, the errors are -26% and +24%
+#That's a log10 change of initS of -0.131 and +0.093
+#Which would cause a change in peaktimehr of -0.131 hr and +0.093 hr
+#Which is the same effect as a log10 change of a_S1 of -0.0655 and +0.0465
+#Which is a raw amount of change in a_S1 as 0.86 and 1.113
+#So at 50 colonies using the average effects, the confidence interval of
+# errors in a_S1 would be 0.86 and 1.113
+
+#So, for each point with gradients in both directions (27x), we just need to
+# run these calculations but for all possible # of colonies
+
+ysum7_gradnoise <- dplyr::filter(ysum7,
+                                 !is.na(peaktimehr_dloga) &
+                                   !is.na(peaktimehr_dlogP) &
+                                   !is.na(peaktimehr_dlogS1))
+
+ysum7_gradnoise <- 
+  full_join(ysum7_gradnoise,
+            expand.grid(uniq_run = ysum7_gradnoise$uniq_run,
+                        num_colony = 1:100,
+                        num_replicates = 1:5))
+ysum7_gradnoise <- 
+  mutate(ungroup(ysum7_gradnoise),
+         lower_S =
+           (10**((log10(qpois(0.025, num_replicates*num_colony)
+                        /num_replicates
+                        /num_colony 
+                        * init_S1) 
+                  - loginitS1)
+                 * peaktimehr_dlogS1
+                 / peaktimehr_dloga
+                 + loga)
+            / a_S1),
+         upper_S =
+           (10**((log10(qpois(0.975, num_replicates*num_colony)
+                        /num_replicates
+                        /num_colony 
+                        * init_S1) 
+                  - loginitS1)
+                 * peaktimehr_dlogS1
+                 / peaktimehr_dloga
+                 + loga)
+            / a_S1),
+         lower_P =
+           (10**((log10(qpois(0.025, num_replicates*num_colony)
+                        /num_replicates
+                        /num_colony 
+                        * init_P) 
+                  - loginitP)
+                 * peaktimehr_dlogP
+                 / peaktimehr_dloga
+                 + loga)
+            / a_S1),
+         upper_P =
+           (10**((log10(qpois(0.975, num_replicates*num_colony)
+                        /num_replicates
+                        /num_colony 
+                        * init_P) 
+                  - loginitP)
+                 * peaktimehr_dlogP
+                 / peaktimehr_dloga
+                 + loga)
+            / a_S1)
+  )
+
+ysum7_gradnoise2 <- dplyr::filter(ysum7,
+                                  !is.na(peaktimehr_dloga) &
+                                    !is.na(peaktimehr_dlogP) &
+                                    !is.na(peaktimehr_dlogS1))
+ysum7_gradnoise2 <- 
+  mutate(ungroup(ysum7_gradnoise2),
+         lower_S =
+           (10**((log10(qpois(0.025, init_S1)) 
+                  - loginitS1)
+                 * peaktimehr_dlogS1
+                 / peaktimehr_dloga
+                 + loga)
+            / a_S1),
+         upper_S =
+           (10**((log10(qpois(0.975, init_S1)) 
+                  - loginitS1)
+                 * peaktimehr_dlogS1
+                 / peaktimehr_dloga
+                 + loga)
+            / a_S1),
+         lower_P =
+           (10**((log10(qpois(0.025, init_P)) 
+                  - loginitP)
+                 * peaktimehr_dlogP
+                 / peaktimehr_dloga
+                 + loga)
+            / a_S1),
+         upper_P =
+           (10**((log10(qpois(0.975, init_P)) 
+                  - loginitP)
+                 * peaktimehr_dlogP
+                 / peaktimehr_dloga
+                 + loga)
+            / a_S1)
+  )
+
 if (glob_make_statplots) {
   p1 <- ggplot(data = filter(ysum7, init_S1 == 10**6), 
                aes(x = log10(a_S1), y = log10(init_P))) +
@@ -3413,112 +3542,80 @@ if (glob_make_statplots) {
                            labels = "AUTO",
                            nrow = 2, align = "hv", axis = "tblr"))
   dev.off()
+
   
-  
-                                     
-  #At each point in the grid, we know how much a 10-fold change in initial
-  # bacterial density or in infection rate will shift the peak time
-  #We can calculate the amount of error up or down (at 95% confidence interval)
-  # we could expect based on a given number of colonies counted
-  #So we take the amount of e.g. upper error, calculate the amount that
-  # error in initS would shift peak time, then calculate the amount of
-  # error in a that would shift peak time equivalently.
-  
-  #Let's say a 10-fold change in initS changes peaktimehr by 1 and
-  # a 10-fold change in a_S1 changes peaktimehr by 2
-  #At counting 50 colonies, the errors are -26% and +24%
-  #That's a log10 change of initS of -0.131 and +0.093
-  #Which would cause a change in peaktimehr of -0.131 hr and +0.093 hr
-  #Which is the same effect as a log10 change of a_S1 of -0.0655 and +0.0465
-  #Which is a raw amount of change in a_S1 as 0.86 and 1.113
-  #So at 50 colonies using the average effects, the confidence interval of
-  # errors in a_S1 would be 0.86 and 1.113
-  
-  #So, for each point with gradients in both directions (27x), we just need to
-  # run these calculations but for all possible # of colonies
-  
-  #At each of 27 points, we have the slopes of peak time (and other metrics)
-  # against log10 changes in a, S1, and P
-  #We set the number of colonies picked and set the confidence interval
-  #We use qpois to calculate the amount up and down at those values
-  #Multiply by the density to get the density up and down
-  #Convert via slope of S1 or P to get change in metric
-  #Then back-convert via slope of a to get change in a
-  
-  ysum7_gradients <- dplyr::filter(ysum7,
-                                   !is.na(peaktimehr_dloga) &
-                                     !is.na(peaktimehr_dlogP) &
-                                     !is.na(peaktimehr_dlogS1))
-  
-  ysum7_gradients <- 
-    full_join(ysum7_gradients,
-              expand.grid(uniq_run = ysum7_gradients$uniq_run,
-                          num_colony = 1:100,
-                          num_replicates = 1:5))
-  ysum7_gradients <- 
-    mutate(ungroup(ysum7_gradients),
-           lower_S =
-             (10**((log10(qpois(0.025, num_replicates*num_colony)
-                          /num_replicates
-                          /num_colony 
-                          * init_S1) 
-                    - loginitS1)
-                   * peaktimehr_dlogS1
-                   / peaktimehr_dloga
-                   + loga)
-              / a_S1),
-           upper_S =
-             (10**((log10(qpois(0.975, num_replicates*num_colony)
-                          /num_replicates
-                          /num_colony 
-                          * init_S1) 
-                    - loginitS1)
-                   * peaktimehr_dlogS1
-                   / peaktimehr_dloga
-                   + loga)
-              / a_S1),
-           lower_P =
-             (10**((log10(qpois(0.025, num_replicates*num_colony)
-                          /num_replicates
-                          /num_colony 
-                          * init_P) 
-                    - loginitP)
-                   * peaktimehr_dlogP
-                   / peaktimehr_dloga
-                   + loga)
-              / a_S1),
-           upper_P =
-             (10**((log10(qpois(0.975, num_replicates*num_colony)
-                          /num_replicates
-                          /num_colony 
-                          * init_P) 
-                    - loginitP)
-                   * peaktimehr_dlogP
-                   / peaktimehr_dloga
-                   + loga)
-              / a_S1)
-    )
-  
-  png("test.png", width = 7, height = 5, units = "in",
-      res = 150)
-  ggplot(data = pivot_longer(ysum7_gradients,
-                             cols = c("lower_S", "upper_S", "lower_P", "upper_P"),
-                             names_to = c("bound", "popgradient"),
-                             names_sep = "_",
-                             values_to = "change_in_a"),
-         aes(x = num_colony, y = change_in_a)) +
-    geom_point(size = 0.5, alpha = 0.1) +
-    facet_grid(popgradient ~ num_replicates) +
-    scale_x_log10()
+  png("./statplots/figS16_run7_peaktime_sensitivity_avsinitestimate.png", 
+      width = 8, height = 5, units = "in", res = 300)
+  print(
+    ggplot(data = pivot_longer(ysum7_gradnoise,
+                               cols = c("lower_S", "upper_S", "lower_P", "upper_P"),
+                               names_to = c("bound", "popgradient"),
+                               names_sep = "_",
+                               values_to = "change_in_a"),
+           aes(x = num_colony, y = change_in_a)) +
+      geom_point(size = 0.5, alpha = 0.1) +
+      facet_grid(popgradient ~ num_replicates,
+                 labeller = labeller(
+                   num_replicates = function(x){return(x)},
+                   popgradient = c("P" = "Initial phage density",
+                                   "S" = "Initial bacterial density"))) +
+      scale_x_log10() +
+      labs(x = "Number of colonies/plaques counted (cfu or pfu)",
+           y = "Fold-change in infection\nrate obscured by noise",
+           subtitle = "Number of replicate plates/spots") +
+      theme_bw() +
+      theme(axis.title = element_text(size = 18),
+            axis.text = element_text(size = 9),
+            plot.subtitle = element_text(size = 18),
+            strip.text = element_text(size = 12)) +
+      NULL)
   dev.off()
   
   
+  p1 <- ggplot(data = dplyr::filter(pivot_longer(ysum7_gradnoise2,
+                                                 cols = c("lower_S", "upper_S", "lower_P", "upper_P"),
+                                                 names_to = c("bound", "popgradient"),
+                                                 names_sep = "_",
+                                                 values_to = "change_in_a"),
+                                    popgradient == "S"),
+               aes(x = log10(init_S1), y = change_in_a)) +
+    geom_point(size = 0.9, alpha = 0.5) +
+    scale_x_continuous(labels = math_format(10^.x),
+                       breaks = c(6.5, 7, 7.5)) +
+    labs(x = "Target initial density (cfu/mL)",
+         y = "Fold-change in infection\nrate obscured by noise") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 18),
+          axis.text = element_text(size = 9),
+          plot.subtitle = element_text(size = 18),
+          strip.text = element_text(size = 12)) +
+    NULL
+  p2 <- ggplot(data = dplyr::filter(pivot_longer(ysum7_gradnoise2,
+                                                 cols = c("lower_S", "upper_S", "lower_P", "upper_P"),
+                                                 names_to = c("bound", "popgradient"),
+                                                 names_sep = "_",
+                                                 values_to = "change_in_a"),
+                                    popgradient == "P"),
+               aes(x = log10(init_P), y = change_in_a)) +
+    geom_point(size = 0.9, alpha = 0.5) +
+    scale_x_continuous(labels = math_format(10^.x),
+                       breaks = c(4.5, 5, 5.5)) +
+    labs(x = "Target initial density (pfu/mL)",
+         y = "Fold-change in infection\nrate obscured by noise") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 18),
+          axis.text = element_text(size = 9),
+          plot.subtitle = element_text(size = 18),
+          strip.text = element_text(size = 12)) +
+    NULL
   
+  png("./statplots/figS17_run7_peaktime_sensitivity_avsinitsample.png", 
+      width = 10.5, height = 4, units = "in", res = 300)
+  cowplot::plot_grid(p1, p2, nrow = 1, labels = "AUTO")
+  dev.off()
   
-  
-  
-  
-  p1 <- ggplot(data = filter(ysum7, init_S1 == 10**6), 
+  #Noise bars from estimating density (old fig S23)
+  ggplot(data = filter(ysum7, init_S1 == 10**6), 
                aes(x = a_S1, y = init_P)) +
           geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
           geom_segment(aes(x = a_S1, xend = a_S1,
@@ -3544,7 +3641,7 @@ if (glob_make_statplots) {
           legend.text = element_text(size = 14)) +
           NULL
   
-  p2 <- ggplot(data = filter(ysum7, init_P == 10**4), 
+  ggplot(data = filter(ysum7, init_P == 10**4), 
                aes(x = a_S1, y = init_S1)) +
           geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
           geom_segment(aes(x = a_S1, xend = a_S1,
@@ -3570,12 +3667,8 @@ if (glob_make_statplots) {
           legend.text = element_text(size = 14)) +
           NULL
   
-  png("./statplots/figS23_run7_peaktime_a_estimatebars_contour.png", 
-      width = 10, height = 3.2, units = "in", res = 300)
-  print(cowplot::plot_grid(p1, p2, ncol = 2, labels = "AUTO"))
-  dev.off()
-  
-  p1 <- ggplot(data = filter(ysum7, init_P == 10**4), 
+  #Noise from sampling from flask (old fig S25)
+  ggplot(data = filter(ysum7, init_P == 10**4), 
                aes(x = a_S1, y = init_S1)) +
           geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
           geom_point(aes(color = peak_time/60, shape = extin_flag),
@@ -3598,7 +3691,7 @@ if (glob_make_statplots) {
           legend.text = element_text(size = 14)) +
           NULL
         
-  p2 <- ggplot(data = filter(ysum7, init_S1 == 10**6), 
+  ggplot(data = filter(ysum7, init_S1 == 10**6), 
                aes(x = a_S1, y = init_P)) +
           geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
           geom_point(aes(color = peak_time/60, shape = extin_flag),
@@ -3621,12 +3714,8 @@ if (glob_make_statplots) {
           legend.text = element_text(size = 14)) +
           NULL
 
-  png("./statplots/figS25_run7_peaktime_a_samplebars_contour.png", 
-      width = 10, height = 3.2, units = "in", res = 300)
-  print(cowplot::plot_grid(p1, p2, ncol = 2, labels = "AUTO"))
-  dev.off()
-  
-  p1 <- ggplot(data = filter(ysum7, init_P == 10**4), 
+  #Noise from multiple replicate plates to estimate density (old Fig S24)
+  ggplot(data = filter(ysum7, init_P == 10**4), 
                aes(x = a_S1, y = init_S1)) +
     geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
     geom_segment(aes(x = a_S1, xend = a_S1,
@@ -3652,7 +3741,7 @@ if (glob_make_statplots) {
           legend.text = element_text(size = 14)) +
     NULL
   
-  p2 <- ggplot(data = filter(ysum7, init_S1 == 10**6), 
+  ggplot(data = filter(ysum7, init_S1 == 10**6), 
                aes(x = a_S1, y = init_P)) +
     geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
     geom_segment(aes(x = a_S1, xend = a_S1,
@@ -3677,13 +3766,6 @@ if (glob_make_statplots) {
           legend.title = element_text(size = 16),
           legend.text = element_text(size = 14)) +
     NULL
-  
-  png("./statplots/figS24_run7_peaktime_a_initP_initS_varyingn_contour.png", 
-      width = 10, height = 3.2, units = "in", res = 300)
-  print(cowplot::plot_grid(p1, p2, ncol = 2, labels = "AUTO"))
-  dev.off()
-  
-  
 }
 
 
