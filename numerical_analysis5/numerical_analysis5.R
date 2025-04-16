@@ -3415,17 +3415,6 @@ if (glob_make_statplots) {
   dev.off()
   
   
-  
-  
-  plating_num_colonies_dat <- data.frame(num_col = 1:200)
-  plating_num_colonies_dat <- 
-    mutate(plating_num_colonies_dat,
-           lower = 100*((qpois(0.025, num_col) - num_col)/num_col),
-           upper = 100*((qpois(0.955, num_col) - num_col)/num_col))
-  ggplot(data = pivot_longer(plating_num_colonies_dat,
-                             cols = c(lower, upper)),
-         aes(x = num_col, y = value, group = name)) +
-    geom_line()
                                      
   #At each point in the grid, we know how much a 10-fold change in initial
   # bacterial density or in infection rate will shift the peak time
@@ -3464,56 +3453,68 @@ if (glob_make_statplots) {
   ysum7_gradients <- 
     full_join(ysum7_gradients,
               expand.grid(uniq_run = ysum7_gradients$uniq_run,
-                          num_colony = 1:200))
+                          num_colony = 1:100,
+                          num_replicates = 1:5))
   ysum7_gradients <- 
     mutate(ungroup(ysum7_gradients),
            lower_S =
-             (10**((log10(qpois(0.025, num_colony)/num_colony * init_S1) - loginitS1)
-                    * peaktimehr_dlogS1
-                    / peaktimehr_dloga
-                    + loga)
+             (10**((log10(qpois(0.025, num_replicates*num_colony)
+                          /num_replicates
+                          /num_colony 
+                          * init_S1) 
+                    - loginitS1)
+                   * peaktimehr_dlogS1
+                   / peaktimehr_dloga
+                   + loga)
               / a_S1),
            upper_S =
-             (10**((log10(qpois(0.975, num_colony)/num_colony * init_S1) - loginitS1)
+             (10**((log10(qpois(0.975, num_replicates*num_colony)
+                          /num_replicates
+                          /num_colony 
+                          * init_S1) 
+                    - loginitS1)
                    * peaktimehr_dlogS1
                    / peaktimehr_dloga
                    + loga)
               / a_S1),
            lower_P =
-             (10**((log10(qpois(0.025, num_colony)/num_colony * init_P) - loginitP)
+             (10**((log10(qpois(0.025, num_replicates*num_colony)
+                          /num_replicates
+                          /num_colony 
+                          * init_P) 
+                    - loginitP)
                    * peaktimehr_dlogP
                    / peaktimehr_dloga
                    + loga)
               / a_S1),
            upper_P =
-             (10**((log10(qpois(0.975, num_colony)/num_colony * init_P) - loginitP)
+             (10**((log10(qpois(0.975, num_replicates*num_colony)
+                          /num_replicates
+                          /num_colony 
+                          * init_P) 
+                    - loginitP)
                    * peaktimehr_dlogP
                    / peaktimehr_dloga
                    + loga)
               / a_S1)
     )
   
+  png("test.png", width = 7, height = 5, units = "in",
+      res = 150)
   ggplot(data = pivot_longer(ysum7_gradients,
                              cols = c("lower_S", "upper_S", "lower_P", "upper_P"),
                              names_to = c("bound", "popgradient"),
                              names_sep = "_",
                              values_to = "change_in_a"),
-         aes(x = num_colony, y = change_in_a, color = bound)) +
-    geom_point() +
-    facet_grid(~popgradient)
-                   
-                   
-    
-                            
+         aes(x = num_colony, y = change_in_a)) +
+    geom_point(size = 0.5, alpha = 0.1) +
+    facet_grid(popgradient ~ num_replicates) +
+    scale_x_log10()
+  dev.off()
   
   
   
   
-  
-  
-  plot(x = 1:200, y = 100*(qpois(c(0.025), 1:200)/(1:200) - 1), 
-       type = "l", ylim = c(-100, 300))
-  lines(x = 1:200, y = 100*(qpois(c(0.975), 1:200)/(1:200) - 1), type = "l")
   
   
   
