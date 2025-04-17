@@ -2474,7 +2474,7 @@ if (glob_make_statplots) {
                           "/10-fold change in\n", against_labels[against_i],
                           "]"),
                 x = paste0("log10[", against_labels[against_i], "]",
-                           "\nlog10[", against_units[against_i], "]")) +
+                           "\n(log10[", against_units[against_i], "])")) +
            theme_bw()
         #Modify as appropriate
         if(against == "tau") {
