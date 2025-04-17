@@ -3586,9 +3586,8 @@ if (glob_make_statplots) {
          y = "Fold-change in infection\nrate obscured by noise") +
     theme_bw() +
     theme(axis.title = element_text(size = 18),
-          axis.text = element_text(size = 9),
-          plot.subtitle = element_text(size = 18),
-          strip.text = element_text(size = 12)) +
+          axis.text = element_text(size = 12),
+          plot.subtitle = element_text(size = 18)) +
     NULL
   p2 <- ggplot(data = dplyr::filter(pivot_longer(ysum7_gradnoise2,
                                                  cols = c("lower_S", "upper_S", "lower_P", "upper_P"),
@@ -3604,14 +3603,13 @@ if (glob_make_statplots) {
          y = "Fold-change in infection\nrate obscured by noise") +
     theme_bw() +
     theme(axis.title = element_text(size = 18),
-          axis.text = element_text(size = 9),
-          plot.subtitle = element_text(size = 18),
-          strip.text = element_text(size = 12)) +
+          axis.text = element_text(size = 12),
+          plot.subtitle = element_text(size = 18)) +
     NULL
   
   png("./statplots/figS17_run7_peaktime_sensitivity_avsinitsample.png", 
       width = 10.5, height = 4, units = "in", res = 300)
-  cowplot::plot_grid(p1, p2, nrow = 1, labels = "AUTO")
+  print(cowplot::plot_grid(p1, p2, nrow = 1, labels = "AUTO"))
   dev.off()
   
   #Noise bars from estimating density (old fig S23)
