@@ -4066,8 +4066,121 @@ ysum10 <- mutate(group_by(ysum10, u_S1, u_S2, k, z, d, h,
                 rel_auc = auc/(auc[init_moi == 0][1]),
                 ref_auc = auc[init_moi == 0][1])
 
+#Variation in auc
+ysum10_groupedu <- summarize(group_by(filter(ysum10, h == 0, init_moi == 0.01),
+                                      u_S1, a_S1, init_moi),
+                             n = n(),
+                             sd_auc = sd(log10(auc)),
+                             sd_relauc = sd(log10(rel_auc)),
+                             avg_auc = mean(auc))
+ysum10_groupedu <- pivot_longer(ysum10_groupedu,
+                                col = starts_with("sd"),
+                                names_to = "type",
+                                values_to = "sd")
+
+ysum10_groupedk <- summarize(group_by(filter(ysum10, h == 0, init_moi == 0.01),
+                                      k, a_S1, init_moi),
+                             n = n(),
+                             sd_auc = sd(auc)/mean(auc),
+                             sd_relauc = sd(rel_auc)/mean(rel_auc),
+                             avg_auc = mean(auc))
+ysum10_groupedk <-  pivot_longer(ysum10_groupedk,
+                                 col = starts_with("sd"),
+                                 names_to = "type",
+                                 values_to = "sd")
+
+# Run 10: PCA ----
+ybig10_B <- filter(ybig10, Pop == "B")
+ybig10_B <- interp_data(df = ybig10_B,
+                        x = "time", y = "Density",
+                        subset_by = ybig10_B$uniq_run)
+ybig10_B <- mutate(group_by(ybig10_B, u_S1, k, h, time),
+                   Dens_norm = Density - logis_func(S_0 = init_S1,
+                                                    u_S = u_S1,
+                                                    k = k,
+                                                    times = time))
+ybig10_B <- filter(ybig10_B, time %% 20 == 0)
+
+ybig10_B_wide <- tidyr::pivot_wider(ybig10_B,
+                                    names_from = time,
+                                    names_prefix = "t_",
+                                    values_from = c(Density, Dens_norm))
+
+mypca <- prcomp(ybig10_B_wide[, grep("Density_", colnames(ybig10_B_wide))[-1]],
+                center = TRUE, scale = TRUE, retx = TRUE)
+mypcanorm <- prcomp(ybig10_B_wide[, grep("Dens_norm", colnames(ybig10_B_wide))[-1]],
+                    center = TRUE, scale = TRUE, retx = TRUE)
+
+#Merge with orig data
+colnames(mypcanorm$x) <- paste0("norm_", colnames(mypcanorm$x))
+ybig10_B_wide <- cbind(ybig10_B_wide,
+                       as.data.frame(mypca$x),
+                       as.data.frame(mypcanorm$x))
+ybig10_B_wide <- inner_join(ybig10_B_wide,
+                            ysum10)
+ysum10 <- left_join(
+  ysum10,
+  select(ybig10_B_wide, 
+         !starts_with("Dens") & !(PC6:PC125) & !(norm_PC6:norm_PC125)))
+
 #Plots
 if(glob_make_statplots) {
+  p1 <- ggplot(data = ysum10_groupedu,
+               aes(x = type, y = sd, color = avg_auc)) +
+    geom_point() +
+    geom_line(aes(group = paste(u_S1, a_S1, init_moi)),
+              alpha = 0.05) +
+    scale_y_continuous(
+      limits = c(0, max(c(ysum10_groupedu$sd, ysum10_groupedk$sd)))) +
+    scale_color_gradient(
+      transform = "log10",
+      limits = c(min(c(ysum10_groupedu$avg_auc, ysum10_groupedk$avg_auc)),
+                 max(c(ysum10_groupedu$avg_auc, ysum10_groupedk$avg_auc))))
+                                          
+  p2 <- ggplot(data = ysum10_groupedk,
+               aes(x = type, y = sd, color = avg_auc)) +
+    geom_point() +
+    geom_line(aes(group = paste(k, a_S1, init_moi)),
+              alpha = 0.05)  +
+    scale_y_continuous(
+      limits = c(0, max(c(ysum10_groupedu$sd, ysum10_groupedk$sd)))) +
+    scale_color_gradient(
+      transform = "log10",
+      limits = c(min(c(ysum10_groupedu$avg_auc, ysum10_groupedk$avg_auc)),
+                 max(c(ysum10_groupedu$avg_auc, ysum10_groupedk$avg_auc))))
+  
+  ggplot(data = filter(ybig10_B_wide, init_moi == 0.01),
+                aes(x = log10(a_S1), y = norm_PC1,
+                    color = as.factor(k))) +
+    geom_line(aes(group = paste(u_S1, k, h))) +
+    facet_grid(~init_moi) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    # labs(x = "Infection rate\n(/cfu/pfu/mL/min)", 
+    #      y = "PC1") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12))
+  ggplot(data = filter(ybig10_B_wide, init_moi == 0.01),
+         aes(x = log10(k), y = norm_PC1,
+             color = as.factor(a_S1))) +
+    geom_line(aes(group = paste(u_S1, a_S1, h))) +
+    facet_grid(~init_moi) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    # labs(x = "Infection rate\n(/cfu/pfu/mL/min)", 
+    #      y = "PC1") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12))
+  
+  png("./statplots/fig7_run10_sd_auc_relauc.png", width = 6, height = 4,
+      units = "in", res = 300)
+  cowplot::plot_grid(p1 + guides(color = "none"), 
+                     p2 + guides(color = "none"),
+                     get_legend(p1),
+                     nrow = 1, rel_widths = c(1, 1, 0.5))
+  dev.off()
+  
+  
   p1 <- ggplot(data = filter(ybig10, 
                              a_S1 %in% c(0),
                              u_S1 %in% c(0.0179),
@@ -4157,7 +4270,7 @@ if(glob_make_statplots) {
     theme(axis.text.y = element_blank(),
           axis.title.y = element_blank())
   
-  png("./statplots/fig8_run10_auccurves.png", width = 6, height = 4,
+  png("./statplots/extrafigure_run10_auccurves.png", width = 6, height = 4,
       units = "in", res = 300)
   print(cowplot::plot_grid(
     cowplot::plot_grid(p1, p2, rel_widths = c(0.45, 1), 
@@ -4178,38 +4291,10 @@ if(glob_make_statplots) {
     geom_point() +
     geom_line(aes(group = paste(u_S1, k)))
   
-  test1 <- summarize(group_by(filter(ysum10, h == 0, init_moi != 0),
-                              u_S1, h, a_S1, init_moi),
-                     n = n(),
-                     sd_auc = sd(auc)/mean(auc),
-                     sd_relauc = sd(rel_auc)/mean(rel_auc))
-  ggplot(data = pivot_longer(test1,
-                             col = starts_with("sd"),
-                             names_to = "type",
-                             values_to = "sd"),
-         aes(x = type, y = sd)) +
-    geom_point() +
-    geom_line(aes(group = paste(u_S1, a_S1, init_moi)),
-                  alpha = 0.05)
-  
-  test2 <- summarize(group_by(filter(ysum10, h == 0, init_moi != 0),
-                              k, h, a_S1, init_moi),
-                     n = n(),
-                     sd_auc = sd(auc)/mean(auc),
-                     sd_relauc = sd(rel_auc)/mean(rel_auc))
-  ggplot(data = pivot_longer(test2,
-                             col = starts_with("sd"),
-                             names_to = "type",
-                             values_to = "sd"),
-         aes(x = type, y = sd)) +
-    geom_point() +
-    geom_line(aes(group = paste(k, a_S1, init_moi)),
-              alpha = 0.05)
-  
   
   mycolors <- c("black", scales::viridis_pal(end = 0.9)(5))
   
-  fs27a <-
+  p1 <-
     print(ggplot(data = filter(ysum10, h == 0, init_moi == 0.01),
          aes(x = log10(ref_auc), y = log10(auc), 
              fill = as.factor(a_S1), color = as.factor(a_S1))) +
@@ -4240,7 +4325,7 @@ if(glob_make_statplots) {
           panel.grid = element_blank()) +
       labs(x = "log10(Control AUC)\n(hr cfu/mL)", 
            y = "log10(AUC)\n(hr cfu/mL)"))
-  fs27b <-
+  p2 <-
     print(ggplot(data = filter(ysum10, h == 0, init_moi == 0.01),
          aes(x = log10(ref_auc), y = log10(rel_auc), 
              color = as.factor(a_S1), fill = as.factor(a_S1))) +
@@ -4270,14 +4355,14 @@ if(glob_make_statplots) {
     labs(x = "log10(Control AUC)\n(hr cfu/mL)", 
          y = "log10(Relative AUC)"))
   
-  png("./statplots/figS27_run10_relauc_controlauc_all.png", 
+  png("./statplots/extrafigure_run10_relauc_controlauc_all.png", 
       width = 4.5, height = 6,
       units = "in", res = 300)
   print(
     cowplot::plot_grid(
       cowplot::plot_grid(
-        fs27a + guides(shape = "none", color = "none", fill = "none"), 
-        fs27b + guides(shape = "none", color = "none", fill = "none"), 
+        p1 + guides(shape = "none", color = "none", fill = "none"), 
+        p2 + guides(shape = "none", color = "none", fill = "none"), 
         ncol = 1, labels = "AUTO", align = "hv", axis = "tblr"),
       get_legend(fs27a), 
       ncol = 2, rel_widths = c(1, 0.6)))
@@ -4307,32 +4392,10 @@ if(glob_make_statplots) {
 }
 
 
-# Run 10: PCA ----
-ybig10_B <- filter(ybig10, Pop == "B")
-ybig10_B <- interp_data(df = ybig10_B,
-                        x = "time", y = "Density",
-                        subset_by = ybig10_B$uniq_run)
-ybig10_B <- mutate(group_by(ybig10_B, u_S1, k, h, time),
-                   Dens_norm = Density - Density[init_moi == 0])
-ybig10_B <- filter(ybig10_B, time %% 20 == 0)
 
-ybig10_B_wide <- tidyr::pivot_wider(ybig10_B,
-                                    names_from = time,
-                                    names_prefix = "t_",
-                                    values_from = c(Density, Dens_norm))
 
-mypca <- prcomp(ybig10_B_wide[, grep("Density_", colnames(ybig10_B_wide))[-1]],
-                center = TRUE, scale = TRUE, retx = TRUE)
-mypcanorm <- prcomp(ybig10_B_wide[, grep("Dens_norm", colnames(ybig10_B_wide))[-1]],
-                center = TRUE, scale = TRUE, retx = TRUE)
 
-#Merge with orig data
-colnames(mypcanorm$x) <- paste0("norm_", colnames(mypcanorm$x))
-ybig10_B_wide <- cbind(ybig10_B_wide,
-                       as.data.frame(mypca$x),
-                       as.data.frame(mypcanorm$x))
-
-#Plot
+#Plot PCA
 if(glob_make_statplots) {
   fs26a <- 
     ggplot(data = ybig10_B_wide,
