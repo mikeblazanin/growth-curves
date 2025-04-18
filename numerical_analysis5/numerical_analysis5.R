@@ -2650,7 +2650,7 @@ if(glob_make_statplots) {
     theme_bw() +
     theme(axis.title = element_text(size = 20))
   
-  png("./statplots/figS3_run2_metricvmetric_alldata.png", 
+  png("./statplots/extrafigure_run2_metricvmetric_alldata.png", 
       width = 5, height = 12.5, units = "in", res = 300)
   print(plot_grid(fs3a, fs3b, fs3c, ncol = 1, labels = "AUTO",
                   align = "hv", axis = "tb", label_size = 20))
@@ -4166,6 +4166,46 @@ if(glob_make_statplots) {
                        align = "hv", axis = "tb"),
     nrow = 2, labels = "AUTO"))
   dev.off()
+  
+  ggplot(data = filter(ysum10, h == 0, init_moi == 0.01),
+         aes(x = log10(a_S1), y = log10(auc),
+             color = as.factor(k))) +
+    geom_point() +
+    geom_line(aes(group = paste(u_S1, k)))
+  ggplot(data = filter(ysum10, h == 0, init_moi == 0.01),
+         aes(x = log10(a_S1), y = log10(rel_auc),
+             color = as.factor(k))) +
+    geom_point() +
+    geom_line(aes(group = paste(u_S1, k)))
+  
+  test1 <- summarize(group_by(filter(ysum10, h == 0, init_moi != 0),
+                              u_S1, h, a_S1, init_moi),
+                     n = n(),
+                     sd_auc = sd(auc)/mean(auc),
+                     sd_relauc = sd(rel_auc)/mean(rel_auc))
+  ggplot(data = pivot_longer(test1,
+                             col = starts_with("sd"),
+                             names_to = "type",
+                             values_to = "sd"),
+         aes(x = type, y = sd)) +
+    geom_point() +
+    geom_line(aes(group = paste(u_S1, a_S1, init_moi)),
+                  alpha = 0.05)
+  
+  test2 <- summarize(group_by(filter(ysum10, h == 0, init_moi != 0),
+                              k, h, a_S1, init_moi),
+                     n = n(),
+                     sd_auc = sd(auc)/mean(auc),
+                     sd_relauc = sd(rel_auc)/mean(rel_auc))
+  ggplot(data = pivot_longer(test2,
+                             col = starts_with("sd"),
+                             names_to = "type",
+                             values_to = "sd"),
+         aes(x = type, y = sd)) +
+    geom_point() +
+    geom_line(aes(group = paste(k, a_S1, init_moi)),
+              alpha = 0.05)
+  
   
   mycolors <- c("black", scales::viridis_pal(end = 0.9)(5))
   
