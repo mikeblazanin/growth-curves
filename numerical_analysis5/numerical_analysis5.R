@@ -2655,7 +2655,7 @@ ysum2 <- mutate(group_by(ysum2, u_S1, u_S2, k, z, d, h,
                  ref_auc = auc[init_moi == 0][1])
 
 #Calculate variation in auc
-ysum2_groupedu <- summarize(group_by(ysum2, u_S1, a_S1),
+ysum2_groupedu <- summarize(group_by(ysum2, u_S1, a_S1, init_moi),
                             n = n(),
                             sd_auc = sd(log10(auc)),
                             sd_relauc = sd(log10(rel_auc)),
@@ -2664,7 +2664,7 @@ ysum2_groupedu <- pivot_longer(ysum2_groupedu,
                                col = starts_with("sd"),
                                names_to = "type",
                                values_to = "sd")
-ysum2_groupedk <- summarize(group_by(ysum2, k, a_S1),
+ysum2_groupedk <- summarize(group_by(ysum2, k, a_S1, init_moi),
                             n = n(),
                             sd_auc = sd(auc)/mean(auc),
                             sd_relauc = sd(rel_auc)/mean(rel_auc),
@@ -2701,8 +2701,7 @@ colnames(mypcanorm$x) <- paste0("norm_", colnames(mypcanorm$x))
 ybig2_B_wide <- cbind(ybig2_B_wide,
                        as.data.frame(mypca$x),
                        as.data.frame(mypcanorm$x))
-ybig2_B_wide <- inner_join(ybig2_B_wide,
-                            ysum2)
+ybig2_B_wide <- inner_join(ybig2_B_wide, ysum2)
 ysum2 <- left_join(
   ysum2,
   select(ybig2_B_wide, 
@@ -2710,29 +2709,32 @@ ysum2 <- left_join(
 
 # Run 2: plots ----
 if(glob_make_statplots) {
-  p1 <- ggplot(data = ysum2_groupedu,
-               aes(x = type, y = sd, color = avg_auc)) +
+  ggplot(data = ysum2,
+         aes(x = PC1, y = PC2, color = as.factor(a_S1),
+             shape = as.factor(init_moi))) +
+    geom_point()
+  ggplot(data = ysum2,
+         aes(x = norm_PC1, y = norm_PC2, color = as.factor(a_S1),
+             shape = as.factor(init_moi))) +
+    geom_point()
+  ggplot(data = ysum2,
+         aes(x = log10(a_S1), y = PC1)) + 
     geom_point() +
-    geom_line(aes(group = paste(u_S1, a_S1, init_moi)),
-              alpha = 0.05) +
-    scale_y_continuous(
-      limits = c(0, max(c(ysum2_groupedu$sd, ysum2_groupedk$sd)))) +
-    scale_color_gradient(
-      transform = "log10",
-      limits = c(min(c(ysum2_groupedu$avg_auc, ysum2_groupedk$avg_auc)),
-                 max(c(ysum2_groupedu$avg_auc, ysum2_groupedk$avg_auc))))
+    facet_grid(~u_S1)
+  ggplot(data = ysum2,
+         aes(x = log10(a_S1), y = PC1)) + 
+    geom_point() +
+    facet_grid(~k)
+  ggplot(data = ysum2,
+         aes(x = log10(a_S1), y = norm_PC1)) + 
+    geom_point() +
+    facet_grid(~u_S1)
+  ggplot(data = ysum2,
+         aes(x = log10(a_S1), y = norm_PC1)) + 
+    geom_point() +
+    facet_grid(~k)
   
-  p2 <- ggplot(data = ysum2_groupedk,
-               aes(x = type, y = sd, color = avg_auc)) +
-    geom_point() +
-    geom_line(aes(group = paste(k, a_S1, init_moi)),
-              alpha = 0.05)  +
-    scale_y_continuous(
-      limits = c(0, max(c(ysum2_groupedu$sd, ysum2_groupedk$sd)))) +
-    scale_color_gradient(
-      transform = "log10",
-      limits = c(min(c(ysum2_groupedu$avg_auc, ysum2_groupedk$avg_auc)),
-                 max(c(ysum2_groupedu$avg_auc, ysum2_groupedk$avg_auc))))
+  
   
   ggplot(data = filter(ybig2_B_wide, init_moi == 0.01),
          aes(x = log10(a_S1), y = PC1,
@@ -2758,6 +2760,36 @@ if(glob_make_statplots) {
     theme_bw() +
     theme(axis.title = element_text(size = 16),
           axis.text = element_text(size = 12))
+  
+  
+  
+  p1 <- ggplot(data = filter(ysum2_groupedu, init_moi != 0),
+               aes(x = type, y = sd, color = avg_auc)) +
+    geom_point() +
+    geom_line(aes(group = paste(u_S1, a_S1, init_moi)),
+              alpha = 0.05) +
+    scale_y_continuous(
+      limits = c(0, max(c(ysum2_groupedu$sd, ysum2_groupedk$sd)))) +
+    scale_color_gradient(
+      transform = "log10",
+      limits = c(min(c(ysum2_groupedu$avg_auc, ysum2_groupedk$avg_auc)),
+                 max(c(ysum2_groupedu$avg_auc, ysum2_groupedk$avg_auc))))
+
+  p2 <- ggplot(data = filter(ysum2_groupedk, init_moi != 0),
+               aes(x = type, y = sd, color = avg_auc)) +
+    geom_point() +
+    geom_line(aes(group = paste(k, a_S1, init_moi)),
+              alpha = 0.05)  +
+    scale_y_continuous(
+      limits = c(0, max(c(ysum2_groupedu$sd, ysum2_groupedk$sd)))) +
+    scale_color_gradient(
+      transform = "log10",
+      limits = c(min(c(ysum2_groupedu$avg_auc, ysum2_groupedk$avg_auc)),
+                 max(c(ysum2_groupedu$avg_auc, ysum2_groupedk$avg_auc))))
+  
+  ##To add here: PCA plot
+  
+  ##To add here: fitting plot
   
   png("./statplots/fig7_run2_sd_auc_relauc.png", width = 6, height = 4,
       units = "in", res = 300)
