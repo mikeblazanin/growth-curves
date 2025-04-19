@@ -2711,7 +2711,8 @@ ysum2 <- left_join(
 #Do fitting
 ode_fn_optim <- function(optim_parms, times, ref_B,
                          init_S1, init_I1, init_P, u_S1, k) {
-  if(any(optim_parms <= 0)) {return(Inf)}
+  #No longer necessary with bounded parameter optimization
+  #if(any(optim_parms <= 0)) {return(Inf)}
   
   # print(paste("a", optim_parms[["a_S1"]],
   #             "tau", optim_parms[["tau"]],
