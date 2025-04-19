@@ -2711,6 +2711,7 @@ ysum2 <- left_join(
 #Do fitting
 ode_fn_optim <- function(optim_parms, times, ref_B,
                          init_S1, init_I1, init_P, u_S1, k) {
+  if(any(optim_parms <= 0)) {return(Inf)}
   mycatch <- myTryCatch(simdata <- as.data.frame(ode(
     y = c(S1 = init_S1,
           I1 = init_I1,
@@ -2725,6 +2726,8 @@ ode_fn_optim <- function(optim_parms, times, ref_B,
               b = optim_parms[["b"]],
               z = 1, f_tau = 0, d = 0, nI = 1,
               warnings = 0, thresh_min_dens = 10**-10))))
+  browser()
+  
   if((!is.null(mycatch$warning) || !is.null(mycatch$error)) &&
      (nrow(mycatch$value) == length(ref_B))) {browser()}
   simdata <- mycatch$value
@@ -2734,8 +2737,7 @@ ode_fn_optim <- function(optim_parms, times, ref_B,
 }
 
 fit_across_runs <- function(sumdata, bigdata) {
-  browser()
-  
+
   fitrun <- filter(ysum2, init_moi != 0)
   fitrun <- left_join(
     fitrun,
