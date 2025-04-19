@@ -2742,19 +2742,25 @@ ode_fn_optim <- function(optim_parms, times, ref_B,
   return(sum((simdata$B - ref_B)**2))
 }
 
-fit_across_runs <- function(sumdata, bigdata) {
-  fitrun <- filter(ysum2, init_moi != 0)
+fit_across_runs <- function(
+    sumdata, bigdata,
+    start_a_S1 = 10**seq(from = -12, to = -8, length.out = 3),
+    start_tau = signif(10**seq(from = 1, to = 2, length.out = 3), 3),
+    start_b = signif(5*10**seq(from = 0, to = 2, length.out = 3), 3)) {
+  browser()
+  fitrun <- filter(sumdata, init_moi != 0)
   fitrun <- left_join(
     fitrun,
     expand.grid(uniq_run = fitrun$uniq_run,
-                start_a_S1 = 10**seq(from = -12, to = -8, length.out = 3),
-                start_tau = signif(10**seq(from = 1, to = 2, length.out = 3), 3),
-                start_b = signif(5*10**seq(from = 0, to = 2, length.out = 3), 3),
+                start_a_S1 = start_a_S1,
+                start_tau = start_tau,
+                start_b = start_b,
                 end_a_S1 = NA,
                 end_tau = NA,
                 end_b = NA,
                 optim_val = NA,
-                optim_conv = NA))
+                optim_conv = NA,
+                optim_msg = NA))
   
   print(paste(nrow(fitrun), "optimizations will be run"))
   #Save sequence of 10% cutoff points for later reference
@@ -2781,6 +2787,7 @@ fit_across_runs <- function(sumdata, bigdata) {
     fitrun$end_b[i] <- optout$par[["b"]]
     fitrun$optim_val[i] <- optout$value
     fitrun$optim_conv[i] <- optout$convergence
+    fitrun$optim_msg[i] <- optout$message
     if (i %in% progress_seq) {
       print(paste((which(progress_seq == i)-1)*10, "% completed", sep = ""))
     }
@@ -2788,8 +2795,69 @@ fit_across_runs <- function(sumdata, bigdata) {
   return(fitrun)
 }
 
+run_fitted_sims <- function(fitrun) {
+  return(run_sims_ode(u_S1 = fitrun$u_S1,
+                      k = fitrun$k,
+                      a_S1 = fitrun$end_a_S1,
+                      tau = fitrun$end_tau,
+                      b = fitrun$end_b,
+                      z = fitrun$z,
+                      d = fitrun$d,
+                      init_S1 = fitrun$init_S1,
+                      init_moi = fitrun$init_moi,
+                      equil_cutoff_dens = 0.1,
+                      max_time = 48*60,
+                      init_time = 48*60,
+                      init_stepsize = 5,
+                      combinatorial = FALSE,
+                      dynamic_stepsize = FALSE,
+                      fixed_time = FALSE,
+                      print_info = TRUE))
+}
+
+fitruntest <- 
+  fit_across_runs(sumdata = filter(ysum2, uniq_run == 63),
+                  bigdata = filter(ybig2, Pop == "B", uniq_run == 63),
+                  start_a_S1 = 10**seq(from = -12, to = -8, length.out = 3),
+                  start_tau = signif(10**seq(from = 1, to = 2, length.out = 3), 3),
+                  start_b = signif(5*10**seq(from = 0, to = 2, length.out = 3), 3))
+
+fitruntest_big <- run_fitted_sims(fitruntest)
+
+fitruntest_big1 <- fitruntest_big[[1]]
+
+ggplot(data = filter(fitruntest_big1, Pop == "B"),
+       aes(x = time, y = Density)) +
+  geom_line(aes(group = uniq_run)) +
+  scale_y_log10()
+  
+
+
+
+ggplot(data = filter(fitruntest, optim_conv == 0)) +
+  geom_point(data = filter(ysum2, uniq_run == 63),
+             aes(x = a_S1, y = tau), pch = 4, size = 5) +
+  geom_point(aes(x = start_a_S1, y = start_tau)) +
+  geom_segment(aes(x = start_a_S1, y = start_tau, 
+                   xend = end_a_S1, yend = end_tau,
+                   color = as.factor(start_b))) +
+  scale_x_log10() +
+  scale_y_log10()
+
+ggplot(data = fitruntest) +
+  geom_point(aes(x = start_b, y = start_tau)) +
+  geom_segment(aes(x = start_b, y = start_tau, 
+                   xend = end_b, yend = end_tau,
+                   color = as.factor(start_a_S1))) +
+  scale_x_log10() +
+  scale_y_log10()
+
+
+
 fitrun2 <- fit_across_runs(sumdata = filter(ysum2, init_moi != 0),
                 bigdata = filter(ybig2, Pop == "B", init_moi != 0))
+
+
 
 
                                  
