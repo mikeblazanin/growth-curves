@@ -2712,6 +2712,10 @@ ysum2 <- left_join(
 ode_fn_optim <- function(optim_parms, times, ref_B,
                          init_S1, init_I1, init_P, u_S1, k) {
   if(any(optim_parms <= 0)) {return(Inf)}
+  
+  # print(paste("a", optim_parms[["a_S1"]],
+  #             "tau", optim_parms[["tau"]],
+  #             "b", optim_parms[["b"]]))
   mycatch <- myTryCatch(simdata <- as.data.frame(ode(
     y = c(S1 = init_S1,
           I1 = init_I1,
@@ -2726,8 +2730,7 @@ ode_fn_optim <- function(optim_parms, times, ref_B,
               b = optim_parms[["b"]],
               z = 1, f_tau = 0, d = 0, nI = 1,
               warnings = 0, thresh_min_dens = 10**-10))))
-  browser()
-  
+
   if((!is.null(mycatch$warning) || !is.null(mycatch$error)) &&
      (nrow(mycatch$value) == length(ref_B))) {browser()}
   simdata <- mycatch$value
@@ -2737,7 +2740,6 @@ ode_fn_optim <- function(optim_parms, times, ref_B,
 }
 
 fit_across_runs <- function(sumdata, bigdata) {
-
   fitrun <- filter(ysum2, init_moi != 0)
   fitrun <- left_join(
     fitrun,
@@ -2757,7 +2759,10 @@ fit_across_runs <- function(sumdata, bigdata) {
   
   for (i in 1:nrow(fitrun)) {
     temp <- filter(bigdata, uniq_run == fitrun$uniq_run[i])
-    optout <- optim(par = c(a_S1 = fitrun$start_a_S1[i], 
+    optout <- optim(method = "L-BFGS-B",
+                    lower = c(10**-20, 1, 1),
+                    upper = c(10**-3, 10000, 10000),
+                    par = c(a_S1 = fitrun$start_a_S1[i], 
                             tau = fitrun$start_tau[i], 
                             b = fitrun$start_b[i]),
                     fn = ode_fn_optim,
@@ -2799,9 +2804,12 @@ optsim <- as.data.frame(ode(
   func = deriv_ode,
   parms = c(u_S1 = temp$u_S1[1],
             k = temp$k[1],
-            a_S1 = optout$par[["a_S1"]],
-            tau = optout$par[["tau"]],
-            b = optout$par[["b"]],
+            # a_S1 = optout$par[["a_S1"]],
+            # tau = optout$par[["tau"]],
+            # b = optout$par[["b"]],
+            a_S1 = 1.929,
+            tau = 109.89,
+            b = 1.0648,
             z = 1, f_tau = 0, d = 0, nI = 1,
             warnings = 0, thresh_min_dens = 10**-10)))
 optsim$B <- optsim$S1 + optsim$I1
