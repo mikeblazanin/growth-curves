@@ -2707,6 +2707,107 @@ ysum2 <- left_join(
   select(ybig2_B_wide, 
          !starts_with("Dens") & !(PC6:PC125) & !(norm_PC6:norm_PC125)))
 
+
+#Do fitting
+ode_fn_optim <- function(optim_parms, times, ref_B,
+                         init_S1, init_I1, init_P, u_S1, k) {
+  mycatch <- myTryCatch(simdata <- as.data.frame(ode(
+    y = c(S1 = init_S1,
+          I1 = init_I1,
+          P = init_P,
+          N = k - init_S1), 
+    times = times, 
+    func = deriv_ode,
+    parms = c(u_S1 = u_S1,
+              k = k,
+              a_S1 = optim_parms[["a_S1"]],
+              tau = optim_parms[["tau"]],
+              b = optim_parms[["b"]],
+              z = 1, f_tau = 0, d = 0, nI = 1,
+              warnings = 0, thresh_min_dens = 10**-10))))
+  if((!is.null(mycatch$warning) || !is.null(mycatch$error)) &&
+     (nrow(mycatch$value) == length(ref_B))) {browser()}
+  simdata <- mycatch$value
+  if(nrow(simdata) < length(ref_B)) {return(Inf)}
+  simdata$B <- simdata$S1 + simdata$I1
+  return(sum((simdata$B - ref_B)**2))
+}
+
+fit_across_runs <- function(sumdata, bigdata) {
+  browser()
+  
+  fitrun <- filter(ysum2, init_moi != 0)
+  fitrun <- left_join(
+    fitrun,
+    expand.grid(uniq_run = fitrun$uniq_run,
+                start_a_S1 = 10**seq(from = -12, to = -8, length.out = 3),
+                start_tau = signif(10**seq(from = 1, to = 2, length.out = 3), 3),
+                start_b = signif(5*10**seq(from = 0, to = 2, length.out = 3), 3),
+                end_a_S1 = NA,
+                end_tau = NA,
+                end_b = NA,
+                optim_val = NA,
+                optim_conv = NA))
+  
+  print(paste(nrow(fitrun), "optimizations will be run"))
+  #Save sequence of 10% cutoff points for later reference
+  progress_seq <- round(seq(from = 0, to = nrow(fitrun), by = nrow(fitrun)/10))
+  
+  for (i in 1:nrow(fitrun)) {
+    temp <- filter(bigdata, uniq_run == fitrun$uniq_run[i])
+    optout <- optim(par = c(a_S1 = fitrun$start_a_S1[i], 
+                            tau = fitrun$start_tau[i], 
+                            b = fitrun$start_b[i]),
+                    fn = ode_fn_optim,
+                    times = temp$time,
+                    ref_B = temp$Density,
+                    init_S1 = temp$init_S1[1],
+                    init_I1 = 0,
+                    init_P = temp$init_moi[1]*temp$init_S1[1],
+                    u_S1 = temp$u_S1[1],
+                    k = temp$k[1])
+    fitrun$end_a_S1[i] <- optout$par[["a_S1"]]
+    fitrun$end_tau[i] <- optout$par[["tau"]]
+    fitrun$end_b[i] <- optout$par[["b"]]
+    fitrun$optim_val[i] <- optout$value
+    fitrun$optim_conv[i] <- optout$convergence
+    if (i %in% progress_seq) {
+      print(paste((which(progress_seq == i)-1)*10, "% completed", sep = ""))
+    }
+  }
+  return(fitrun)
+}
+
+fitrun2 <- fit_across_runs(sumdata = filter(ysum2, init_moi != 0),
+                bigdata = filter(ybig2, Pop == "B", init_moi != 0))
+
+
+                                 
+
+
+
+
+
+optsim <- as.data.frame(ode(
+  y = c(S1 = temp$init_S1[1],
+        I1 = 0,
+        P = temp$init_moi[1]*temp$init_S1[1],
+        N = temp$k[1] - temp$init_S1[1]), 
+  times = temp$time, 
+  func = deriv_ode,
+  parms = c(u_S1 = temp$u_S1[1],
+            k = temp$k[1],
+            a_S1 = optout$par[["a_S1"]],
+            tau = optout$par[["tau"]],
+            b = optout$par[["b"]],
+            z = 1, f_tau = 0, d = 0, nI = 1,
+            warnings = 0, thresh_min_dens = 10**-10)))
+optsim$B <- optsim$S1 + optsim$I1
+
+plot(optsim$time, optsim$B)
+lines(temp$time, temp$Density)
+
+
 # Run 2: plots ----
 if(glob_make_statplots) {
   ggplot(data = ysum2,
