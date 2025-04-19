@@ -719,8 +719,8 @@ run_sims_ode <- function(u_S1,
     }
     
     #Save parameters into dataframe, replicating as needed
-    param_combos <- sapply(X = sim_vars,
-                           FUN = function(x) {rep_len(x, num_sims)})
+    param_combos <- as.data.frame(sapply(X = sim_vars,
+                           FUN = function(x) {rep_len(x, num_sims)}))
   }
   
   #if N is NA, N = k-S-R
@@ -803,8 +803,10 @@ run_sims_ode <- function(u_S1,
     #Once end conditions triggered, if run succeeded (or warning-d)
     if(!is.null(yout_list$value)) {
       #Calculate I
-      yout_list$value$I <- 
-        rowSums(yout_list$value[, grep("I", colnames(yout_list$value))])
+      I_cols <- grep("I", colnames(yout_list$value))
+      if(length(I_cols) > 1) {
+        yout_list$value$I <- rowSums(yout_list$value[, I_cols])
+      } else {yout_list$value$I <- yout_list$value[, I_cols]}
       #Calculate all bacteria (B)
       yout_list$value$B <- yout_list$value$S1 + yout_list$value$I
       #Calculate all phage (PI)
