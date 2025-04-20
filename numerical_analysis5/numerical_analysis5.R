@@ -2748,10 +2748,10 @@ fit_across_runs <- function(
     start_tau = signif(10**seq(from = 1, to = 2, length.out = 3), 3),
     start_b = signif(5*10**seq(from = 0, to = 2, length.out = 3), 3)) {
   browser()
-  fitrun <- filter(sumdata, init_moi != 0)
-  fitrun <- left_join(
-    fitrun,
-    expand.grid(uniq_run = fitrun$uniq_run,
+  fitsum <- filter(sumdata, init_moi != 0)
+  fitsum <- left_join(
+    fitsum,
+    expand.grid(uniq_run = fitsum$uniq_run,
                 start_a_S1 = start_a_S1,
                 start_tau = start_tau,
                 start_b = start_b,
@@ -2761,19 +2761,20 @@ fit_across_runs <- function(
                 optim_val = NA,
                 optim_conv = NA,
                 optim_msg = NA))
-  
-  print(paste(nrow(fitrun), "optimizations will be run"))
+  fitsum <- cbind(data.frame(fitrun = 1:nrow(fitsum)), fitsum)
+
+  print(paste(nrow(fitsum), "optimizations will be run"))
   #Save sequence of 10% cutoff points for later reference
-  progress_seq <- round(seq(from = 0, to = nrow(fitrun), by = nrow(fitrun)/10))
+  progress_seq <- round(seq(from = 0, to = nrow(fitsum), by = nrow(fitsum)/10))
   
-  for (i in 1:nrow(fitrun)) {
-    temp <- filter(bigdata, uniq_run == fitrun$uniq_run[i])
+  for (i in 1:nrow(fitsum)) {
+    temp <- filter(bigdata, uniq_run == fitsum$uniq_run[i])
     optout <- optim(method = "L-BFGS-B",
                     lower = c(10**-20, 1, 1),
                     upper = c(10**-3, 10000, 10000),
-                    par = c(a_S1 = fitrun$start_a_S1[i], 
-                            tau = fitrun$start_tau[i], 
-                            b = fitrun$start_b[i]),
+                    par = c(a_S1 = fitsum$start_a_S1[i], 
+                            tau = fitsum$start_tau[i], 
+                            b = fitsum$start_b[i]),
                     fn = ode_fn_optim,
                     times = temp$time,
                     ref_B = temp$Density,
@@ -2782,21 +2783,21 @@ fit_across_runs <- function(
                     init_P = temp$init_moi[1]*temp$init_S1[1],
                     u_S1 = temp$u_S1[1],
                     k = temp$k[1])
-    fitrun$end_a_S1[i] <- optout$par[["a_S1"]]
-    fitrun$end_tau[i] <- optout$par[["tau"]]
-    fitrun$end_b[i] <- optout$par[["b"]]
-    fitrun$optim_val[i] <- optout$value
-    fitrun$optim_conv[i] <- optout$convergence
-    fitrun$optim_msg[i] <- optout$message
+    fitsum$end_a_S1[i] <- optout$par[["a_S1"]]
+    fitsum$end_tau[i] <- optout$par[["tau"]]
+    fitsum$end_b[i] <- optout$par[["b"]]
+    fitsum$optim_val[i] <- optout$value
+    fitsum$optim_conv[i] <- optout$convergence
+    fitsum$optim_msg[i] <- optout$message
     if (i %in% progress_seq) {
       print(paste((which(progress_seq == i)-1)*10, "% completed", sep = ""))
     }
   }
-  return(fitrun)
+  return(fitsum)
 }
 
 run_fitted_sims <- function(fitrun) {
-  return(run_sims_ode(u_S1 = fitrun$u_S1,
+  out <- run_sims_ode(u_S1 = fitrun$u_S1,
                       k = fitrun$k,
                       a_S1 = fitrun$end_a_S1,
                       tau = fitrun$end_tau,
@@ -2812,10 +2813,12 @@ run_fitted_sims <- function(fitrun) {
                       combinatorial = FALSE,
                       dynamic_stepsize = FALSE,
                       fixed_time = FALSE,
-                      print_info = TRUE))
+                      print_info = TRUE)
+  colnames(out[[1]])[colnames(out[[1]]) == "uniq_run"] <- "fitrun"
+  return(out)
 }
 
-fitruntest <- 
+fitruntest_sum <- 
   fit_across_runs(sumdata = filter(ysum2, uniq_run == 63),
                   bigdata = filter(ybig2, Pop == "B", uniq_run == 63),
                   start_a_S1 = 10**seq(from = -12, to = -8, length.out = 3),
@@ -2825,12 +2828,18 @@ fitruntest <-
 fitruntest_big <- run_fitted_sims(fitruntest)
 
 fitruntest_big1 <- fitruntest_big[[1]]
+fitruntest_big1 <- left_join(fitruntest_big1,
+                             select(fitruntest_sum, uniq_run, fitrun))
 
-ggplot(data = filter(fitruntest_big1, Pop == "B"),
+
+ggplot(data = filter(fitruntest_big1, Pop == "B", fitrun == 1),
        aes(x = time, y = Density)) +
-  geom_line(aes(group = uniq_run)) +
-  scale_y_log10()
-  
+  geom_line(aes(group = fitrun), color = "red") +
+  #scale_y_log10() +
+  geom_line(data = filter(ybig2, Pop == "B", init_moi != 0, uniq_run == 63),
+            aes(group = uniq_run)) +
+  facet_wrap(~uniq_run)
+            
 
 
 
@@ -2915,6 +2924,27 @@ if(glob_make_statplots) {
          aes(x = log10(a_S1), y = norm_PC1)) + 
     geom_point() +
     facet_grid(~k)
+  
+  #Calculate how much variation is in each
+  mylm <- lm(PC1 ~ as.factor(a_S1) + as.factor(k):as.factor(u_S1),
+     data = ysum2)
+  anova(mylm)
+  summary(mylm)
+  mylm2 <- lm(norm_PC1 ~ as.factor(a_S1) + as.factor(k):as.factor(u_S1),
+             data = ysum2)
+  anova(mylm2)
+  summary(mylm2)
+  #Basically, what we want is to calculate what proportion of the variance
+  # is within-bacteria across a vs within-a across bacteria
+  #Ideally the proportion of variance within-bacteria is 1 and within a is 0
+  #Can calculate this by grabbing the sum of squares for each term & dividing
+  # by the total sum of squares to calculate the proportion of variation
+  # explained by that term (so we want high sum of squares for a and low for
+  # the bacteria)
+  av1 <- anova(mylm)
+  av1$`Sum Sq`/sum(av1$`Sum Sq`)
+  #Except we do want to try to partition by variation in u vs k
+  
   
   
   
