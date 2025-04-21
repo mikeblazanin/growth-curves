@@ -2656,29 +2656,6 @@ ysum2 <- mutate(group_by(ysum2, u_S1, u_S2, k, z, d, h,
                  rel_auc = auc/(auc[init_moi == 0][1]),
                  ref_auc = auc[init_moi == 0][1])
 
-#Calculate variation in auc
-ysum2_aucgroupedu <- summarize(group_by(filter(ysum2, init_moi != 0),
-                                        u_S1, a_S1, init_moi),
-                            n = n(),
-                            sd_auc = sd(log10(auc)),
-                            sd_relauc = sd(log10(rel_auc)),
-                            avg_auc = mean(auc))
-ysum2_aucgroupedu <- pivot_longer(ysum2_aucgroupedu,
-                               col = starts_with("sd"),
-                               names_to = "type",
-                               values_to = "sd")
-ysum2_aucgroupedk <- summarize(group_by(filter(ysum2, init_moi != 0), 
-                                        k, a_S1, init_moi),
-                            n = n(),
-                            sd_auc = sd(auc)/mean(auc),
-                            sd_relauc = sd(rel_auc)/mean(rel_auc),
-                            avg_auc = mean(auc))
-ysum2_aucgroupedk <-  pivot_longer(ysum2_aucgroupedk,
-                                col = starts_with("sd"),
-                                names_to = "type",
-                                values_to = "sd")
-
-
 
 #Run PCA
 ybig2_B <- filter(ybig2, Pop == "B")
@@ -2713,26 +2690,29 @@ ysum2 <- left_join(
   select(ybig2_B_wide, 
          !starts_with("Dens") & !(PC6:PC125) & !(norm_PC6:norm_PC125)))
 
-#Calculate variation in PCs
-ysum2_PCgroupedu <- summarize(group_by(filter(ysum2, init_moi != 0),
-                                       u_S1, a_S1, init_moi),
-                              n = n(),
-                              sd_PC1 = sd(PC1)/abs(mean(PC1)),
-                              sd_normPC1 = sd(norm_PC1)/abs(mean(norm_PC1)))
-ysum2_PCgroupedu <- pivot_longer(ysum2_PCgroupedu,
-                                 col = starts_with("sd"),
-                                 names_to = "type",
-                                 values_to = "sd")
-ysum2_PCgroupedk <- summarize(group_by(filter(ysum2, init_moi != 0), 
-                                       k, a_S1, init_moi),
-                              n = n(),
-                              sd_PC1 = sd(PC1)/abs(mean(PC1)),
-                              sd_normPC1 = sd(norm_PC1)/abs(mean(norm_PC1)))
-ysum2_PCgroupedk <-  pivot_longer(ysum2_PCgroupedk,
-                                  col = starts_with("sd"),
-                                  names_to = "type",
-                                  values_to = "sd")
-
+#Calculate variation in metrics
+ysum2_groupedu <- summarize(
+  group_by(filter(ysum2, init_moi != 0),
+           u_S1, a_S1, init_moi),
+  across(
+    .cols = c(peak_dens, peak_time, auc, extin_time_4,
+              rel_auc, PC1, norm_PC1),
+    .fns = list("cv" = function(x) {sd(x)/abs(mean(x))})))
+ysum2_groupedu <- pivot_longer(ysum2_groupedu,
+                               col = ends_with("cv"),
+                               names_to = "type",
+                               values_to = "cv")
+ysum2_groupedk <- summarize(
+  group_by(filter(ysum2, init_moi != 0),
+           k, a_S1, init_moi),
+  across(
+    .cols = c(peak_dens, peak_time, auc, extin_time_4,
+              rel_auc, PC1, norm_PC1),
+    .fns = list("cv" = function(x) {sd(x)/abs(mean(x))})))
+ysum2_groupedk <- pivot_longer(ysum2_groupedk,
+                               col = ends_with("cv"),
+                               names_to = "type",
+                               values_to = "cv")
 
 #Code where I was exploring visualizing success of fitting approaches to
 # estimate phage parameters (didn't end up including in paper)
@@ -2928,21 +2908,22 @@ if(glob_make_statplots) {
     geom_point() +
     facet_grid(~k)
   
-  mylimits <- 
-    c(min(log10(c(ysum2_aucgroupedu$sd, ysum2_aucgroupedk$sd)), na.rm = T),
-      max(log10(c(ysum2_aucgroupedu$sd, ysum2_aucgroupedk$sd)), na.rm = T))
-  
-  p1 <- ggplot(data = filter(ysum2_aucgroupedk, init_moi != 0),
-               aes(x = type, y = log10(sd))) +
-    geom_point() +
-    geom_line(aes(group = paste(k, a_S1, init_moi)), alpha = 0.1)  +
-    scale_x_discrete(limits = c("sd_auc", "sd_relauc"),
-                     labels = c("AUC", "Relative AUC")) +
+  p1 <- ggplot(data = ysum2_groupedk,
+               aes(x = type, y = log10(cv))) +
+    geom_point(alpha = 0.5) +
+    geom_line(data = filter(ysum2_groupedk, type %in% c("auc_cv", "rel_auc_cv")),
+              aes(group = paste(k, a_S1)), alpha = 0.1) +
+    geom_line(data = filter(ysum2_groupedk, type %in% c("PC1_cv", "norm_PC1_cv")),
+              aes(group = paste(k, a_S1)), alpha = 0.1) +
+    scale_x_discrete(limits = c("peak_dens_cv", "peak_time_cv", "extin_time_4_cv",
+                                "auc_cv", "rel_auc_cv", "PC1_cv", "norm_PC1_cv"),
+                     labels = c("Peak density", "Time of peak density",
+                                "Extinction time", "AUC", "Relative AUC",
+                                "PC1", "Relative PC1")) +
     facet_wrap(~ "Growth rate varies") +
     scale_y_continuous(
       labels = math_format(10^.x),
-      limits = mylimits,
-      breaks = c(0, -1, -2)) +
+      breaks = c(0, -1, -2, -3, -4)) +
     # scale_color_gradient(
     #   transform = "log10",
     #   limits = c(min(c(ysum2_aucgroupedu$avg_auc, ysum2_aucgroupedk$avg_auc)),
@@ -2952,75 +2933,37 @@ if(glob_make_statplots) {
     theme(axis.title.y = element_text(size = 13),
           axis.title.x = element_blank(),
           strip.text = element_text(size = 10.5),
-          axis.text.x = element_text(size = 11),
+          axis.text.x = element_text(size = 11, angle = 45, hjust = 1),
           axis.text.y = element_text(size = 10)) +
     NULL
   
-  p2 <- ggplot(data = filter(ysum2_aucgroupedu, init_moi != 0),
-               aes(x = type, y = log10(sd))) +
-    geom_point() +
-    geom_line(aes(group = paste(u_S1, a_S1, init_moi)), alpha = 0.1) +
-    scale_x_discrete(limits = c("sd_auc", "sd_relauc"),
-                   labels = c("AUC", "Relative AUC")) +
+  p2 <- ggplot(data = ysum2_groupedu,
+               aes(x = type, y = log10(cv))) +
+    geom_point(alpha = 0.5) +
+    geom_line(data = filter(ysum2_groupedu, type %in% c("auc_cv", "rel_auc_cv")),
+              aes(group = paste(u_S1, a_S1)), alpha = 0.1) +
+    geom_line(data = filter(ysum2_groupedu, type %in% c("PC1_cv", "norm_PC1_cv")),
+              aes(group = paste(u_S1, a_S1)), alpha = 0.1) +
+    #geom_line(aes(group = paste(k, a_S1, init_moi)), alpha = 0.1)  +
+    scale_x_discrete(limits = c("peak_dens_cv", "peak_time_cv", "extin_time_4_cv",
+                                "auc_cv", "rel_auc_cv", "PC1_cv", "norm_PC1_cv"),
+                     labels = c("Peak density", "Time of peak density",
+                                "Extinction time", "AUC", "Relative AUC",
+                                "PC1", "Relative PC1")) +
     facet_wrap(~ "Stationary phase density varies") +
     scale_y_continuous(
       labels = math_format(10^.x),
-      limits = mylimits,
-      breaks = c(0, -1, -2)) +
+      breaks = c(2, 0, -2, -4)) +
     # scale_color_gradient(
     #   transform = "log10",
     #   limits = c(min(c(ysum2_aucgroupedu$avg_auc, ysum2_aucgroupedk$avg_auc)),
-    #              max(c(ysum2_aucgroupedu$avg_auc, ysum2_aucgroupedk$avg_auc)))) +
+    #              max(c(ysum2_aucgroupedu$avg_auc, ysum2_aucgroupedk$avg_auc))))
     labs(y = "Coefficient of Variation") +
     theme_bw() +
     theme(axis.title.y = element_text(size = 13),
           axis.title.x = element_blank(),
           strip.text = element_text(size = 10.5),
-          axis.text.x = element_text(size = 11),
-          axis.text.y = element_text(size = 10)) +
-    NULL
-
-  mylimits <- 
-    c(min(log10(c(ysum2_PCgroupedu$sd, ysum2_PCgroupedk$sd)), na.rm = T),
-      max(log10(c(ysum2_PCgroupedu$sd, ysum2_PCgroupedk$sd)), na.rm = T))
-  
-  p3 <- ggplot(data = filter(ysum2_PCgroupedk, init_moi != 0),
-               aes(x = type, y = log10(sd))) +
-    geom_point() +
-    geom_line(aes(group = paste(k, a_S1, init_moi)), alpha = 0.1) +
-    scale_x_discrete(limits = c("sd_PC1", "sd_normPC1"),
-                     labels = c("Density PC1", "Relative\nDensity PC1")) +
-    facet_wrap(~ "Growth rate varies") +
-    scale_y_continuous(
-      labels = math_format(10^.x),
-      breaks = c(2, 0, -2, -4),
-      limits = mylimits) +
-    labs(y = "Coefficient of Variation") +
-    theme_bw() +
-    theme(axis.title.y = element_text(size = 13),
-          axis.title.x = element_blank(),
-          strip.text = element_text(size = 10.5),
-          axis.text.x = element_text(size = 11),
-          axis.text.y = element_text(size = 10)) +
-    NULL
-  
-  p4 <- ggplot(data = filter(ysum2_PCgroupedu, init_moi != 0),
-         aes(x = type, y = log10(sd))) +
-    geom_point() +
-    geom_line(aes(group = paste(u_S1, a_S1, init_moi)), alpha = 0.1) +
-    scale_x_discrete(limits = c("sd_PC1", "sd_normPC1"),
-                     labels = c("Density PC1", "Relative\nDensity PC1")) +
-    facet_wrap(~ "Stationary phase density varies") +
-    scale_y_continuous(
-      labels = math_format(10^.x),
-      breaks = c(2, 0, -2, -4),
-      limits = mylimits) +
-    labs(y = "Coefficient of Variation") +
-    theme_bw() +
-    theme(axis.title.y = element_text(size = 13),
-          axis.title.x = element_blank(),
-          strip.text = element_text(size = 10.5),
-          axis.text.x = element_text(size = 11),
+          axis.text.x = element_text(size = 11, angle = 45, hjust = 1),
           axis.text.y = element_text(size = 10)) +
     NULL
   
@@ -3029,9 +2972,7 @@ if(glob_make_statplots) {
   cowplot::plot_grid(
     p1, 
     p2,
-    p3,
-    p4,
-    nrow = 2, align = "hv", axis = "tblr", labels = "AUTO")
+    nrow = 1, align = "hv", axis = "tblr", labels = "AUTO")
   dev.off()
   
   
