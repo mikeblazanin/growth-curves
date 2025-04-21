@@ -2657,24 +2657,28 @@ ysum2 <- mutate(group_by(ysum2, u_S1, u_S2, k, z, d, h,
                  ref_auc = auc[init_moi == 0][1])
 
 #Calculate variation in auc
-ysum2_groupedu <- summarize(group_by(ysum2, u_S1, a_S1, init_moi),
+ysum2_aucgroupedu <- summarize(group_by(filter(ysum2, init_moi != 0),
+                                        u_S1, a_S1, init_moi),
                             n = n(),
                             sd_auc = sd(log10(auc)),
                             sd_relauc = sd(log10(rel_auc)),
                             avg_auc = mean(auc))
-ysum2_groupedu <- pivot_longer(ysum2_groupedu,
+ysum2_aucgroupedu <- pivot_longer(ysum2_aucgroupedu,
                                col = starts_with("sd"),
                                names_to = "type",
                                values_to = "sd")
-ysum2_groupedk <- summarize(group_by(ysum2, k, a_S1, init_moi),
+ysum2_aucgroupedk <- summarize(group_by(filter(ysum2, init_moi != 0), 
+                                        k, a_S1, init_moi),
                             n = n(),
                             sd_auc = sd(auc)/mean(auc),
                             sd_relauc = sd(rel_auc)/mean(rel_auc),
                             avg_auc = mean(auc))
-ysum2_groupedk <-  pivot_longer(ysum2_groupedk,
+ysum2_aucgroupedk <-  pivot_longer(ysum2_aucgroupedk,
                                 col = starts_with("sd"),
                                 names_to = "type",
                                 values_to = "sd")
+
+
 
 #Run PCA
 ybig2_B <- filter(ybig2, Pop == "B")
@@ -2709,206 +2713,205 @@ ysum2 <- left_join(
   select(ybig2_B_wide, 
          !starts_with("Dens") & !(PC6:PC125) & !(norm_PC6:norm_PC125)))
 
+#Calculate variation in PCs
+ysum2_PCgroupedu <- summarize(group_by(filter(ysum2, init_moi != 0),
+                                       u_S1, a_S1, init_moi),
+                              n = n(),
+                              sd_PC1 = sd(PC1)/abs(mean(PC1)),
+                              sd_normPC1 = sd(norm_PC1)/abs(mean(norm_PC1)))
+ysum2_PCgroupedu <- pivot_longer(ysum2_PCgroupedu,
+                                 col = starts_with("sd"),
+                                 names_to = "type",
+                                 values_to = "sd")
+ysum2_PCgroupedk <- summarize(group_by(filter(ysum2, init_moi != 0), 
+                                       k, a_S1, init_moi),
+                              n = n(),
+                              sd_PC1 = sd(PC1)/abs(mean(PC1)),
+                              sd_normPC1 = sd(norm_PC1)/abs(mean(norm_PC1)))
+ysum2_PCgroupedk <-  pivot_longer(ysum2_PCgroupedk,
+                                  col = starts_with("sd"),
+                                  names_to = "type",
+                                  values_to = "sd")
 
-#Do fitting
-ode_fn_optim <- function(optim_parms, times, ref_B,
-                         init_S1, init_I1, init_P, u_S1, k) {
-  #No longer necessary with bounded parameter optimization
-  #if(any(optim_parms <= 0)) {return(Inf)}
+
+#Code where I was exploring visualizing success of fitting approaches to
+# estimate phage parameters (didn't end up including in paper)
+if(FALSE) {
+  ode_fn_optim <- function(optim_parms, times, ref_B,
+                           init_S1, init_I1, init_P, u_S1, k) {
+    #No longer necessary with bounded parameter optimization
+    #if(any(optim_parms <= 0)) {return(Inf)}
+    
+    # print(paste("a", optim_parms[["a_S1"]],
+    #             "tau", optim_parms[["tau"]],
+    #             "b", optim_parms[["b"]]))
+    mycatch <- myTryCatch(simdata <- as.data.frame(ode(
+      y = c(S1 = init_S1,
+            I1 = init_I1,
+            P = init_P,
+            N = k - init_S1), 
+      times = times, 
+      func = deriv_ode,
+      parms = c(u_S1 = u_S1,
+                k = k,
+                a_S1 = optim_parms[["a_S1"]],
+                tau = optim_parms[["tau"]],
+                b = optim_parms[["b"]],
+                z = 1, f_tau = 0, d = 0, nI = 1,
+                warnings = 0, thresh_min_dens = 10**-10))))
+    
+    if((!is.null(mycatch$warning) || !is.null(mycatch$error)) &&
+       (nrow(mycatch$value) == length(ref_B))) {browser()}
+    simdata <- mycatch$value
+    if(nrow(simdata) < length(ref_B)) {return(Inf)}
+    simdata$B <- simdata$S1 + simdata$I1
+    return(sum((simdata$B - ref_B)**2))
+  }
   
-  # print(paste("a", optim_parms[["a_S1"]],
-  #             "tau", optim_parms[["tau"]],
-  #             "b", optim_parms[["b"]]))
-  mycatch <- myTryCatch(simdata <- as.data.frame(ode(
-    y = c(S1 = init_S1,
-          I1 = init_I1,
-          P = init_P,
-          N = k - init_S1), 
-    times = times, 
-    func = deriv_ode,
-    parms = c(u_S1 = u_S1,
-              k = k,
-              a_S1 = optim_parms[["a_S1"]],
-              tau = optim_parms[["tau"]],
-              b = optim_parms[["b"]],
-              z = 1, f_tau = 0, d = 0, nI = 1,
-              warnings = 0, thresh_min_dens = 10**-10))))
-
-  if((!is.null(mycatch$warning) || !is.null(mycatch$error)) &&
-     (nrow(mycatch$value) == length(ref_B))) {browser()}
-  simdata <- mycatch$value
-  if(nrow(simdata) < length(ref_B)) {return(Inf)}
-  simdata$B <- simdata$S1 + simdata$I1
-  return(sum((simdata$B - ref_B)**2))
-}
-
-fit_across_runs <- function(
+  fit_across_runs <- function(
     sumdata, bigdata,
     start_a_S1 = 10**seq(from = -12, to = -8, length.out = 3),
     start_tau = signif(10**seq(from = 1, to = 2, length.out = 3), 3),
     start_b = signif(5*10**seq(from = 0, to = 2, length.out = 3), 3)) {
-  browser()
-  fitsum <- filter(sumdata, init_moi != 0)
-  fitsum <- left_join(
-    fitsum,
-    expand.grid(uniq_run = fitsum$uniq_run,
-                start_a_S1 = start_a_S1,
-                start_tau = start_tau,
-                start_b = start_b,
-                end_a_S1 = NA,
-                end_tau = NA,
-                end_b = NA,
-                optim_val = NA,
-                optim_conv = NA,
-                optim_msg = NA))
-  fitsum <- cbind(data.frame(fitrun = 1:nrow(fitsum)), fitsum)
-
-  print(paste(nrow(fitsum), "optimizations will be run"))
-  #Save sequence of 10% cutoff points for later reference
-  progress_seq <- round(seq(from = 0, to = nrow(fitsum), by = nrow(fitsum)/10))
-  
-  for (i in 1:nrow(fitsum)) {
-    temp <- filter(bigdata, uniq_run == fitsum$uniq_run[i])
-    optout <- optim(method = "L-BFGS-B",
-                    lower = c(10**-20, 1, 1),
-                    upper = c(10**-3, 10000, 10000),
-                    par = c(a_S1 = fitsum$start_a_S1[i], 
-                            tau = fitsum$start_tau[i], 
-                            b = fitsum$start_b[i]),
-                    fn = ode_fn_optim,
-                    times = temp$time,
-                    ref_B = temp$Density,
-                    init_S1 = temp$init_S1[1],
-                    init_I1 = 0,
-                    init_P = temp$init_moi[1]*temp$init_S1[1],
-                    u_S1 = temp$u_S1[1],
-                    k = temp$k[1])
-    fitsum$end_a_S1[i] <- optout$par[["a_S1"]]
-    fitsum$end_tau[i] <- optout$par[["tau"]]
-    fitsum$end_b[i] <- optout$par[["b"]]
-    fitsum$optim_val[i] <- optout$value
-    fitsum$optim_conv[i] <- optout$convergence
-    fitsum$optim_msg[i] <- optout$message
-    if (i %in% progress_seq) {
-      print(paste((which(progress_seq == i)-1)*10, "% completed", sep = ""))
+    browser()
+    fitsum <- filter(sumdata, init_moi != 0)
+    fitsum <- left_join(
+      fitsum,
+      expand.grid(uniq_run = fitsum$uniq_run,
+                  start_a_S1 = start_a_S1,
+                  start_tau = start_tau,
+                  start_b = start_b,
+                  end_a_S1 = NA,
+                  end_tau = NA,
+                  end_b = NA,
+                  optim_val = NA,
+                  optim_conv = NA,
+                  optim_msg = NA))
+    fitsum <- cbind(data.frame(fitrun = 1:nrow(fitsum)), fitsum)
+    
+    print(paste(nrow(fitsum), "optimizations will be run"))
+    #Save sequence of 10% cutoff points for later reference
+    progress_seq <- round(seq(from = 0, to = nrow(fitsum), by = nrow(fitsum)/10))
+    
+    for (i in 1:nrow(fitsum)) {
+      temp <- filter(bigdata, uniq_run == fitsum$uniq_run[i])
+      optout <- optim(method = "L-BFGS-B",
+                      lower = c(10**-20, 1, 1),
+                      upper = c(10**-3, 10000, 10000),
+                      par = c(a_S1 = fitsum$start_a_S1[i], 
+                              tau = fitsum$start_tau[i], 
+                              b = fitsum$start_b[i]),
+                      fn = ode_fn_optim,
+                      times = temp$time,
+                      ref_B = temp$Density,
+                      init_S1 = temp$init_S1[1],
+                      init_I1 = 0,
+                      init_P = temp$init_moi[1]*temp$init_S1[1],
+                      u_S1 = temp$u_S1[1],
+                      k = temp$k[1])
+      fitsum$end_a_S1[i] <- optout$par[["a_S1"]]
+      fitsum$end_tau[i] <- optout$par[["tau"]]
+      fitsum$end_b[i] <- optout$par[["b"]]
+      fitsum$optim_val[i] <- optout$value
+      fitsum$optim_conv[i] <- optout$convergence
+      fitsum$optim_msg[i] <- optout$message
+      if (i %in% progress_seq) {
+        print(paste((which(progress_seq == i)-1)*10, "% completed", sep = ""))
+      }
     }
+    return(fitsum)
   }
-  return(fitsum)
+  
+  run_fitted_sims <- function(fitrun) {
+    out <- run_sims_ode(u_S1 = fitrun$u_S1,
+                        k = fitrun$k,
+                        a_S1 = fitrun$end_a_S1,
+                        tau = fitrun$end_tau,
+                        b = fitrun$end_b,
+                        z = fitrun$z,
+                        d = fitrun$d,
+                        init_S1 = fitrun$init_S1,
+                        init_moi = fitrun$init_moi,
+                        equil_cutoff_dens = 0.1,
+                        max_time = 48*60,
+                        init_time = 48*60,
+                        init_stepsize = 5,
+                        combinatorial = FALSE,
+                        dynamic_stepsize = FALSE,
+                        fixed_time = FALSE,
+                        print_info = TRUE)
+    colnames(out[[1]])[colnames(out[[1]]) == "uniq_run"] <- "fitrun"
+    return(out)
+  }
+  
+  fitruntest_sum <- 
+    fit_across_runs(sumdata = filter(ysum2, uniq_run == 63),
+                    bigdata = filter(ybig2, Pop == "B", uniq_run == 63),
+                    start_a_S1 = 10**seq(from = -12, to = -8, length.out = 3),
+                    start_tau = signif(10**seq(from = 1, to = 2, length.out = 3), 3),
+                    start_b = signif(5*10**seq(from = 0, to = 2, length.out = 3), 3))
+  
+  fitruntest_big <- run_fitted_sims(fitruntest)
+  
+  fitruntest_big1 <- fitruntest_big[[1]]
+  fitruntest_big1 <- left_join(fitruntest_big1,
+                               select(fitruntest_sum, uniq_run, fitrun))
+  
+  ggplot(data = filter(fitruntest_big1, Pop == "B", fitrun == 1),
+         aes(x = time, y = Density)) +
+    geom_line(aes(group = fitrun), color = "red") +
+    #scale_y_log10() +
+    geom_line(data = filter(ybig2, Pop == "B", init_moi != 0, uniq_run == 63),
+              aes(group = uniq_run)) +
+    facet_wrap(~uniq_run)
+  
+  ggplot(data = filter(fitruntest, optim_conv == 0)) +
+    geom_point(data = filter(ysum2, uniq_run == 63),
+               aes(x = a_S1, y = tau), pch = 4, size = 5) +
+    geom_point(aes(x = start_a_S1, y = start_tau)) +
+    geom_segment(aes(x = start_a_S1, y = start_tau, 
+                     xend = end_a_S1, yend = end_tau,
+                     color = as.factor(start_b))) +
+    scale_x_log10() +
+    scale_y_log10()
+  
+  ggplot(data = fitruntest) +
+    geom_point(aes(x = start_b, y = start_tau)) +
+    geom_segment(aes(x = start_b, y = start_tau, 
+                     xend = end_b, yend = end_tau,
+                     color = as.factor(start_a_S1))) +
+    scale_x_log10() +
+    scale_y_log10()
+  
+  fitrun2 <- fit_across_runs(sumdata = filter(ysum2, init_moi != 0),
+                             bigdata = filter(ybig2, Pop == "B", init_moi != 0))
+  
+  optsim <- as.data.frame(ode(
+    y = c(S1 = temp$init_S1[1],
+          I1 = 0,
+          P = temp$init_moi[1]*temp$init_S1[1],
+          N = temp$k[1] - temp$init_S1[1]), 
+    times = temp$time, 
+    func = deriv_ode,
+    parms = c(u_S1 = temp$u_S1[1],
+              k = temp$k[1],
+              # a_S1 = optout$par[["a_S1"]],
+              # tau = optout$par[["tau"]],
+              # b = optout$par[["b"]],
+              a_S1 = 1.929,
+              tau = 109.89,
+              b = 1.0648,
+              z = 1, f_tau = 0, d = 0, nI = 1,
+              warnings = 0, thresh_min_dens = 10**-10)))
+  optsim$B <- optsim$S1 + optsim$I1
+  
+  plot(optsim$time, optsim$B)
+  lines(temp$time, temp$Density)
 }
-
-run_fitted_sims <- function(fitrun) {
-  out <- run_sims_ode(u_S1 = fitrun$u_S1,
-                      k = fitrun$k,
-                      a_S1 = fitrun$end_a_S1,
-                      tau = fitrun$end_tau,
-                      b = fitrun$end_b,
-                      z = fitrun$z,
-                      d = fitrun$d,
-                      init_S1 = fitrun$init_S1,
-                      init_moi = fitrun$init_moi,
-                      equil_cutoff_dens = 0.1,
-                      max_time = 48*60,
-                      init_time = 48*60,
-                      init_stepsize = 5,
-                      combinatorial = FALSE,
-                      dynamic_stepsize = FALSE,
-                      fixed_time = FALSE,
-                      print_info = TRUE)
-  colnames(out[[1]])[colnames(out[[1]]) == "uniq_run"] <- "fitrun"
-  return(out)
-}
-
-fitruntest_sum <- 
-  fit_across_runs(sumdata = filter(ysum2, uniq_run == 63),
-                  bigdata = filter(ybig2, Pop == "B", uniq_run == 63),
-                  start_a_S1 = 10**seq(from = -12, to = -8, length.out = 3),
-                  start_tau = signif(10**seq(from = 1, to = 2, length.out = 3), 3),
-                  start_b = signif(5*10**seq(from = 0, to = 2, length.out = 3), 3))
-
-fitruntest_big <- run_fitted_sims(fitruntest)
-
-fitruntest_big1 <- fitruntest_big[[1]]
-fitruntest_big1 <- left_join(fitruntest_big1,
-                             select(fitruntest_sum, uniq_run, fitrun))
-
-
-ggplot(data = filter(fitruntest_big1, Pop == "B", fitrun == 1),
-       aes(x = time, y = Density)) +
-  geom_line(aes(group = fitrun), color = "red") +
-  #scale_y_log10() +
-  geom_line(data = filter(ybig2, Pop == "B", init_moi != 0, uniq_run == 63),
-            aes(group = uniq_run)) +
-  facet_wrap(~uniq_run)
-            
-
-
-
-ggplot(data = filter(fitruntest, optim_conv == 0)) +
-  geom_point(data = filter(ysum2, uniq_run == 63),
-             aes(x = a_S1, y = tau), pch = 4, size = 5) +
-  geom_point(aes(x = start_a_S1, y = start_tau)) +
-  geom_segment(aes(x = start_a_S1, y = start_tau, 
-                   xend = end_a_S1, yend = end_tau,
-                   color = as.factor(start_b))) +
-  scale_x_log10() +
-  scale_y_log10()
-
-ggplot(data = fitruntest) +
-  geom_point(aes(x = start_b, y = start_tau)) +
-  geom_segment(aes(x = start_b, y = start_tau, 
-                   xend = end_b, yend = end_tau,
-                   color = as.factor(start_a_S1))) +
-  scale_x_log10() +
-  scale_y_log10()
-
-
-
-fitrun2 <- fit_across_runs(sumdata = filter(ysum2, init_moi != 0),
-                bigdata = filter(ybig2, Pop == "B", init_moi != 0))
-
-
-
-
-                                 
-
-
-
-
-
-optsim <- as.data.frame(ode(
-  y = c(S1 = temp$init_S1[1],
-        I1 = 0,
-        P = temp$init_moi[1]*temp$init_S1[1],
-        N = temp$k[1] - temp$init_S1[1]), 
-  times = temp$time, 
-  func = deriv_ode,
-  parms = c(u_S1 = temp$u_S1[1],
-            k = temp$k[1],
-            # a_S1 = optout$par[["a_S1"]],
-            # tau = optout$par[["tau"]],
-            # b = optout$par[["b"]],
-            a_S1 = 1.929,
-            tau = 109.89,
-            b = 1.0648,
-            z = 1, f_tau = 0, d = 0, nI = 1,
-            warnings = 0, thresh_min_dens = 10**-10)))
-optsim$B <- optsim$S1 + optsim$I1
-
-plot(optsim$time, optsim$B)
-lines(temp$time, temp$Density)
-
 
 # Run 2: plots ----
 if(glob_make_statplots) {
   ggplot(data = ysum2,
-         aes(x = PC1, y = PC2, color = as.factor(a_S1),
-             shape = as.factor(init_moi))) +
-    geom_point()
-  ggplot(data = ysum2,
-         aes(x = norm_PC1, y = norm_PC2, color = as.factor(a_S1),
-             shape = as.factor(init_moi))) +
-    geom_point()
-  ggplot(data = ysum2,
          aes(x = log10(a_S1), y = PC1)) + 
     geom_point() +
     facet_grid(~u_S1)
@@ -2925,90 +2928,110 @@ if(glob_make_statplots) {
     geom_point() +
     facet_grid(~k)
   
-  #Calculate how much variation is in each
-  mylm <- lm(PC1 ~ as.factor(a_S1) + as.factor(k):as.factor(u_S1),
-     data = ysum2)
-  anova(mylm)
-  summary(mylm)
-  mylm2 <- lm(norm_PC1 ~ as.factor(a_S1) + as.factor(k):as.factor(u_S1),
-             data = ysum2)
-  anova(mylm2)
-  summary(mylm2)
-  #Basically, what we want is to calculate what proportion of the variance
-  # is within-bacteria across a vs within-a across bacteria
-  #Ideally the proportion of variance within-bacteria is 1 and within a is 0
-  #Can calculate this by grabbing the sum of squares for each term & dividing
-  # by the total sum of squares to calculate the proportion of variation
-  # explained by that term (so we want high sum of squares for a and low for
-  # the bacteria)
-  av1 <- anova(mylm)
-  av1$`Sum Sq`/sum(av1$`Sum Sq`)
-  #Except we do want to try to partition by variation in u vs k
+  mylimits <- 
+    c(min(log10(c(ysum2_aucgroupedu$sd, ysum2_aucgroupedk$sd)), na.rm = T),
+      max(log10(c(ysum2_aucgroupedu$sd, ysum2_aucgroupedk$sd)), na.rm = T))
   
-  
-  
-  
-  ggplot(data = filter(ybig2_B_wide, init_moi == 0.01),
-         aes(x = log10(a_S1), y = PC1,
-             color = as.factor(k))) +
-    #geom_line(aes(group = paste(u_S1, k, h))) +
+  p1 <- ggplot(data = filter(ysum2_aucgroupedk, init_moi != 0),
+               aes(x = type, y = log10(sd))) +
     geom_point() +
-    facet_grid(~init_moi) +
-    scale_x_continuous(labels = math_format(10^.x)) +
-    # labs(x = "Infection rate\n(/cfu/pfu/mL/min)", 
-    #      y = "PC1") +
-    theme_bw() +
-    theme(axis.title = element_text(size = 16),
-          axis.text = element_text(size = 12))
-  ggplot(data = filter(ybig2_B_wide, init_moi == 0.01),
-         aes(x = log10(a_S1), y = norm_PC1,
-             color = as.factor(k))) +
-    #geom_line(aes(group = paste(u_S1, k, h))) +
-    geom_point() +
-    facet_grid(~init_moi) +
-    scale_x_continuous(labels = math_format(10^.x)) +
-    # labs(x = "Infection rate\n(/cfu/pfu/mL/min)", 
-    #      y = "PC1") +
-    theme_bw() +
-    theme(axis.title = element_text(size = 16),
-          axis.text = element_text(size = 12))
-  
-  
-  
-  p1 <- ggplot(data = filter(ysum2_groupedu, init_moi != 0),
-               aes(x = type, y = sd, color = avg_auc)) +
-    geom_point() +
-    geom_line(aes(group = paste(u_S1, a_S1, init_moi)),
-              alpha = 0.05) +
+    geom_line(aes(group = paste(k, a_S1, init_moi)), alpha = 0.1)  +
+    scale_x_discrete(limits = c("sd_auc", "sd_relauc"),
+                     labels = c("AUC", "Relative AUC")) +
+    facet_wrap(~ "Growth rate varies") +
     scale_y_continuous(
-      limits = c(0, max(c(ysum2_groupedu$sd, ysum2_groupedk$sd)))) +
-    scale_color_gradient(
-      transform = "log10",
-      limits = c(min(c(ysum2_groupedu$avg_auc, ysum2_groupedk$avg_auc)),
-                 max(c(ysum2_groupedu$avg_auc, ysum2_groupedk$avg_auc))))
+      labels = math_format(10^.x),
+      limits = mylimits,
+      breaks = c(0, -1, -2)) +
+    # scale_color_gradient(
+    #   transform = "log10",
+    #   limits = c(min(c(ysum2_aucgroupedu$avg_auc, ysum2_aucgroupedk$avg_auc)),
+    #              max(c(ysum2_aucgroupedu$avg_auc, ysum2_aucgroupedk$avg_auc))))
+    labs(y = "Coefficient of Variation") +
+    theme_bw() +
+    theme(axis.title.y = element_text(size = 13),
+          axis.title.x = element_blank(),
+          strip.text = element_text(size = 10.5),
+          axis.text.x = element_text(size = 11),
+          axis.text.y = element_text(size = 10)) +
+    NULL
+  
+  p2 <- ggplot(data = filter(ysum2_aucgroupedu, init_moi != 0),
+               aes(x = type, y = log10(sd))) +
+    geom_point() +
+    geom_line(aes(group = paste(u_S1, a_S1, init_moi)), alpha = 0.1) +
+    scale_x_discrete(limits = c("sd_auc", "sd_relauc"),
+                   labels = c("AUC", "Relative AUC")) +
+    facet_wrap(~ "Stationary phase density varies") +
+    scale_y_continuous(
+      labels = math_format(10^.x),
+      limits = mylimits,
+      breaks = c(0, -1, -2)) +
+    # scale_color_gradient(
+    #   transform = "log10",
+    #   limits = c(min(c(ysum2_aucgroupedu$avg_auc, ysum2_aucgroupedk$avg_auc)),
+    #              max(c(ysum2_aucgroupedu$avg_auc, ysum2_aucgroupedk$avg_auc)))) +
+    labs(y = "Coefficient of Variation") +
+    theme_bw() +
+    theme(axis.title.y = element_text(size = 13),
+          axis.title.x = element_blank(),
+          strip.text = element_text(size = 10.5),
+          axis.text.x = element_text(size = 11),
+          axis.text.y = element_text(size = 10)) +
+    NULL
 
-  p2 <- ggplot(data = filter(ysum2_groupedk, init_moi != 0),
-               aes(x = type, y = sd, color = avg_auc)) +
+  mylimits <- 
+    c(min(log10(c(ysum2_PCgroupedu$sd, ysum2_PCgroupedk$sd)), na.rm = T),
+      max(log10(c(ysum2_PCgroupedu$sd, ysum2_PCgroupedk$sd)), na.rm = T))
+  
+  p3 <- ggplot(data = filter(ysum2_PCgroupedk, init_moi != 0),
+               aes(x = type, y = log10(sd))) +
     geom_point() +
-    geom_line(aes(group = paste(k, a_S1, init_moi)),
-              alpha = 0.05)  +
+    geom_line(aes(group = paste(k, a_S1, init_moi)), alpha = 0.1) +
+    scale_x_discrete(limits = c("sd_PC1", "sd_normPC1"),
+                     labels = c("Density PC1", "Relative\nDensity PC1")) +
+    facet_wrap(~ "Growth rate varies") +
     scale_y_continuous(
-      limits = c(0, max(c(ysum2_groupedu$sd, ysum2_groupedk$sd)))) +
-    scale_color_gradient(
-      transform = "log10",
-      limits = c(min(c(ysum2_groupedu$avg_auc, ysum2_groupedk$avg_auc)),
-                 max(c(ysum2_groupedu$avg_auc, ysum2_groupedk$avg_auc))))
+      labels = math_format(10^.x),
+      breaks = c(2, 0, -2, -4),
+      limits = mylimits) +
+    labs(y = "Coefficient of Variation") +
+    theme_bw() +
+    theme(axis.title.y = element_text(size = 13),
+          axis.title.x = element_blank(),
+          strip.text = element_text(size = 10.5),
+          axis.text.x = element_text(size = 11),
+          axis.text.y = element_text(size = 10)) +
+    NULL
   
-  ##To add here: PCA plot
+  p4 <- ggplot(data = filter(ysum2_PCgroupedu, init_moi != 0),
+         aes(x = type, y = log10(sd))) +
+    geom_point() +
+    geom_line(aes(group = paste(u_S1, a_S1, init_moi)), alpha = 0.1) +
+    scale_x_discrete(limits = c("sd_PC1", "sd_normPC1"),
+                     labels = c("Density PC1", "Relative\nDensity PC1")) +
+    facet_wrap(~ "Stationary phase density varies") +
+    scale_y_continuous(
+      labels = math_format(10^.x),
+      breaks = c(2, 0, -2, -4),
+      limits = mylimits) +
+    labs(y = "Coefficient of Variation") +
+    theme_bw() +
+    theme(axis.title.y = element_text(size = 13),
+          axis.title.x = element_blank(),
+          strip.text = element_text(size = 10.5),
+          axis.text.x = element_text(size = 11),
+          axis.text.y = element_text(size = 10)) +
+    NULL
   
-  ##To add here: fitting plot
-  
-  png("./statplots/fig7_run2_sd_auc_relauc.png", width = 6, height = 4,
+  png("./statplots/fig7_run2_sd_auc_relauc.png", width = 5.5, height = 5,
       units = "in", res = 300)
-  cowplot::plot_grid(p1 + guides(color = "none"), 
-                     p2 + guides(color = "none"),
-                     get_legend(p1),
-                     nrow = 1, rel_widths = c(1, 1, 0.5))
+  cowplot::plot_grid(
+    p1, 
+    p2,
+    p3,
+    p4,
+    nrow = 2, align = "hv", axis = "tblr", labels = "AUTO")
   dev.off()
   
   
