@@ -2891,23 +2891,6 @@ if(FALSE) {
 
 # Run 2: plots ----
 if(glob_make_statplots) {
-  ggplot(data = ysum2,
-         aes(x = log10(a_S1), y = PC1)) + 
-    geom_point() +
-    facet_grid(~u_S1)
-  ggplot(data = ysum2,
-         aes(x = log10(a_S1), y = PC1)) + 
-    geom_point() +
-    facet_grid(~k)
-  ggplot(data = ysum2,
-         aes(x = log10(a_S1), y = norm_PC1)) + 
-    geom_point() +
-    facet_grid(~u_S1)
-  ggplot(data = ysum2,
-         aes(x = log10(a_S1), y = norm_PC1)) + 
-    geom_point() +
-    facet_grid(~k)
-  
   p1 <- ggplot(data = ysum2_groupedk,
                aes(x = type, y = log10(cv))) +
     geom_point(alpha = 0.5) +
@@ -2975,6 +2958,146 @@ if(glob_make_statplots) {
     nrow = 1, align = "hv", axis = "tblr", labels = "AUTO")
   dev.off()
   
+  fs18a <- ggplot(data = filter(ysum2, init_moi != 0),
+                aes(x = log10(a_S1), y = peak_dens/10**8)) +
+    geom_line(aes(group = paste(u_S1, k))) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    scale_y_continuous(labels = c("0", 
+                                  "2.5×10<sup>8</sup>", 
+                                  "5×10<sup>8</sup>",
+                                  "7.5×10<sup>8</sup>", 
+                                  "10<sup>9</sup>")) +
+    labs(x = "Infection rate\n(/cfu/pfu/mL/min)", 
+         y = "Peak Bacterial\nDensity (cfu/mL)") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12),
+          axis.text.y = element_markdown())
+  
+  fs18b <- ggplot(data = filter(ysum2, init_moi != 0),
+                aes(x = log10(a_S1), y = peak_time/60)) +
+    geom_line(aes(group = paste(u_S1, k))) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    labs(x = "Infection rate\n(/cfu/pfu/mL/min)", 
+         y = "Time of Peak\nBacterial Density (hr)") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12))
+  
+  fs18c <- ggplot(data = filter(ysum2, init_moi != 0),
+                aes(x = log10(a_S1), y = extin_time_4/60)) +
+    geom_line(aes(group = paste(u_S1, k))) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    labs(x = "Infection rate\n(/cfu/pfu/mL/min)", 
+         y = "Extinction Time (hr)") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12))
+  
+  fs18d <- ggplot(data = filter(ysum2, init_moi != 0),
+                aes(x = log10(a_S1), y = auc/60)) +
+    geom_line(aes(group = paste(u_S1, k))) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    scale_y_continuous(breaks = 0:4*10**10,
+                       labels = c("0",
+                                  "1×10<sup>10</sup>",
+                                  "2×10<sup>10</sup>",
+                                  "3×10<sup>10</sup>",
+                                  "4×10<sup>10</sup>")) +
+    labs(x = "Infection rate\n(/cfu/pfu/mL/min)", 
+         y = "Area Under the\nCurve (hr cfu/mL)") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12),
+          axis.text.y = element_markdown())
+  
+  fs18e <- ggplot(data = filter(ysum2, init_moi != 0),
+                  aes(x = log10(a_S1), y = rel_auc)) +
+    geom_line(aes(group = paste(u_S1, k))) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    labs(x = "Infection rate\n(/cfu/pfu/mL/min)", 
+         y = "Relative Area\nUnder the Curve (%)") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12),
+          axis.text.y = element_markdown())
+  
+  
+  fs18f <- ggplot(data = filter(ysum2, init_moi != 0),
+                aes(x = log10(a_S1), y = PC1)) +
+    geom_line(aes(group = paste(u_S1, k))) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    labs(x = "Infection rate\n(/cfu/pfu/mL/min)", 
+         y = "PC1") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12))
+  
+  fs18g <- ggplot(data = filter(ysum2, init_moi != 0),
+                  aes(x = log10(a_S1), y = norm_PC1)) +
+    geom_line(aes(group = paste(u_S1, k))) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    labs(x = "Infection rate\n(/cfu/pfu/mL/min)", 
+         y = "Relative PC1") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12))
+  
+  png("./statplots/figS18_run2_metricvaS1.png",
+      width = 9, height = 14, units = "in", res = 150)
+  print(plot_grid(fs18a, fs18b, fs18c, fs18d, fs18e, fs18f, fs18g,
+                  ncol = 2, align = 'hv', axis = 'lr',
+                  labels = "AUTO", label_size = 16))
+  dev.off()
+  
+  png("./statplots/figS19_run2_allmetricsvmetrics.png",
+      width = 9, height = 9, units = "in", res = 150)
+  GGally::ggpairs(
+    data = mutate(filter(ysum2, init_moi != 0),
+                  peak_time_hr = peak_time/60,
+                  extin_time_4_hr = extin_time_4/60,
+                  auc_hr = auc/60),
+    columns = c("peak_dens", "peak_time_hr", "extin_time_4_hr", 
+                "auc_hr", "rel_auc", "PC1", "norm_PC1"),
+    columnLabels = c("Peak Bacterial\nDensity (cfu/mL)",
+                     "Time of Peak\nBacterial\nDensity (hr)",
+                     "Extinction\nTime (hr)",
+                     "Area Under\nthe Curve\n(hr cfu/mL)",
+                     "Relative Area\nUnder the Curve",
+                     "PC1",
+                     "Relative PC1"),
+    upper = list(continuous = "points"), lower = list(continuous = "points"),
+    diag = list(continuous = "autopointDiag")) +
+    theme_bw() +
+    theme(strip.text = element_text(size = 14),
+          axis.text.x = element_text(size = 12, angle = 45, hjust = 1))
+  dev.off()
+  
+  fs4 <- GGally::ggpairs(
+    data = mutate(ungroup(ybig1_PCA_wide),
+                  peak_time_hr = peak_time/60,
+                  extin_time_4_hr = extin_time_4/60,
+                  auc_hr = auc/60),
+    aes(shape = extin_flag),
+    columns = c("peak_dens", "peak_time_hr", 
+                "extin_time_4_hr", "auc_hr", "PC1",
+                "max_percap", "first_above_15106", "death_slope"),
+    columnLabels = c("Peak Bacterial\nDensity (cfu/mL)",
+                     "Time of Peak\nBacterial\nDensity (hr)",
+                     "Extinction\nTime (hr)",
+                     "Area Under\nthe Curve\n(hr cfu/mL)",
+                     "PC1",
+                     "Maximum\ncellular\ngrowth rate\n(/min)",
+                     "Time to reach\n1.5×10^6 cfu/mL\n(min)",
+                     "Maximum rate\nof decline\n(10^8 cfu/hr)"),
+    upper = list(continuous = "points"), lower = list(continuous = "points"),
+    diag = list(continuous = "autopointDiag")) +
+    scale_shape_manual(breaks = c("none", "neark", "noextin"),
+                       values = c(16, 4, 3)) +
+    theme_bw() +
+    theme(strip.text = element_text(size = 14),
+          axis.text.x = element_text(size = 12, angle = 45, hjust = 1)) +
+    guides(shape = "none")
   
   p1 <- ggplot(data = filter(ybig2, 
                              a_S1 %in% c(0),
