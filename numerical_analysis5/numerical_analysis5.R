@@ -3051,53 +3051,33 @@ if(glob_make_statplots) {
   dev.off()
   
   png("./statplots/figS19_run2_allmetricsvmetrics.png",
-      width = 9, height = 9, units = "in", res = 150)
+      width = 9, height = 9, units = "in", res = 300)
   GGally::ggpairs(
     data = mutate(filter(ysum2, init_moi != 0),
                   peak_time_hr = peak_time/60,
                   extin_time_4_hr = extin_time_4/60,
                   auc_hr = auc/60),
+    aes(shape = extin_flag),
     columns = c("peak_dens", "peak_time_hr", "extin_time_4_hr", 
                 "auc_hr", "rel_auc", "PC1", "norm_PC1"),
-    columnLabels = c("Peak Bacterial\nDensity (cfu/mL)",
+    columnLabels = c("Peak Bacterial\nDensity\n(cfu/mL)",
                      "Time of Peak\nBacterial\nDensity (hr)",
                      "Extinction\nTime (hr)",
                      "Area Under\nthe Curve\n(hr cfu/mL)",
-                     "Relative Area\nUnder the Curve",
+                     "Relative Area\nUnder the\nCurve",
                      "PC1",
                      "Relative PC1"),
-    upper = list(continuous = "points"), lower = list(continuous = "points"),
-    diag = list(continuous = "autopointDiag")) +
-    theme_bw() +
-    theme(strip.text = element_text(size = 14),
-          axis.text.x = element_text(size = 12, angle = 45, hjust = 1))
-  dev.off()
-  
-  fs4 <- GGally::ggpairs(
-    data = mutate(ungroup(ybig1_PCA_wide),
-                  peak_time_hr = peak_time/60,
-                  extin_time_4_hr = extin_time_4/60,
-                  auc_hr = auc/60),
-    aes(shape = extin_flag),
-    columns = c("peak_dens", "peak_time_hr", 
-                "extin_time_4_hr", "auc_hr", "PC1",
-                "max_percap", "first_above_15106", "death_slope"),
-    columnLabels = c("Peak Bacterial\nDensity (cfu/mL)",
-                     "Time of Peak\nBacterial\nDensity (hr)",
-                     "Extinction\nTime (hr)",
-                     "Area Under\nthe Curve\n(hr cfu/mL)",
-                     "PC1",
-                     "Maximum\ncellular\ngrowth rate\n(/min)",
-                     "Time to reach\n1.5×10^6 cfu/mL\n(min)",
-                     "Maximum rate\nof decline\n(10^8 cfu/hr)"),
     upper = list(continuous = "points"), lower = list(continuous = "points"),
     diag = list(continuous = "autopointDiag")) +
     scale_shape_manual(breaks = c("none", "neark", "noextin"),
                        values = c(16, 4, 3)) +
     theme_bw() +
-    theme(strip.text = element_text(size = 14),
-          axis.text.x = element_text(size = 12, angle = 45, hjust = 1)) +
+    theme(strip.text = element_text(size = 11),
+          axis.text.y = element_text(size = 10),
+          axis.text.x = element_text(size = 10, angle = 45, hjust = 1)) +
     guides(shape = "none")
+  dev.off()
+  
   
   p1 <- ggplot(data = filter(ybig2, 
                              a_S1 %in% c(0),
