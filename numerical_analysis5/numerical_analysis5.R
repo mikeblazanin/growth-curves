@@ -3079,6 +3079,11 @@ if(glob_make_statplots) {
   dev.off()
   
   
+  
+}
+
+# Run 2: extra plots (stat v stat, contours) ----
+if(glob_make_statplots) {
   p1 <- ggplot(data = filter(ybig2, 
                              a_S1 %in% c(0),
                              u_S1 %in% c(0.0179),
@@ -3265,64 +3270,6 @@ if(glob_make_statplots) {
       get_legend(fs27a), 
       ncol = 2, rel_widths = c(1, 0.6)))
   dev.off() 
-}
-
-# Run 2: extra plots (stat v stat, contours) ----
-if(glob_make_statplots) {
-  p1 <- 
-    ggplot(data = ysum2,
-           aes(x = peak_time/60, y = peak_dens)) +
-    geom_point(aes(shape = extin_flag)) +
-    geom_line(data = run2_preds,
-              aes(x = time/60, y = peak_dens_pred),
-              lty = 2) +
-    facet_nested("k (cfu/mL)" * signif(k, 2) ~ "u_S1 (/hr)" * signif(u_S1*60, 2), 
-                 scales = "free_y") +
-    scale_x_continuous(breaks = c(0, 12, 24), limits = c(0, 24)) +
-    scale_shape_manual(breaks = c("none", "neark", "noextin"),
-                       values = c(16, 4, 3)) +
-    labs(x = "Peak Time (hr)", y = "Peak Density\n(cfu/mL)") +
-    guides(shape = "none") + 
-    theme_bw() +
-    theme(axis.title = element_text(size = 20),
-          strip.text = element_text(size = 10))
-  
-  p2 <- 
-    ggplot(data = ysum2,
-           aes(x = peak_time/60, y = auc/60)) +
-    geom_point(aes(shape = extin_flag)) +
-    geom_line(data = run2_preds,
-              aes(x = time/60, y = auc_pred/60),
-              lty = 2) +
-    facet_nested("k (cfu/mL)" * signif(k, 2) ~ "u_S1 (/hr)" * signif(u_S1*60, 2), 
-                 scales = "free_y") +
-    scale_x_continuous(breaks = c(0, 12, 24), limits = c(0, 24)) +
-    scale_y_log10() +
-    scale_shape_manual(breaks = c("none", "neark", "noextin"),
-                       values = c(16, 4, 3)) +
-    labs(x = "Peak Time (hr)", y = "Area Under the\nCurve (hr cfu/mL)") +
-    guides(shape = "none") +
-    theme_bw() +
-    theme(axis.title = element_text(size = 20),
-          strip.text = element_text(size = 10))
-  
-  p3 <- 
-    ggplot(data = ysum2,
-           aes(x = peak_time/60, y = extin_time_4/60)) +
-    geom_point(aes(shape = extin_flag)) +
-    geom_abline(slope = 1, intercept = 0, alpha = 0.5) +
-    scale_shape_manual(breaks = c("none", "neark", "noextin"),
-                       values = c(16, 4, 3)) +
-    labs(x = "Peak Time (hr)", y = "Extinction Time\n(hr)") +
-    guides(shape = "none") +
-    theme_bw() +
-    theme(axis.title = element_text(size = 20))
-  
-  png("./statplots/extrafigure_run2_metricvmetric_alldata.png", 
-      width = 5, height = 12.5, units = "in", res = 300)
-  print(plot_grid(p1, p2, p3, ncol = 1, labels = "AUTO",
-                  align = "hv", axis = "tb", label_size = 20))
-  dev.off()
 
   ##Contours
   p1 <- ggplot(data = ysum2, aes(x = a_S1, y = 60*u_S1)) +
