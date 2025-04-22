@@ -4245,7 +4245,7 @@ if (glob_make_statplots) {
                                                  values_to = "change_in_a"),
                                     popgradient == "S"),
                aes(x = log10(init_S1), y = change_in_a)) +
-    geom_point(size = 0.9, alpha = 0.5) +
+    geom_point(size = 1.75, alpha = 0.4) +
     scale_x_continuous(labels = math_format(10^.x),
                        breaks = c(6.5, 7, 7.5)) +
     labs(x = "Target initial density (cfu/mL)",
@@ -4262,7 +4262,7 @@ if (glob_make_statplots) {
                                                  values_to = "change_in_a"),
                                     popgradient == "P"),
                aes(x = log10(init_P), y = change_in_a)) +
-    geom_point(size = 0.9, alpha = 0.5) +
+    geom_point(size = 1.75, alpha = 0.4) +
     scale_x_continuous(labels = math_format(10^.x),
                        breaks = c(4.5, 5, 5.5)) +
     labs(x = "Target initial density (pfu/mL)",
