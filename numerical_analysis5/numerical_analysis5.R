@@ -31,20 +31,21 @@ deriv_dede <- function(t, y, parms) {
   #Set small/negative y values to 0 so they don't affect the dN's
   y[y < parms["thresh_min_dens"]] <- 0
   if (t >= parms["tau"]) {
-    lagY <- c("S1" = lagvalue(t-parms["tau"], 1),
-              "S2" = lagvalue(t-parms["tau"], 2),
-              "I1" = NA,
-              "I2" = NA,
-              "P" = lagvalue(t-parms["tau"], 5),
-              "N" = lagvalue(t-parms["tau"], 6))
+    lagY <- c(S1 = lagvalue(t-parms["tau"], 1),
+              S2 = lagvalue(t-parms["tau"], 2),
+              I1 = NA,
+              I2 = NA,
+              P = lagvalue(t-parms["tau"], 5),
+              N = lagvalue(t-parms["tau"], 6),
+              D = NA)
     
     lagY[lagY < parms["thresh_min_dens"]] <- 0
   } else {
-    lagY <- c("S1" = 0, "S2" = 0, "I1" = NA, "I2" = NA, "P" = 0, "N" = 0)
+    lagY <- c(S1 = 0, S2 = 0, I1 = NA, I2 = NA, P = 0, N = 0, D = 0)
   }
   
   #Create output vector
-  dY <- c(S1 = 0, S2 = 0, I1 = 0, I2 = 0, P = 0, N = 0)
+  dY <- c(S1 = 0, S2 = 0, I1 = 0, I2 = 0, P = 0, N = 0, D = 0)
   
   #Function (f) for reduction of parameters depending on N (rd)
   # frac_t = 1 - f + f*(N/k)
@@ -149,6 +150,17 @@ deriv_dede <- function(t, y, parms) {
          (parms["a_S1"]*lagY[1] + parms["a_S2"]*lagY[2]))
   }
   
+  #Calculate dD
+  #dD/dt = m * (af_tau * a_S1 * S1(t-tau) * P(t-tau)
+  #             + af_tau * a_S2 * S2(t-tau) * P(t-tau))
+  if(t < parms["tau"] || parms["m"] == 0) {
+    dY["D"] <- 0
+  } else {
+    dY["D"] <- 
+      parms["m"] * (af_tau * parms["a_S1"] * lagY[1] * lagY[5] +
+                      af_tau * parms["a_S2"] * lagY[2] * lagY[5])
+  }
+  
   #Issue warning about too large pop (if warnings is TRUE)
   if (parms["warnings"]==1 & any(y > 10**100)) {
     warning(paste("pop(s)",
@@ -231,7 +243,7 @@ if(F) {
   #delay differential
   times <- seq(from = 0, to = 48*60, by = 15)
   yinit <- c("S1" = 10**6, "S2" = 0, "I1" = 0, "I2" = 0, 
-             "P" = 10**4, "N" = (10**9 - 10**6))
+             "P" = 10**4, "N" = (10**9 - 10**6), "D" = 0)
   params <- c(u_S1 = 0.0179, u_S2 = 0,
               k = 10**9,
               a_S1 = 10**-8, a_S2 = 0,
@@ -241,6 +253,7 @@ if(F) {
               d = 0,
               h = 0, g1 = 0, g2 = 0,
               v = 0, w = 0,
+              m = 0,
               warnings = 1, thresh_min_dens = 10**-100)
   
   test <- as.data.frame(dede(y = yinit, times = times, func = deriv_dede, 
@@ -424,6 +437,7 @@ run_sims_dede <- function(u_S1, u_S2,
                           d = 1,
                           h = 0, g1 = 0, g2 = 0,
                           v = 0, w = 0,
+                          m = 0,
                           init_S1 = 10**6,
                           init_S2 = 0,
                           init_moi = 10**-2,
@@ -459,8 +473,8 @@ run_sims_dede <- function(u_S1, u_S2,
     warning("fixed_time == TRUE overrides dynamic_stepsize == TRUE")
   }
   
-  #placeholder for when derivs changes, currently S1 S2 I1 I2 P N S I B PI
-  num_pops <- 10 
+  #placeholder for when derivs changes, currently S1 S2 I1 I2 P N D S I B PI BD
+  num_pops <- 12
   
   if(init_time %% init_stepsize != 0) {
     warning("init_time is not divisible by init_stepsize, this has not been tested")
@@ -472,7 +486,7 @@ run_sims_dede <- function(u_S1, u_S2,
   sim_vars <- sim_vars[names(sim_vars) %in%
                          c("u_S1", "u_S2", "k", "a_S1", "a_S2",
                            "tau", "b", "z", "f_a", "f_b", "d",
-                           "h", "g1", "g2", "v", "w",
+                           "h", "g1", "g2", "v", "w", "m",
                            "init_S1", "init_S2", "init_moi", "init_N")]
   
   if (combinatorial) {
@@ -535,7 +549,8 @@ run_sims_dede <- function(u_S1, u_S2,
                I1 = 0,
                I2 = 0,
                P = param_combos$init_S1[i]*param_combos$init_moi[i],
-               N = param_combos$init_N[i])
+               N = param_combos$init_N[i],
+               D = 0)
     params <- c(unlist(param_combos[i, ]),
                 warnings = 0, thresh_min_dens = 10**-100)
     
@@ -584,6 +599,8 @@ run_sims_dede <- function(u_S1, u_S2,
       yout_list$value$B <- yout_list$value$S + yout_list$value$I
       #Calculate all phage (PI)
       yout_list$value$PI <- yout_list$value$P + yout_list$value$I
+      #Calculate all density (BD)
+      yout_list$value$BD <- yout_list$value$B + yout_list$value$D
       
       if (!dynamic_stepsize) {
         cntrs$this_run_nrows <- num_pops*nrow(yout_list$value)
@@ -877,7 +894,7 @@ run_sims_ode <- function(u_S1,
   return(list(ybig, y_noequil, yfail))
 }
 
-run_sims_dede(u_S1 = 0.01, u_S2 = 0,
+test <- run_sims_dede(u_S1 = 0.01, u_S2 = 0,
               k = 10**9,
               a_S1 = 10**-10, a_S2 = NA,
               tau = 100, b = 50)
