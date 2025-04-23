@@ -900,9 +900,9 @@ test <- run_sims_dede(u_S1 = 0.01, u_S2 = 0,
               tau = 100, b = 50)
 
 ##Define file save/load wrapper for run_sims ----
-run_sims_filewrapper <- function(name, mydir = ".",
+run_sims_filewrapper <- function(..., name, mydir = ".",
                                  read_file = TRUE, write_file = TRUE,
-                                 type = "dede", ...) {
+                                 type = "dede") {
   #type = c('dede', 'ode')
   
   #Note: ... can be all the arguments to pass to run sims
