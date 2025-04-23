@@ -3364,7 +3364,7 @@ run3 <- run_sims_filewrapper(
   b = 50,
   z = 1,
   d = 0,
-  f_a = round(seq(from = 0, to = 3, length.out = 3), 2),
+  f_a = round(seq(from = 0, to = 3, length.out = 5), 2),
   init_S1 = 10**6,
   init_moi = 10**-2,
   equil_cutoff_dens = 0.1,
@@ -3393,7 +3393,58 @@ ybig3_wide <- tidyr::pivot_longer(ybig3_wide,
 ybig3_wide <- filter(ybig3_wide,
                      time %% 20 == 0)
 
+#Summarize
+ysum3 <- summarize(group_by(filter(ybig3, Pop == "B"),
+                             uniq_run, u_S1, u_S2, k, a_S1, a_S2,
+                             tau, b, z, f_a, f_b, d, h, g1, g2, m,
+                             init_S1, init_S2, init_moi, init_N, equil),
+                    peak_dens = max(Density))
+
+ysum3 <- mutate(
+  ysum3,
+  extin_flag = ifelse(peak_dens >= 0.9*k, "neark", "none"))
+
+
 if(glob_make_statplots) {
+  f8a <-
+    ggplot(data = filter(ybig3, Pop == "B", f_a == 1.5),
+           aes(x = time/60, y = Density)) +
+    geom_line(aes(color = as.factor(a_S1), group = interaction(a_S1, f_a)),
+              lwd = 1.5) +
+    labs(x = "Time (hr)", y = "Density (cfu/mL)") +
+    scale_x_continuous(limits = c(NA, 24), breaks = c(0, 6, 12, 18, 24)) +
+    scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
+                       name = "Infection rate\n(/cfu/pfu/mL/min)") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 17),
+          legend.title = element_text(size = 14),
+          legend.text = element_text(size = 12)) +
+    NULL
+  
+  f8b <- ggplot(data = ysum3,
+                aes(x = log10(a_S1), y = f_a)) +
+    geom_contour_filled(aes(z = peak_dens), alpha = 0.5) +
+    geom_point(aes(color = peak_dens, shape = extin_flag),
+               size = 3) +
+    scale_color_viridis_c(name = "Peak density\n(cfu/mL)",
+                          breaks = c(0, 5*10**8, 10**9),
+                          labels = c(0,
+                                     expression(5%*%10^8),
+                                     expression(10^9)),
+                          limits = c(0, 10**9)) +
+    scale_shape_manual(breaks = c("neark", "noextin", "none"), 
+                       values = c(4, 4, 16)) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    xlab("Infection rate\n(/cfu/pfu/mL/min)") +
+    ylab("Lysis time (min)") +
+    guides(fill = "none", shape = "none") +
+    theme(axis.title = element_text(size = 20),
+          legend.title = element_text(size = 14, 
+                                      margin = margin(0, 0, 0.07, 0, unit = "npc")),
+          legend.text = element_text(size = 13)) +
+    NULL
+  
+  
   png("./statplots/figS14_run3_BvsNk.png", width = 6, height = 4,
       units = "in", res = 300)
   print(ggplot(data = ybig3_wide,
@@ -4594,7 +4645,7 @@ if (glob_make_statplots) {
 }
 
 
-## Run 10: test of metrics across dift bact ----
+## Run 10: test of metrics across dift bact & moi ----
 
 run10 <- run_sims_filewrapper(
   name = "run10",
@@ -4732,8 +4783,6 @@ ysum10 <- left_join(
 
 #Plots
 if(glob_make_statplots) {
-  
-  
   png("./statplots/figS28_run10_relauc_moi_VirulenceIndexNull.png", 
       width = 6, height = 4,
       units = "in", res = 300)
@@ -4757,13 +4806,9 @@ if(glob_make_statplots) {
   dev.off()
 }
 
-
-
-
-
 #Plot PCA
 if(glob_make_statplots) {
-  fs26a <- 
+  p1 <- 
     ggplot(data = ybig10_B_wide,
            aes(x = PC1, y = PC2)) +
     geom_point(aes(color = as.factor(a_S1)), alpha = 0.7) +
@@ -4785,7 +4830,7 @@ if(glob_make_statplots) {
           legend.text = element_text(size = 14)) +
     NULL
   
-  fs26b <- 
+  p2 <- 
     ggplot(data = ybig10_B_wide,
            aes(x = norm_PC1, y = norm_PC2)) +
     geom_point(aes(color = as.factor(k)), alpha = 0.7) +
@@ -4807,7 +4852,7 @@ if(glob_make_statplots) {
           legend.text = element_text(size = 14)) +
     NULL
   
-  png("./statplots/figS26_run10_pca.png", 
+  png("./statplots/extrafigure_run10_pca.png", 
       width = 8, height = 3,
       units = "in", res = 300)
   print(
@@ -4928,3 +4973,88 @@ if (glob_make_statplots) {
   dev.off()
 }
 
+# Run 12: Debris ----
+run12 <- run_sims_filewrapper(
+  name = "run12",
+  u_S1 = signif(0.04*10**-0.35, 3), u_S2 = 0,
+  k = 10**9,
+  a_S1 = 10**seq(from = -12, to = -8, length.out = 5),
+  a_S2 = 0,
+  tau = 31.6,
+  b = 50,
+  z = 1,
+  d = 0,
+  m = c(0, 0.25, 0.5, 0.75, 1),
+  init_S1 = 10**6,
+  init_moi = 10**-2,
+  equil_cutoff_dens = 0.1,
+  init_time = 48*60,
+  max_time = 48*60,
+  init_stepsize = 15,
+  print_info = TRUE, read_file = glob_read_files)
+
+ybig12 <- run12[[1]]
+
+#Set below 0 values to 0
+ybig12 <- mutate(group_by(ybig12, uniq_run, Pop),
+                Density = ifelse(Density < 0, 0, Density))
+
+#Summarize
+ysum12 <- summarize(group_by(filter(ybig12),
+                             uniq_run, u_S1, u_S2, k, a_S1, a_S2,
+                             tau, b, z, f_a, f_b, d, h, g1, g2, m,
+                             init_S1, init_S2, init_moi, init_N, equil),
+                    peak_B = max(Density[Pop == "B"]),
+                    final_dens = Density[Pop == "BD" & time == max(time)])
+
+ysum12 <- mutate(
+  ysum12,
+  extin_flag = ifelse(peak_B >= 0.9*k, "neark", "none"))
+
+
+if(glob_make_statplots) {
+  fs23a <-
+    ggplot(data = filter(ybig12, Pop == "BD", a_S1 == 10**-10),
+           aes(x = time/60, y = Density)) +
+    geom_line(aes(color = as.factor(m), group = interaction(a_S1, m)),
+              lwd = 1.5) +
+    labs(x = "Time (hr)", y = "Density (cfu/mL)") +
+    scale_x_continuous(limits = c(NA, 9), breaks = c(0, 3, 6, 9)) +
+    scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
+                       name = "Conversion\nto Debris") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          legend.title = element_text(size = 14),
+          legend.text = element_text(size = 12)) +
+    #facet_grid(~ a_S1) +
+    NULL
+  
+  fs23b <- ggplot(data = ysum12,
+                aes(x = log10(a_S1), y = m)) +
+    geom_contour_filled(aes(z = final_dens), alpha = 0.5) +
+    geom_point(aes(color = final_dens, shape = extin_flag),
+               size = 3) +
+    scale_color_viridis_c(name = "Final density\n(cfu/mL)",
+                          breaks = c(0, 5*10**8, 10**9),
+                          labels = c(0,
+                                     expression(5%*%10^8),
+                                     expression(10^9)),
+                          limits = c(0, 10**9)) +
+    scale_shape_manual(breaks = c("neark", "noextin", "none"), 
+                       values = c(4, 4, 16)) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    xlab("Infection rate\n(/cfu/pfu/mL/min)") +
+    ylab("Conversion to Debris") +
+    guides(fill = "none", shape = "none") +
+    theme(axis.title = element_text(size = 16),
+          legend.title = element_text(size = 14, 
+                                      margin = margin(0, 0, 0.07, 0, unit = "npc")),
+          legend.text = element_text(size = 13)) +
+    NULL
+  
+  png("./statplots/figS23_run12_contours.png", width = 9.5, height = 3.5,
+      units = "in", res = 300)
+  cowplot::plot_grid(fs23a, fs23b, nrow = 1, labels = "AUTO",
+                     align = "hv", axis = "tblr")
+  dev.off()
+}
