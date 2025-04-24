@@ -3465,10 +3465,6 @@ if(glob_make_statplots) {
           legend.text = element_text(size = 13)) +
     NULL
   
-  cowplot::plot_grid(ggdraw(f8a +
-                            draw_plot(f8a_inset, -0.75, 7.25*10**8, 7.5, 3*10**8)),
-                     f8b)
-  
   
   png("./statplots/figS14_run3_BvsNk.png", width = 6, height = 4,
       units = "in", res = 300)
@@ -5039,26 +5035,18 @@ if(glob_make_curveplots) {
           legend.text = element_text(size = 13)) +
     NULL
   
-  print(ggplot(data = filter(ybig11, d == 0, Pop == "B"),
-               aes(x = time, y = Density)) +
-          geom_line() +
-          scale_y_log10() +
-          facet_grid(a_S1 ~ h) +
-          geom_vline(data = filter(ysum11, d == 0), aes(xintercept = extin_time),
-                     color = "red") +
-          geom_vline(data = filter(ysum11, d == 0), aes(xintercept = emerg_time_6),
-                     color = "blue") +
-          NULL)
-  print(ggplot(data = filter(ybig11, d == 1, Pop == "B"),
-               aes(x = time, y = Density)) +
-          geom_line() +
-          scale_y_log10() +
-          facet_grid(a_S1 ~ h) +
-          geom_vline(data = filter(ysum11, d == 1), aes(xintercept = extin_time),
-                     color = "red") +
-          geom_vline(data = filter(ysum11, d == 1), aes(xintercept = emerg_time_6),
-                     color = "blue") +
-          NULL)
+  png("./statplots/fig8_runs3,6,11.png", 
+      width = 24, height = 10, units = "in", res = 300)
+  cowplot::plot_grid(
+    ggdraw(f8a + draw_plot(f8a_inset, -0.75, 7.25*10**8, 7.5, 3*10**8)),
+    f8b,
+    f8c,
+    f8d,
+    f8e,
+    f8f,
+    nrow = 2, labels = "AUTO")
+  dev.off()
+  
 }
 
 
