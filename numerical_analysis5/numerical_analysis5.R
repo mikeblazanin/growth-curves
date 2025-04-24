@@ -3284,7 +3284,7 @@ if(glob_make_statplots) {
         p1 + guides(shape = "none", color = "none", fill = "none"), 
         p2 + guides(shape = "none", color = "none", fill = "none"), 
         ncol = 1, labels = "AUTO", align = "hv", axis = "tblr"),
-      get_legend(fs27a), 
+      get_legend(p1), 
       ncol = 2, rel_widths = c(1, 0.6)))
   dev.off() 
 
@@ -3398,7 +3398,8 @@ ysum3 <- summarize(group_by(filter(ybig3, Pop == "B"),
                              uniq_run, u_S1, u_S2, k, a_S1, a_S2,
                              tau, b, z, f_a, f_b, d, h, g1, g2, m,
                              init_S1, init_S2, init_moi, init_N, equil),
-                    peak_dens = max(Density))
+                    peak_dens = max(Density),
+                   final_dens = Density[time == max(time)])
 
 ysum3 <- mutate(
   ysum3,
@@ -3407,12 +3408,13 @@ ysum3 <- mutate(
 
 if(glob_make_statplots) {
   f8a <-
-    ggplot(data = filter(ybig3, Pop == "B", f_a == 1.5),
-           aes(x = time/60, y = Density)) +
+    ggplot(
+      data = filter(ybig3, Pop == "B", f_a == 1.5),
+      aes(x = time/60, y = Density)) +
     geom_line(aes(color = as.factor(a_S1), group = interaction(a_S1, f_a)),
-              lwd = 1.5) +
+              lwd = 1.5, position = position_dodge(width = .75)) +
     labs(x = "Time (hr)", y = "Density (cfu/mL)") +
-    scale_x_continuous(limits = c(NA, 24), breaks = c(0, 6, 12, 18, 24)) +
+    scale_x_continuous(limits = c(NA, 12), breaks = c(0, 6, 12, 18, 24)) +
     scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
                        name = "Infection rate\n(/cfu/pfu/mL/min)") +
     theme_bw() +
@@ -3420,13 +3422,32 @@ if(glob_make_statplots) {
           legend.title = element_text(size = 14),
           legend.text = element_text(size = 12)) +
     NULL
+  f8a_inset <- 
+    ggplot(
+      data = mutate(filter(ybig3, Pop == "N", f_a == 1.5),
+                    a_rate = 1 - f_a + f_a*(Density/k),
+                    a_rate = ifelse(a_rate < 0, 0, 100*a_rate)),
+      aes(x = time/60, y = a_rate)) +
+    geom_line(aes(color = as.factor(a_S1), group = interaction(a_S1, f_a)),
+              lwd = 1, position = position_dodge(width = 1.5)) +
+    labs(x = "Time (hr)", y = "Relative infection\nrate (%)") +
+    scale_x_continuous(limits = c(NA, 12), breaks = c(0, 6, 12, 18, 24)) +
+    scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
+                       name = "Infection rate\n(/cfu/pfu/mL/min)") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 12),
+          plot.background = 
+            element_rect(fill = NA, color = "black", linewidth = 1),
+          plot.margin = unit(c(0.15, 0.04, 0.04, 0.03), "npc")) +
+    guides(color = "none") +
+    NULL
   
-  f8b <- ggplot(data = ysum3,
+  f8d <- ggplot(data = ysum3,
                 aes(x = log10(a_S1), y = f_a)) +
-    geom_contour_filled(aes(z = peak_dens), alpha = 0.5) +
-    geom_point(aes(color = peak_dens, shape = extin_flag),
+    geom_contour_filled(aes(z = final_dens), alpha = 0.5) +
+    geom_point(aes(color = final_dens, shape = extin_flag),
                size = 3) +
-    scale_color_viridis_c(name = "Peak density\n(cfu/mL)",
+    scale_color_viridis_c(name = "Final density\n(cfu/mL)",
                           breaks = c(0, 5*10**8, 10**9),
                           labels = c(0,
                                      expression(5%*%10^8),
@@ -3436,13 +3457,17 @@ if(glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_x_continuous(labels = math_format(10^.x)) +
     xlab("Infection rate\n(/cfu/pfu/mL/min)") +
-    ylab("Lysis time (min)") +
+    ylab("f_a") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 20),
           legend.title = element_text(size = 14, 
                                       margin = margin(0, 0, 0.07, 0, unit = "npc")),
           legend.text = element_text(size = 13)) +
     NULL
+  
+  cowplot::plot_grid(ggdraw(f8a +
+                            draw_plot(f8a_inset, -0.75, 7.25*10**8, 7.5, 3*10**8)),
+                     f8b)
   
   
   png("./statplots/figS14_run3_BvsNk.png", width = 6, height = 4,
@@ -3615,7 +3640,7 @@ run6 <- run_sims_filewrapper(
     b = 50,
     z = 1,
     d = 0,
-    h = c(0, 0.001, 0.01, 0.1),
+    h = c(0, 10**c(-3, -2.5, -2, -1.5, -1)),
     g1 = 0,
     init_S1 = 10**6,
     init_moi = 10**-2,
@@ -3634,7 +3659,7 @@ run6 <- run_sims_filewrapper(
     b = 50,
     z = 1,
     d = 0,
-    h = c(0, 0.001, 0.01, 0.1),
+    h = c(0, 10**c(-3, -2.5, -2, -1.5, -1)),
     g1 = 1,
     g2 = c(1, -1),
     init_S1 = 10**6,
@@ -3659,7 +3684,67 @@ ybig6 <-
          time = ifelse(time == max(time), max(ybig6$time), time),
          Density = ifelse(Density < 1, 0, Density))
 
+#Summarize
+ysum6 <- summarize(group_by(filter(ybig6, Pop == "B"),
+                            uniq_run, u_S1, u_S2, k, a_S1, a_S2,
+                            tau, b, z, f_a, f_b, d, h, g1, g2,
+                            init_S1, init_S2, init_moi, init_N, equil,
+                            transition),
+                   peak_dens = max(Density),
+                   final_dens = Density[time == max(time)])
+ysum6 <- mutate(
+  ysum6,
+  extin_flag = ifelse(peak_dens >= 0.9*k, "neark", "none"))
+
 if(glob_make_statplots) {
+  f8b <-
+    ggplot(
+      data = filter(ybig6, Pop == "B", transition == "Constant", h == 0.01,
+                    u_S2 == 0, a_S1 %in% 10**c(-12, -11, -10, -9, -8)),
+      aes(x = time/60, y = log10(Density))) +
+    geom_line(aes(color = as.factor(a_S1), group = a_S1),
+              lwd = 1.5) +
+    labs(x = "Time (hr)", y = "Density (cfu/mL)") +
+    scale_x_continuous(limits = c(NA, 12), breaks = c(0, 6, 12, 18, 24)) +
+    scale_y_continuous(labels = math_format(10^.x)) +
+    scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
+                       name = "Infection rate\n(/cfu/pfu/mL/min)") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 17),
+          legend.title = element_text(size = 14),
+          legend.text = element_text(size = 12)) +
+    NULL
+  
+  f8e <-
+    ggplot(data = filter(ysum6, transition == "Constant", u_S2 == 0, h != 0),
+                  aes(x = log10(a_S1), y = h)) +
+    geom_contour_filled(aes(z = log10(final_dens)), alpha = 0.5) +
+    geom_point(aes(color = log10(final_dens), shape = extin_flag),
+               size = 3) +
+    scale_color_viridis_c(name = "Final density\n(cfu/mL)",
+                          breaks = c(5, 7, 9), limits = c(4, 9),
+                          labels = math_format(10^.x)) +
+    # scale_color_viridis_c(name = "Final density\n(cfu/mL)",
+    #                       breaks = c(0, 5*10**8, 10**9),
+    #                       labels = c(0,
+    #                                  expression(5%*%10^8),
+    #                                  expression(10^9)),
+    #                       limits = c(0, 10**9)) +
+    scale_shape_manual(breaks = c("neark", "noextin", "none"), 
+                       values = c(4, 4, 16)) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    scale_y_log10() +
+    xlab("Infection rate\n(/cfu/pfu/mL/min)") +
+    ylab("Resistance Transition Rate") +
+    guides(fill = "none", shape = "none") +
+    theme(axis.title = element_text(size = 20),
+          legend.title = element_text(size = 14, 
+                                      margin = margin(0, 0, 0.07, 0, unit = "npc")),
+          legend.text = element_text(size = 13)) +
+    NULL
+  
+  
+  
   png("./statplots/fig6_run6_h_Bcurves_constant_uS2_0.png", width = 6, height = 2.5,
       units = "in", res = 300)
   print(ggplot(data = filter(ybig6, Pop == "B", transition == "Constant",
@@ -4870,7 +4955,7 @@ run11 <- run_sims_filewrapper(
   u_S1 = signif(0.04*10**-0.35, 3),
   u_S2 = signif(0.04*10**-0.35, 3),
   k = 10**9,
-  a_S1 = signif(10**seq(from = -12, to = -8, length.out = 7), 3),
+  a_S1 = signif(10**seq(from = -12, to = -8, length.out = 5), 3),
   a_S2 = 0,
   tau = 31.6,
   b = 50,
@@ -4883,7 +4968,7 @@ run11 <- run_sims_filewrapper(
   init_moi = 10**-2,
   equil_cutoff_dens = 0.1,
   init_time = 4*24*60,
-  max_time = 4*24*60,
+  max_time = 7*24*60,
   init_stepsize = 5,
   print_info = TRUE
 )
@@ -4910,8 +4995,50 @@ ysum11 <- summarize(group_by(filter(ybig11, Pop == "B"),
                       first_above(y = Density[time > extin_time], 
                                   x = time[time > extin_time],
                                   threshold = 10**6, return = "x"))
+ysum11 <- mutate(
+  ysum11,
+  extin_flag = ifelse(peak_dens >= 0.9*k, "neark", "none"))
 
 if(glob_make_curveplots) {
+  f8c <-
+    ggplot(
+      data = filter(ybig11, Pop == "B", h == 10**-5, d == 0,
+                    a_S1 %in% 10**c(-12, -11, -10, -9, -8)),
+      aes(x = time/60, y = Density)) +
+    geom_line(aes(color = as.factor(a_S1), group = a_S1),
+              lwd = 1.5) +
+    labs(x = "Time (hr)", y = "Density (cfu/mL)") +
+    scale_x_continuous(limits = c(NA, 24), breaks = c(0, 6, 12, 18, 24)) +
+    #scale_y_continuous(labels = math_format(10^.x)) +
+    scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
+                       name = "Infection rate\n(/cfu/pfu/mL/min)") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 17),
+          legend.title = element_text(size = 14),
+          legend.text = element_text(size = 12)) +
+    NULL
+  
+  f8f <-
+    ggplot(data = filter(ysum11, d == 0, h != 0),
+           aes(x = log10(a_S1), y = log10(h))) +
+    geom_contour_filled(aes(z = emerg_time_6/60), alpha = 0.5) +
+    geom_point(aes(color = emerg_time_6/60, shape = extin_flag),
+               size = 3) +
+    scale_color_viridis_c(name = "Emergence\ntime (hr)",
+                          breaks = c(0, 24, 48, 72)) +
+    scale_shape_manual(breaks = c("neark", "noextin", "none"), 
+                       values = c(4, 4, 16)) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    scale_y_continuous(labels = math_format(10^.x)) +
+    xlab("Infection rate\n(/cfu/pfu/mL/min)") +
+    ylab("Resistance Mutation Rate") +
+    guides(fill = "none", shape = "none") +
+    theme(axis.title = element_text(size = 20),
+          legend.title = element_text(size = 14, 
+                                      margin = margin(0, 0, 0.07, 0, unit = "npc")),
+          legend.text = element_text(size = 13)) +
+    NULL
+  
   print(ggplot(data = filter(ybig11, d == 0, Pop == "B"),
                aes(x = time, y = Density)) +
           geom_line() +
