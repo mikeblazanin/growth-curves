@@ -3457,16 +3457,13 @@ if(glob_make_statplots) {
   f8d <- ggplot(data = ysum3,
                 aes(x = log10(a_S1), y = f_a)) +
     geom_contour_filled(aes(z = final_dens), alpha = 0.5) +
-    geom_point(aes(color = final_dens, shape = extin_flag),
-               size = 3) +
+    geom_point(aes(color = final_dens), size = 3) +
     scale_color_viridis_c(name = "Final density\n(cfu/mL)",
                           breaks = c(0, 5*10**8, 10**9),
                           labels = c(0,
                                      expression(5%*%10^8),
                                      expression(10^9)),
                           limits = c(0, 10**9)) +
-    scale_shape_manual(breaks = c("neark", "noextin", "none"), 
-                       values = c(4, 4, 16)) +
     scale_x_continuous(labels = math_format(10^.x)) +
     xlab("Infection rate\n(/cfu/pfu/mL/min)") +
     ylab("Degree of infection rate plasticity") +
@@ -3736,19 +3733,10 @@ if(glob_make_statplots) {
                          a_S1 %in% 10**c(-12, -11, -10, -9, -8)),
                   aes(x = log10(a_S1), y = h)) +
     geom_contour_filled(aes(z = log10(final_dens)), alpha = 0.5) +
-    geom_point(aes(color = log10(final_dens), shape = extin_flag),
-               size = 3) +
+    geom_point(aes(color = log10(final_dens)), size = 3) +
     scale_color_viridis_c(name = "Final density\n(cfu/mL)",
                           breaks = c(5, 7, 9), limits = c(4, 9),
                           labels = math_format(10^.x)) +
-    # scale_color_viridis_c(name = "Final density\n(cfu/mL)",
-    #                       breaks = c(0, 5*10**8, 10**9),
-    #                       labels = c(0,
-    #                                  expression(5%*%10^8),
-    #                                  expression(10^9)),
-    #                       limits = c(0, 10**9)) +
-    scale_shape_manual(breaks = c("neark", "noextin", "none"), 
-                       values = c(4, 4, 16)) +
     scale_x_continuous(labels = math_format(10^.x)) +
     scale_y_log10() +
     xlab("Infection rate\n(/cfu/pfu/mL/min)") +
@@ -5051,12 +5039,9 @@ if(glob_make_curveplots) {
     ggplot(data = filter(ysum11, d == 0, h != 0),
            aes(x = log10(a_S1), y = log10(h))) +
     geom_contour_filled(aes(z = emerg_time_6/60), alpha = 0.5) +
-    geom_point(aes(color = emerg_time_6/60, shape = extin_flag),
-               size = 3) +
+    geom_point(aes(color = emerg_time_6/60), size = 3) +
     scale_color_viridis_c(name = "Emergence\ntime (hr)",
                           breaks = c(0, 24, 48, 72)) +
-    scale_shape_manual(breaks = c("neark", "noextin", "none"), 
-                       values = c(4, 4, 16)) +
     scale_x_continuous(labels = math_format(10^.x)) +
     scale_y_continuous(labels = math_format(10^.x)) +
     xlab("Infection rate\n(/cfu/pfu/mL/min)") +
