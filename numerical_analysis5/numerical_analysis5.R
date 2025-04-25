@@ -3414,7 +3414,7 @@ if(glob_make_statplots) {
     geom_line(aes(color = as.factor(a_S1), group = interaction(a_S1, f_a)),
               lwd = 1.5, position = position_dodge(width = .75)) +
     labs(x = "Time (hr)", y = "Density (cfu/mL)") +
-    scale_x_continuous(limits = c(NA, 12), breaks = c(0, 6, 12, 18, 24)) +
+    scale_x_continuous(limits = c(NA, 24), breaks = c(0, 12, 24)) +
     scale_y_continuous(breaks = c(0, 5*10**8, 10**9),
                        labels = c(0,
                                   expression(5%*%10^8),
@@ -3442,15 +3442,15 @@ if(glob_make_statplots) {
       aes(x = time/60, y = a_rate)) +
     geom_line(aes(color = as.factor(a_S1), group = interaction(a_S1, f_a)),
               lwd = 1, position = position_dodge(width = 1.5)) +
-    labs(x = "Time (hr)", y = "Infection\nrate (%)") +
+    labs(x = "Time (hr)", y = "Infection rate (%)") +
     scale_x_continuous(limits = c(NA, 12), breaks = c(0, 6, 12, 18, 24)) +
     scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
                        name = "Infection rate\n(/cfu/pfu/mL/min)") +
     theme_bw() +
-    theme(axis.title = element_text(size = 12),
+    theme(axis.title = element_text(size = 14),
           plot.background = 
-            element_rect(fill = NA, color = "black", linewidth = 1),
-          plot.margin = unit(c(0.15, 0.04, 0.04, 0.03), "npc")) +
+            element_rect(fill = "white", color = "black", linewidth = 1),
+          plot.margin = unit(c(0.05, 0.04, 0.04, 0.03), "npc")) +
     guides(color = "none") +
     NULL
   
@@ -5073,7 +5073,7 @@ if(glob_make_curveplots) {
       nrow = 3, labels = c("", "", "", "A", "B", "C", "D", "E", "F"),
       align = "hv", axis = "tblr", label_size = 20, vjust = 0.8,
       rel_heights = c(0.15, 1, 1)) +
-    draw_plot(f8a_inset, 0.0525, 0.785, 0.09, 0.13))
+    draw_plot(f8a_inset, 0.125, 0.6, 0.1, 0.25))
   dev.off()
   
 }
