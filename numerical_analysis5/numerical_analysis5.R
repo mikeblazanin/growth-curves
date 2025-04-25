@@ -3415,12 +3415,24 @@ if(glob_make_statplots) {
               lwd = 1.5, position = position_dodge(width = .75)) +
     labs(x = "Time (hr)", y = "Density (cfu/mL)") +
     scale_x_continuous(limits = c(NA, 12), breaks = c(0, 6, 12, 18, 24)) +
+    scale_y_continuous(breaks = c(0, 5*10**8, 10**9),
+                       labels = c(0,
+                                  expression(5%*%10^8),
+                                  expression(10^9)),
+                       limits = c(0, 10**9)) +
     scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
-                       name = "Infection rate\n(/cfu/pfu/mL/min)") +
+                       name = "Infection rate\n(/cfu/pfu/mL/min)",
+                       labels = c(expression(10^-12),
+                                  expression(10^-11),
+                                  expression(10^-10),
+                                  expression(10^-9),
+                                  expression(10^-8)),
+                       breaks = 10**c(-12, -11, -10, -9, -8)) +
     theme_bw() +
-    theme(axis.title = element_text(size = 17),
-          legend.title = element_text(size = 14),
-          legend.text = element_text(size = 12)) +
+    theme(axis.title = element_text(size = 18),
+          axis.text = element_text(size = 14),
+          legend.title = element_text(size = 16),
+          legend.text = element_text(size = 14)) +
     NULL
   f8a_inset <- 
     ggplot(
@@ -3430,7 +3442,7 @@ if(glob_make_statplots) {
       aes(x = time/60, y = a_rate)) +
     geom_line(aes(color = as.factor(a_S1), group = interaction(a_S1, f_a)),
               lwd = 1, position = position_dodge(width = 1.5)) +
-    labs(x = "Time (hr)", y = "Relative infection\nrate (%)") +
+    labs(x = "Time (hr)", y = "Infection\nrate (%)") +
     scale_x_continuous(limits = c(NA, 12), breaks = c(0, 6, 12, 18, 24)) +
     scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
                        name = "Infection rate\n(/cfu/pfu/mL/min)") +
@@ -3457,12 +3469,13 @@ if(glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_x_continuous(labels = math_format(10^.x)) +
     xlab("Infection rate\n(/cfu/pfu/mL/min)") +
-    ylab("f_a") +
+    ylab("Degree of infection rate plasticity") +
     guides(fill = "none", shape = "none") +
-    theme(axis.title = element_text(size = 20),
-          legend.title = element_text(size = 14, 
-                                      margin = margin(0, 0, 0.07, 0, unit = "npc")),
-          legend.text = element_text(size = 13)) +
+    theme(axis.title = element_text(size = 18),
+          axis.text = element_text(size = 14),
+          legend.title = element_text(
+            size = 16, margin = margin(0, 0, 0.07, 0, unit = "npc")),
+          legend.text = element_text(size = 14)) +
     NULL
   
   
@@ -3704,15 +3717,23 @@ if(glob_make_statplots) {
     scale_x_continuous(limits = c(NA, 12), breaks = c(0, 6, 12, 18, 24)) +
     scale_y_continuous(labels = math_format(10^.x)) +
     scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
-                       name = "Infection rate\n(/cfu/pfu/mL/min)") +
+                       name = "Infection rate\n(/cfu/pfu/mL/min)",
+                       labels = c(expression(10^-12),
+                                  expression(10^-11),
+                                  expression(10^-10),
+                                  expression(10^-9),
+                                  expression(10^-8)),
+                       breaks = 10**c(-12, -11, -10, -9, -8)) +
     theme_bw() +
-    theme(axis.title = element_text(size = 17),
-          legend.title = element_text(size = 14),
-          legend.text = element_text(size = 12)) +
+    theme(axis.title = element_text(size = 18),
+          axis.text = element_text(size = 14),
+          legend.title = element_text(size = 16),
+          legend.text = element_text(size = 14)) +
     NULL
   
   f8e <-
-    ggplot(data = filter(ysum6, transition == "Constant", u_S2 == 0, h != 0),
+    ggplot(data = filter(ysum6, transition == "Constant", u_S2 == 0, h != 0,
+                         a_S1 %in% 10**c(-12, -11, -10, -9, -8)),
                   aes(x = log10(a_S1), y = h)) +
     geom_contour_filled(aes(z = log10(final_dens)), alpha = 0.5) +
     geom_point(aes(color = log10(final_dens), shape = extin_flag),
@@ -3733,10 +3754,11 @@ if(glob_make_statplots) {
     xlab("Infection rate\n(/cfu/pfu/mL/min)") +
     ylab("Resistance Transition Rate") +
     guides(fill = "none", shape = "none") +
-    theme(axis.title = element_text(size = 20),
-          legend.title = element_text(size = 14, 
-                                      margin = margin(0, 0, 0.07, 0, unit = "npc")),
-          legend.text = element_text(size = 13)) +
+    theme(axis.title = element_text(size = 18),
+          axis.text = element_text(size = 14),
+          legend.title = element_text(
+            size = 16, margin = margin(0, 0, 0.07, 0, unit = "npc")),
+          legend.text = element_text(size = 14)) +
     NULL
   
   
@@ -5005,13 +5027,24 @@ if(glob_make_curveplots) {
               lwd = 1.5) +
     labs(x = "Time (hr)", y = "Density (cfu/mL)") +
     scale_x_continuous(limits = c(NA, 24), breaks = c(0, 6, 12, 18, 24)) +
-    #scale_y_continuous(labels = math_format(10^.x)) +
+    scale_y_continuous(breaks = c(0, 5*10**8, 10**9),
+                       labels = c(0,
+                                  expression(5%*%10^8),
+                                  expression(10^9)),
+                       limits = c(0, 10**9)) +
     scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
-                       name = "Infection rate\n(/cfu/pfu/mL/min)") +
+                       name = "Infection rate\n(/cfu/pfu/mL/min)",
+                       labels = c(expression(10^-12),
+                                  expression(10^-11),
+                                  expression(10^-10),
+                                  expression(10^-9),
+                                  expression(10^-8)),
+                       breaks = 10**c(-12, -11, -10, -9, -8)) +
     theme_bw() +
-    theme(axis.title = element_text(size = 17),
-          legend.title = element_text(size = 14),
-          legend.text = element_text(size = 12)) +
+    theme(axis.title = element_text(size = 18),
+          axis.text = element_text(size = 14),
+          legend.title = element_text(size = 16),
+          legend.text = element_text(size = 14)) +
     NULL
   
   f8f <-
@@ -5029,22 +5062,33 @@ if(glob_make_curveplots) {
     xlab("Infection rate\n(/cfu/pfu/mL/min)") +
     ylab("Resistance Mutation Rate") +
     guides(fill = "none", shape = "none") +
-    theme(axis.title = element_text(size = 20),
-          legend.title = element_text(size = 14, 
-                                      margin = margin(0, 0, 0.07, 0, unit = "npc")),
-          legend.text = element_text(size = 13)) +
+    theme(axis.title = element_text(size = 18),
+          axis.text = element_text(size = 14),
+          legend.title = element_text(
+            size = 16, margin = margin(0, 0, 0.07, 0, unit = "npc")),
+          legend.text = element_text(size = 14)) +
     NULL
   
   png("./statplots/fig8_runs3,6,11.png", 
-      width = 24, height = 10, units = "in", res = 300)
-  cowplot::plot_grid(
-    ggdraw(f8a + draw_plot(f8a_inset, -0.75, 7.25*10**8, 7.5, 3*10**8)),
-    f8b,
-    f8c,
-    f8d,
-    f8e,
-    f8f,
-    nrow = 2, labels = "AUTO")
+      width = 20, height = 10, units = "in", res = 300)
+  ggdraw(
+    cowplot::plot_grid(
+      grid::grid.text("Plastic infection rate", x = unit(0.43, "npc"),
+                      gp = grid::gpar(fontsize = 24, fontface = "bold")),
+      grid::grid.text("Transitions to resistance", x = unit(0.43, "npc"),
+                      gp = grid::gpar(fontsize = 24, fontface = "bold")),
+      grid::grid.text("Evolving resistance", x = unit(0.43, "npc"),
+                      gp = grid::gpar(fontsize = 24, fontface = "bold")),
+      f8a,
+      f8b,
+      f8c,
+      f8d,
+      f8e,
+      f8f,
+      nrow = 3, labels = c("", "", "", "A", "B", "C", "D", "E", "F"),
+      align = "hv", axis = "tblr", label_size = 20, vjust = 0.8,
+      rel_heights = c(0.15, 1, 1)) +
+    draw_plot(f8a_inset, 0.0525, 0.785, 0.09, 0.13))
   dev.off()
   
 }
