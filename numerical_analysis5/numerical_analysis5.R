@@ -3412,7 +3412,7 @@ if(glob_make_statplots) {
       data = filter(ybig3, Pop == "B", f_a == 1.5),
       aes(x = time/60, y = Density)) +
     geom_line(aes(color = as.factor(a_S1), group = interaction(a_S1, f_a)),
-              lwd = 1.5, position = position_dodge(width = .75)) +
+              lwd = 1.5, position = position_dodge(width = 2.5)) +
     labs(x = "Time (hr)", y = "Density (cfu/mL)") +
     scale_x_continuous(limits = c(NA, 24), breaks = c(0, 12, 24)) +
     scale_y_continuous(breaks = c(0, 5*10**8, 10**9),
@@ -3441,7 +3441,7 @@ if(glob_make_statplots) {
                     a_rate = ifelse(a_rate < 0, 0, 100*a_rate)),
       aes(x = time/60, y = a_rate)) +
     geom_line(aes(color = as.factor(a_S1), group = interaction(a_S1, f_a)),
-              lwd = 1, position = position_dodge(width = 1.5)) +
+              lwd = 1, position = position_dodge(width = 2)) +
     labs(x = "Time (hr)", y = "Infection rate (%)") +
     scale_x_continuous(limits = c(NA, 12), breaks = c(0, 6, 12, 18, 24)) +
     scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
