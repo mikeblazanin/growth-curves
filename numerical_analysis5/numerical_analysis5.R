@@ -1258,7 +1258,7 @@ if(glob_make_statplots) {
   dens_offset <- 1
   
   temp <- filter(ybig1, uniq_run == myrun, Pop %in% c("S", "I", "P", "N"))
-  png("./statplots/fig1B_run1.png",
+  png("./statplots/extrafigure_run1_pops.png",
       width = 6, height = 4, units = "in", res = 150)
   print(
     ggplot(data = temp, 
@@ -1308,12 +1308,12 @@ if(glob_make_statplots) {
           plot.margin = margin(t = 0.2, l = 0.2, b = 0.2, r = 0.2, unit = "in")) +
     labs(y = "Density", x = "Time (hr)") +
     NULL
-  png("./statplots/run1_example_B.png",
+  png("./statplots/extrafigure_run1_example_B.png",
       width = 5, height = 5, units = "in", res = 150)
   print(p1)
   dev.off()
   
-  png("./statplots/run1_example_Bpeak.png",
+  png("./statplots/extrafigure_run1_example_Bpeak.png",
       width = 5, height = 5, units = "in", res = 150)
   p1 <- p1 +
     geom_point(data = filter(ysum1, uniq_run == myrun),
@@ -1332,7 +1332,7 @@ if(glob_make_statplots) {
   print(p1)
   dev.off()
   
-  png("./statplots/run1_example_Bpeakextin.png",
+  png("./statplots/extrafigure_run1_example_Bpeakextin.png",
       width = 5, height = 5, units = "in", res = 150)
   p1 <- p1 +
     geom_point(data = filter(ysum1, uniq_run == myrun),
@@ -1346,7 +1346,7 @@ if(glob_make_statplots) {
   print(p1)
   dev.off()
   
-  png("./statplots/fig1C_run1.png",
+  png("./statplots/extrafigure_run1_metrics.png",
       width = 4, height = 4, units = "in", res = 150)
   p1 <- p1 +
     geom_area(aes(y = Density+dens_offset),
@@ -1765,22 +1765,24 @@ if(glob_make_statplots) {
 if(glob_make_statplots) {  
   png("./statplots/fig3_run1_allmetricsvmetrics_subset.png",
       width = 9, height = 9, units = "in", res = 150)
-  GGally::ggpairs(
-    data = mutate(ungroup(filter(ybig1_PCA_wide, extin_flag != "noextin")),
-                  peak_time_hr = peak_time/60,
-                  extin_time_4_hr = extin_time_4/60,
-                  auc_hr = auc/60),
-    columns = c("peak_dens", "peak_time_hr", "extin_time_4_hr", "auc_hr", "PC1"),
-    columnLabels = c("Peak Bacterial\nDensity (cfu/mL)",
-                     "Time of Peak\nBacterial\nDensity (hr)",
-                     "Extinction\nTime (hr)",
-                     "Area Under\nthe Curve\n(hr cfu/mL)",
-                     "PC1"),
-    upper = list(continuous = "points"), lower = list(continuous = "points"),
-    diag = list(continuous = "autopointDiag")) +
-    theme_bw() +
-    theme(strip.text = element_text(size = 14),
-          axis.text.x = element_text(size = 12, angle = 45, hjust = 1))
+  print(
+    GGally::ggpairs(
+      data = mutate(ungroup(filter(ybig1_PCA_wide, extin_flag != "noextin")),
+                    peak_time_hr = peak_time/60,
+                    extin_time_4_hr = extin_time_4/60,
+                    auc_hr = auc/60),
+      columns = c("peak_dens", "peak_time_hr", "extin_time_4_hr", "auc_hr", "PC1"),
+      columnLabels = c("Peak Bacterial\nDensity (cfu/mL)",
+                       "Time of Peak\nBacterial\nDensity (hr)",
+                       "Extinction\nTime (hr)",
+                       "Area Under\nthe Curve\n(hr cfu/mL)",
+                       "PC1"),
+      upper = list(continuous = "points"), lower = list(continuous = "points"),
+      diag = list(continuous = "autopointDiag")) +
+      theme_bw() +
+      theme(strip.text = element_text(size = 14),
+            axis.text.x = element_text(size = 12, angle = 45, hjust = 1))
+  )
   dev.off()
   
   png("./statplots/figS4_run1_allmetricsvmetrics_alldata.png",
@@ -2155,10 +2157,12 @@ if (glob_make_statplots) {
   
   png("./statplots/fig5_run1_contours_derivs.png", width = 10, height = 7.5,
       units = "in", res = 300)
-  cowplot::plot_grid(f5a, f5b, f5c,
-                     cowplot::plot_grid(f5d, f5e, nrow = 1, labels = c("D", "E")),
-                     nrow = 2, labels = c("A", "B", "C", ""),
-                     rel_heights = c(1, 0.9))
+  print(
+    cowplot::plot_grid(f5a, f5b, f5c,
+                       cowplot::plot_grid(f5d, f5e, nrow = 1, labels = c("D", "E")),
+                       nrow = 2, labels = c("A", "B", "C", ""),
+                       rel_heights = c(1, 0.9))
+  )
   dev.off()
   
   ##Supplemental contours
@@ -2969,10 +2973,12 @@ if(glob_make_statplots) {
   
   png("./statplots/fig7_run2_sd_auc_relauc.png", width = 5.5, height = 5,
       units = "in", res = 300)
-  cowplot::plot_grid(
-    p1, 
-    p2,
-    nrow = 1, align = "hv", axis = "tblr", labels = "AUTO")
+  print(
+    cowplot::plot_grid(
+      p1, 
+      p2,
+      nrow = 1, align = "hv", axis = "tblr", labels = "AUTO")
+  )
   dev.off()
   
   fs18a <- ggplot(data = filter(ysum2, init_moi != 0),
@@ -3069,7 +3075,8 @@ if(glob_make_statplots) {
   
   png("./statplots/figS19_run2_allmetricsvmetrics.png",
       width = 9, height = 9, units = "in", res = 300)
-  GGally::ggpairs(
+  print(
+    GGally::ggpairs(
     data = mutate(filter(ysum2, init_moi != 0),
                   peak_time_hr = peak_time/60,
                   extin_time_4_hr = extin_time_4/60,
@@ -3093,6 +3100,7 @@ if(glob_make_statplots) {
           axis.text.y = element_text(size = 10),
           axis.text.x = element_text(size = 10, angle = 45, hjust = 1)) +
     guides(shape = "none")
+  )
   dev.off()
   
   
@@ -3476,7 +3484,7 @@ if(glob_make_statplots) {
     NULL
   
   
-  png("./statplots/figS14_run3_BvsNk.png", width = 6, height = 4,
+  png("./statplots/figTBD_run3_BvsNk.png", width = 6, height = 4,
       units = "in", res = 300)
   print(ggplot(data = ybig3_wide,
                aes(x = (k-N)/k, y = Density, color = time/60)) +
@@ -3541,7 +3549,7 @@ ybig4_wide <- filter(ybig4_wide,
                      time %% 20 == 0)
 
 if(glob_make_statplots) {
-  png("./statplots/figS15_run4_BvsNk.png", width = 6, height = 4,
+  png("./statplots/figTBD_run4_BvsNk.png", width = 6, height = 4,
       units = "in", res = 300)
   print(ggplot(data = ybig4_wide,
                aes(x = (k-N)/k, y = Density, color = time/60)) +
@@ -3609,7 +3617,7 @@ ybig5_wide <- filter(ybig5_wide,
                      time %% 20 == 0)
 
 if(glob_make_statplots) {
-  png("./statplots/figS16_run5_BvsNk.png", width = 6, height = 4,
+  png("./statplots/figTBD_run5_BvsNk.png", width = 6, height = 4,
       units = "in", res = 300)
   print(ggplot(data = ybig5_wide,
                aes(x = (k-N)/k, y = Density, color = time/60)) +
@@ -3751,7 +3759,7 @@ if(glob_make_statplots) {
   
   
   
-  png("./statplots/fig6_run6_h_Bcurves_constant_uS2_0.png", width = 6, height = 2.5,
+  png("./statplots/extrafigure_run6_h_Bcurves_constant_uS2_0.png", width = 6, height = 2.5,
       units = "in", res = 300)
   print(ggplot(data = filter(ybig6, Pop == "B", transition == "Constant",
                              u_S2 == 0),
@@ -3767,7 +3775,7 @@ if(glob_make_statplots) {
           NULL)
   dev.off()
   
-  png("./statplots/figS17_run6_h_Bcurves_uS2_0.png", width = 6, height = 4,
+  png("./statplots/figTBD_run6_h_Bcurves_uS2_0.png", width = 6, height = 4,
       units = "in", res = 300)
   print(ggplot(data = filter(ybig6, Pop == "B", u_S2 == 0),
                aes(x = time/60, y = Density, color = log10(a_S1), group = uniq_run)) +
@@ -3782,7 +3790,7 @@ if(glob_make_statplots) {
           NULL)
   dev.off()
   
-  png("./statplots/figS18_run6_h_Bcurves_uS2not0.png", width = 6, height = 4,
+  png("./statplots/figTBD_run6_h_Bcurves_uS2not0.png", width = 6, height = 4,
       units = "in", res = 300)
   print(ggplot(data = filter(ybig6, Pop == "B", u_S2 != 0),
                aes(x = time/60, y = Density, color = log10(a_S1), group = uniq_run)) +
@@ -4630,7 +4638,7 @@ if (glob_make_statplots) {
           guides(fill = "none", shape = "none") +
           NULL
   
-  png("./statplots/figS20_run8_peaktime_b_initP_initS_contour.png", 
+  png("./statplots/figTBD_run8_peaktime_b_initP_initS_contour.png", 
       width = 8, height = 2.5,
       units = "in", res = 300)
   print(cowplot::plot_grid(p1, p2, ncol = 2, labels = "AUTO"))
@@ -4728,7 +4736,7 @@ if (glob_make_statplots) {
           guides(fill = "none", shape = "none") +
           NULL
   
-  png("./statplots/figS21_run9_peaktime_tau_initP_initS_contour.png", 
+  png("./statplots/figTBD_run9_peaktime_tau_initP_initS_contour.png", 
       width = 8, height = 2.5,
       units = "in", res = 300)
   print(cowplot::plot_grid(p1, p2, ncol = 2, labels = "AUTO"))
@@ -4874,7 +4882,7 @@ ysum10 <- left_join(
 
 #Plots
 if(glob_make_statplots) {
-  png("./statplots/figS28_run10_relauc_moi_VirulenceIndexNull.png", 
+  png("./statplots/figS20_run10_relauc_moi_VirulenceIndexNull.png", 
       width = 6, height = 4,
       units = "in", res = 300)
   print(ggplot(filter(ysum10, h == 0, init_moi != 0),
@@ -4947,9 +4955,9 @@ if(glob_make_statplots) {
       width = 8, height = 3,
       units = "in", res = 300)
   print(
-    cowplot::plot_grid(fs26a + guides(color = "none"), 
-                       fs26b + guides(color = "none"),
-                       get_legend(fs26a),
+    cowplot::plot_grid(p1 + guides(color = "none"), 
+                       p2 + guides(color = "none"),
+                       get_legend(p1),
                        nrow = 1, align = "hv", axis = "tblr",
                        labels = c("A", "B", ""), rel_widths = c(1, 1, 0.5)))
   dev.off()
@@ -5005,7 +5013,7 @@ ysum11 <- mutate(
   ysum11,
   extin_flag = ifelse(peak_dens >= 0.9*k, "neark", "none"))
 
-if(glob_make_curveplots) {
+if(glob_make_statplots) {
   f8c <-
     ggplot(
       data = filter(ybig11, Pop == "B", h == 10**-5, d == 0,
@@ -5056,24 +5064,26 @@ if(glob_make_curveplots) {
   
   png("./statplots/fig8_runs3,6,11.png", 
       width = 20, height = 10, units = "in", res = 300)
-  ggdraw(
-    cowplot::plot_grid(
-      grid::grid.text("Plastic infection rate", x = unit(0.43, "npc"),
-                      gp = grid::gpar(fontsize = 24, fontface = "bold")),
-      grid::grid.text("Transitions to resistance", x = unit(0.43, "npc"),
-                      gp = grid::gpar(fontsize = 24, fontface = "bold")),
-      grid::grid.text("Evolving resistance", x = unit(0.43, "npc"),
-                      gp = grid::gpar(fontsize = 24, fontface = "bold")),
-      f8a,
-      f8b,
-      f8c,
-      f8d,
-      f8e,
-      f8f,
-      nrow = 3, labels = c("", "", "", "A", "B", "C", "D", "E", "F"),
-      align = "hv", axis = "tblr", label_size = 20, vjust = 0.8,
-      rel_heights = c(0.15, 1, 1)) +
-    draw_plot(f8a_inset, 0.125, 0.6, 0.1, 0.25))
+  print(
+    ggdraw(
+      cowplot::plot_grid(
+        grid::grid.text("Plastic infection rate", x = unit(0.43, "npc"),
+                        gp = grid::gpar(fontsize = 24, fontface = "bold")),
+        grid::grid.text("Transitions to resistance", x = unit(0.43, "npc"),
+                        gp = grid::gpar(fontsize = 24, fontface = "bold")),
+        grid::grid.text("Evolving resistance", x = unit(0.43, "npc"),
+                        gp = grid::gpar(fontsize = 24, fontface = "bold")),
+        f8a,
+        f8b,
+        f8c,
+        f8d,
+        f8e,
+        f8f,
+        nrow = 3, labels = c("", "", "", "A", "B", "C", "D", "E", "F"),
+        align = "hv", axis = "tblr", label_size = 20, vjust = 0.8,
+        rel_heights = c(0.15, 1, 1)) +
+        draw_plot(f8a_inset, 0.125, 0.6, 0.1, 0.25))
+  )
   dev.off()
   
 }
@@ -5093,7 +5103,7 @@ if (glob_make_statplots) {
       facet_grid(~d) +
     NULL)
   
-  png("./statplots/figSXX_run11_emergencetime_a_mutrate_contour.png", 
+  png("./statplots/figTBD_run11_emergencetime_a_mutrate_contour.png", 
       width = 4.5, height = 5, units = "in", res = 300)
   print(ggplot(data = ysum11, 
                aes(x = a_S1, y = h)) +
@@ -5157,7 +5167,7 @@ ysum12 <- mutate(
 
 
 if(glob_make_statplots) {
-  fs23a <-
+  p1 <-
     ggplot(data = filter(ybig12, Pop == "BD", a_S1 == 10**-10),
            aes(x = time/60, y = Density)) +
     geom_line(aes(color = as.factor(m), group = interaction(a_S1, m)),
@@ -5173,7 +5183,7 @@ if(glob_make_statplots) {
     #facet_grid(~ a_S1) +
     NULL
   
-  fs23b <- ggplot(data = ysum12,
+  p2 <- ggplot(data = ysum12,
                 aes(x = log10(a_S1), y = m)) +
     geom_contour_filled(aes(z = final_dens), alpha = 0.5) +
     geom_point(aes(color = final_dens, shape = extin_flag),
@@ -5196,9 +5206,11 @@ if(glob_make_statplots) {
           legend.text = element_text(size = 13)) +
     NULL
   
-  png("./statplots/figS23_run12_contours.png", width = 9.5, height = 3.5,
+  png("./statplots/figTBD_run12_contours.png", width = 9.5, height = 3.5,
       units = "in", res = 300)
-  cowplot::plot_grid(fs23a, fs23b, nrow = 1, labels = "AUTO",
+  print(
+    cowplot::plot_grid(p1, p2, nrow = 1, labels = "AUTO",
                      align = "hv", axis = "tblr")
+  )
   dev.off()
 }
