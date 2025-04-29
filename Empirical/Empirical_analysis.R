@@ -188,7 +188,7 @@ ggplot(data = filter(gcdata_tidy, file == "2021-11-03_Emma_Growth_Curve",
   labs(y = "Density", color = "Population", x = "Time (hr)")
 dev.off()
 
-png("figS12_empiricalcurves.png", width = 8, height = 5,
+png("figS21_empiricalcurves.png", width = 8, height = 5,
     units = "in", res = 300)
 ggplot(data = filter(gcdata_tidy, bacteria != "Blank"), 
        aes(x = Time, y = smoothed, color = file)) +
@@ -240,7 +240,7 @@ fs13d <-
   labs(x = "Efficiency of plaquing", y = "Minimum death slope\n(OD600/hr)") +
   theme_bw()
 
-png("figS13_EOPvmetrics.png", width = 6, height = 5,
+png("figS22_EOPvmetrics.png", width = 6, height = 5,
     units = "in", res = 300)
 cowplot::plot_grid(fs13a, fs13b, fs13c, fs13d,
                    nrow = 2, labels = "AUTO", align = "hv", axis = "tblr")

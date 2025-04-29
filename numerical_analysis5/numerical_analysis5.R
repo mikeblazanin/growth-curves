@@ -3834,7 +3834,7 @@ if(glob_make_statplots) {
     geom_line(aes(color = as.factor(tau), group = interaction(tau, f_tau)),
               lwd = 0.75, position = position_dodge(width = 4)) +
     facet_grid(~ f_tau, labeller = labeller(f_tau = function(x) {paste("f =", x)})) +
-    labs(x = "Time (hr)", y = "1/Lysis time\n[Rate through\ninfected cell (%)]") +
+    labs(x = "Time (hr)", y = "Lysis rate (%)\n[1/lysis time]") +
     scale_x_continuous(limits = c(NA, 24), breaks = c(0, 12, 24)) +
     scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
                        name = "Lysis time (min)") +
@@ -3909,7 +3909,7 @@ run6 <- run_sims_filewrapper(
   name = "run6", read_file = glob_read_files,
   a = list(
     u_S1 = signif(0.04*10**-0.35, 3),
-    u_S2 = c(0, signif(0.04*10**-0.35, 3)),
+    u_S2 = 0,
     k = 10**9,
     a_S1 = signif(10**seq(from = -12, to = -8, length.out = 9), 3),
     a_S2 = 0,
@@ -3928,7 +3928,7 @@ run6 <- run_sims_filewrapper(
     print_info = TRUE),
   b = list(
     u_S1 = signif(0.04*10**-0.35, 3),
-    u_S2 = c(0, signif(0.04*10**-0.35, 3)),
+    u_S2 = 0,
     k = 10**9,
     a_S1 = signif(10**seq(from = -12, to = -8, length.out = 9), 3),
     a_S2 = 0,
@@ -4020,54 +4020,60 @@ if(glob_make_statplots) {
           legend.text = element_text(size = 14)) +
     NULL
   
+  fs26a <- 
+    ggplot(data = filter(ybig6, Pop == "B", u_S2 == 0),
+           aes(x = time/60, y = log10(Density), color = log10(a_S1), group = uniq_run)) +
+    geom_line() +
+    facet_grid(transition ~ signif(h, 2)) +
+    scale_y_continuous(labels = math_format(10^.x),
+                       breaks = c(3, 6, 9),
+                       limits = c(0, NA)) +
+    coord_cartesian(xlim = c(NA, 30)) +
+    scale_x_continuous(breaks = c(0, 12, 24)) +
+    theme_bw() +
+    scale_color_gradient(low = "gray70", high = "darkblue",
+                         name = "Infection rate\n(/cfu/pfu/mL/min)",
+                         labels = math_format(10^.x)) +
+    labs(x = "Time (hr)", y = "Density (cfu/mL)",
+         subtitle = "Resistance Transition Rate") +
+    theme(axis.title = element_text(size = 18),
+          axis.text.y = element_text(size = 14),
+          axis.text.x = element_text(size = 10),
+          legend.title = element_text(
+            size = 16, margin = margin(0, 0, 0.07, 0, unit = "npc")),
+          legend.text = element_text(size = 14),
+          plot.subtitle = element_text(size = 16),
+          strip.text = element_text(size = 14)) +
+    NULL
+  
+  fs26b <- ggplot(data = filter(ysum6, h != 0),
+                  aes(x = log10(a_S1), y = h)) +
+    geom_contour_filled(aes(z = log10(final_dens)), alpha = 0.5) +
+    geom_point(aes(color = log10(final_dens)), size = 3) +
+    facet_grid(transition ~ .) +
+    scale_color_viridis_c(name = "Final density\n(cfu/mL)",
+                          labels = math_format(10^.x),
+                          limits = c(NA, 9)) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    scale_y_continuous(trans = "log10") +
+    xlab("Infection rate\n(/cfu/pfu/mL/min)") +
+    ylab("Resistance transition rate") +
+    guides(fill = "none", shape = "none") +
+    theme(axis.title = element_text(size = 18),
+          axis.text = element_text(size = 12),
+          legend.title = element_text(
+            size = 16, margin = margin(0, 0, 0.07, 0, unit = "npc")),
+          legend.text = element_text(size = 14),
+          strip.text = element_text(size = 14)) +
+    NULL
   
   
-  png("./statplots/extrafigure_run6_h_Bcurves_constant_uS2_0.png", width = 6, height = 2.5,
+  png("./statplots/figS26_run6_Bcurves_contours.png", width = 13, height = 7,
       units = "in", res = 300)
-  print(ggplot(data = filter(ybig6, Pop == "B", transition == "Constant",
-                             u_S2 == 0),
-               aes(x = time/60, y = Density, color = log10(a_S1), group = uniq_run)) +
-          geom_line() +
-          facet_grid(~ h) +
-          scale_y_continuous(trans = "log10", limits = c(1, NA)) +
-          coord_cartesian(xlim = c(NA, 30)) +
-          theme_bw() +
-          scale_color_viridis_c(end = 0.95, name = "log10(infection rate)") +
-          labs(x = "Time (hr)", y = "Density (cfu/mL)",
-               subtitle = "Resistance Transition Rate") +
-          NULL)
+  print(
+    cowplot::plot_grid(fs26a, fs26b, ncol = 2, rel_widths = c(1, 0.6))
+  )
   dev.off()
-  
-  png("./statplots/figTBD_run6_h_Bcurves_uS2_0.png", width = 6, height = 4,
-      units = "in", res = 300)
-  print(ggplot(data = filter(ybig6, Pop == "B", u_S2 == 0),
-               aes(x = time/60, y = Density, color = log10(a_S1), group = uniq_run)) +
-          geom_line() +
-          facet_grid(transition ~ h) +
-          scale_y_continuous(trans = "log10", limits = c(1, NA)) +
-          coord_cartesian(xlim = c(NA, 30)) +
-          theme_bw() +
-          scale_color_viridis_c(end = 0.95, name = "log10(infection rate)") +
-          labs(x = "Time (hr)", y = "Density (cfu/mL)",
-               subtitle = "Resistance Transition Rate") +
-          NULL)
-  dev.off()
-  
-  png("./statplots/figTBD_run6_h_Bcurves_uS2not0.png", width = 6, height = 4,
-      units = "in", res = 300)
-  print(ggplot(data = filter(ybig6, Pop == "B", u_S2 != 0),
-               aes(x = time/60, y = Density, color = log10(a_S1), group = uniq_run)) +
-          geom_line() +
-          facet_grid(transition ~ h) +
-          scale_y_continuous(trans = "log10", limits = c(1, NA)) +
-          coord_cartesian(xlim = c(NA, 30)) +
-          theme_bw() +
-          scale_color_viridis_c(end = 0.95, name = "log10(infection rate)") +
-          labs(x = "Time (hr)", y = "Density (cfu/mL)",
-               subtitle = "Resistance Transition Rate") +
-          NULL)
-  dev.off()
-  
 }
 
 ## Run 7: init dens, init moi, and a ----
@@ -4901,7 +4907,7 @@ if (glob_make_statplots) {
           guides(fill = "none", shape = "none") +
           NULL
   
-  png("./statplots/figTBD_run8_peaktime_b_initP_initS_contour.png", 
+  png("./statplots/extrafigure_run8_peaktime_b_initP_initS_contour.png", 
       width = 8, height = 2.5,
       units = "in", res = 300)
   print(cowplot::plot_grid(p1, p2, ncol = 2, labels = "AUTO"))
@@ -4999,7 +5005,7 @@ if (glob_make_statplots) {
           guides(fill = "none", shape = "none") +
           NULL
   
-  png("./statplots/figTBD_run9_peaktime_tau_initP_initS_contour.png", 
+  png("./statplots/extrafigure_run9_peaktime_tau_initP_initS_contour.png", 
       width = 8, height = 2.5,
       units = "in", res = 300)
   print(cowplot::plot_grid(p1, p2, ncol = 2, labels = "AUTO"))
@@ -5349,10 +5355,6 @@ if(glob_make_statplots) {
   )
   dev.off()
   
-}
-
-
-if (glob_make_statplots) {
   print(ggplot(data = ysum11, 
                aes(x = a_S1, y = h)) +
     geom_contour_filled(aes(z = extin_time/60), alpha = 0.5) +
@@ -5366,26 +5368,27 @@ if (glob_make_statplots) {
       facet_grid(~d) +
     NULL)
   
-  png("./statplots/figTBD_run11_emergencetime_a_mutrate_contour.png", 
+  png("./statplots/figS28_run11_emergencetime_a_mutrate_contour.png", 
       width = 4.5, height = 5, units = "in", res = 300)
   print(ggplot(data = ysum11, 
-               aes(x = a_S1, y = h)) +
+               aes(x = log10(a_S1), y = log10(h))) +
           geom_contour_filled(aes(z = emerg_time_6/60), alpha = 0.5) +
           geom_point(aes(color = emerg_time_6/60),
                      size = 3) +
           scale_color_viridis_c(name = "Emergence\ntime (hr)",
-                                breaks = c(0, 12, 24, 36, 48)) +
-          scale_y_continuous(trans = "log10") +
-          scale_x_continuous(trans = "log10") +
+                                breaks = c(0, 24, 48, 72)) +
+          scale_y_continuous(labels = math_format(10^.x)) +
+          scale_x_continuous(labels = math_format(10^.x)) +
           labs(x = "Infection rate (/min)", y = "Resistance Mutation Rate") +
           guides(fill = "none", shape = "none") +
           facet_grid(d ~ .,
                      labeller = labeller(
                        d = c("0" = "No nutrients returned by cell lysis",
                              "1" = "All nutrients returned by cell lysis"))) +
-          theme(axis.title = element_text(size = 18),
-                legend.title = element_text(size = 16),
-                legend.text = element_text(size = 14)) +
+          theme(axis.title = element_text(size = 14),
+                legend.title = element_text(size = 14),
+                legend.text = element_text(size = 12),
+                axis.text = element_text(size = 10)) +
           NULL)
   dev.off()
 }
@@ -5469,7 +5472,7 @@ if(glob_make_statplots) {
           legend.text = element_text(size = 13)) +
     NULL
   
-  png("./statplots/figTBD_run12_contours.png", width = 9.5, height = 3.5,
+  png("./statplots/figS27_run12_contours.png", width = 9.5, height = 3.5,
       units = "in", res = 300)
   print(
     cowplot::plot_grid(p1, p2, nrow = 1, labels = "AUTO",
