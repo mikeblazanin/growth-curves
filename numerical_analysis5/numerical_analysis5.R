@@ -5369,7 +5369,7 @@ if(glob_make_statplots) {
     NULL)
   
   png("./statplots/figS28_run11_emergencetime_a_mutrate_contour.png", 
-      width = 4.5, height = 5, units = "in", res = 300)
+      width = 8, height = 4, units = "in", res = 300)
   print(ggplot(data = ysum11, 
                aes(x = log10(a_S1), y = log10(h))) +
           geom_contour_filled(aes(z = emerg_time_6/60), alpha = 0.5) +
@@ -5381,7 +5381,7 @@ if(glob_make_statplots) {
           scale_x_continuous(labels = math_format(10^.x)) +
           labs(x = "Infection rate (/min)", y = "Resistance Mutation Rate") +
           guides(fill = "none", shape = "none") +
-          facet_grid(d ~ .,
+          facet_grid(. ~ d,
                      labeller = labeller(
                        d = c("0" = "No nutrients returned by cell lysis",
                              "1" = "All nutrients returned by cell lysis"))) +
