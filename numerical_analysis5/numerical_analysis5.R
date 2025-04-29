@@ -3452,8 +3452,7 @@ if(glob_make_statplots) {
               lwd = 1, position = position_dodge(width = 2)) +
     labs(x = "Time (hr)", y = "Infection rate (%)") +
     scale_x_continuous(limits = c(NA, 12), breaks = c(0, 6, 12, 18, 24)) +
-    scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
-                       name = "Infection rate\n(/cfu/pfu/mL/min)") +
+    scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5)) +
     theme_bw() +
     theme(axis.title = element_text(size = 14),
           plot.background = 
@@ -3483,8 +3482,96 @@ if(glob_make_statplots) {
           legend.text = element_text(size = 14)) +
     NULL
   
+  fs23a <-
+    ggplot(
+      data = filter(ybig3, Pop == "B"),
+      aes(x = time/60, y = Density)) +
+    geom_line(aes(color = as.factor(a_S1), group = interaction(a_S1, f_a)),
+              lwd = 1, position = position_dodge(width = 4)) +
+    facet_grid(~ f_a, labeller = labeller(f_a = function(x) {paste("f =", x)})) +
+    labs(x = "Time (hr)", y = "Density\n(cfu/mL)") +
+    scale_x_continuous(limits = c(NA, 24), breaks = c(0, 12, 24)) +
+    scale_y_continuous(breaks = c(0, 5*10**8, 10**9),
+                       labels = c(0,
+                                  expression(5%*%10^8),
+                                  expression(10^9)),
+                       limits = c(0, 10**9)) +
+    scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
+                       name = "Infection rate\n(/cfu/pfu/mL/min)",
+                       labels = c(expression(10^-12),
+                                  expression(10^-11),
+                                  expression(10^-10),
+                                  expression(10^-9),
+                                  expression(10^-8)),
+                       breaks = 10**c(-12, -11, -10, -9, -8)) +
+    theme_bw() +
+    theme(axis.title = element_text(size = 18),
+          axis.text = element_text(size = 12),
+          legend.title = element_text(size = 16),
+          legend.text = element_text(size = 14),
+          strip.text = element_text(size = 11)) +
+    NULL
+  fs23b <- 
+    ggplot(
+      data = mutate(filter(ybig3, Pop == "N"),
+                    a_rate = 1 - f_a + f_a*(Density/k),
+                    a_rate = ifelse(a_rate < 0, 0, 100*a_rate)),
+      aes(x = time/60, y = a_rate)) +
+    geom_line(aes(color = as.factor(a_S1), group = interaction(a_S1, f_a)),
+              lwd = 1, position = position_dodge(width = 4)) +
+    facet_grid(~ f_a, labeller = labeller(f_a = function(x) {paste("f =", x)})) +
+    labs(x = "Time (hr)", y = "Infection rate (%)") +
+    scale_x_continuous(limits = c(NA, 24), breaks = c(0, 12, 24)) +
+    scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
+                       name = "Infection rate\n(/cfu/pfu/mL/min)",
+                       labels = c(expression(10^-12),
+                                  expression(10^-11),
+                                  expression(10^-10),
+                                  expression(10^-9),
+                                  expression(10^-8)),
+                       breaks = 10**c(-12, -11, -10, -9, -8)) +
+    theme_bw() +
+    theme(axis.title = element_text(size = 18),
+          axis.text = element_text(size = 12),
+          legend.title = element_text(size = 16),
+          legend.text = element_text(size = 14),
+          strip.text = element_text(size = 11)) +
+    NULL
   
-  png("./statplots/figTBD_run3_BvsNk.png", width = 6, height = 4,
+  fs23c <- ggplot(data = ysum3,
+                  aes(x = log10(a_S1), y = f_a)) +
+    geom_contour_filled(aes(z = final_dens), alpha = 0.5) +
+    geom_point(aes(color = final_dens), size = 3) +
+    scale_color_viridis_c(name = "Final density\n(cfu/mL)",
+                          breaks = c(0, 5*10**8, 10**9),
+                          labels = c(0,
+                                     expression(5%*%10^8),
+                                     expression(10^9)),
+                          limits = c(0, 10**9)) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    xlab("Infection rate\n(/cfu/pfu/mL/min)") +
+    ylab("Degree of\ninfection rate plasticity") +
+    guides(fill = "none", shape = "none") +
+    theme(axis.title = element_text(size = 18),
+          axis.text = element_text(size = 14),
+          legend.title = element_text(
+            size = 16, margin = margin(0, 0, 0.07, 0, unit = "npc")),
+          legend.text = element_text(size = 14)) +
+    NULL
+  
+  png("./statplots/figS23_run3_Bcurve_contour.png", width = 13, height = 5,
+      units = "in", res = 300)
+  print(
+    cowplot::plot_grid(
+      cowplot::plot_grid(fs23a, fs23b, nrow = 2,
+                         align = "hv", axis = "tblr", labels = "AUTO"),
+      fs23c,
+      ncol = 2, labels = c("", "C"))
+  )
+  dev.off()
+  
+  
+  png("./statplots/extrafigure_run3_BvsNk.png", width = 6, height = 4,
       units = "in", res = 300)
   print(ggplot(data = ybig3_wide,
                aes(x = (k-N)/k, y = Density, color = time/60)) +
@@ -3519,7 +3606,7 @@ run4 <- run_sims_filewrapper(
   b = signif(5*10**seq(from = 0, to = 2, length.out = 5), 3),
   z = 1,
   d = 0,
-  f_b = round(seq(from = 0, to = 3, length.out = 3), 2),
+  f_b = round(seq(from = 0, to = 3, length.out = 5), 2),
   init_S1 = 10**6,
   init_moi = 10**-2,
   equil_cutoff_dens = 0.1,
@@ -3548,8 +3635,95 @@ ybig4_wide <- tidyr::pivot_longer(ybig4_wide,
 ybig4_wide <- filter(ybig4_wide,
                      time %% 20 == 0)
 
+#Summarize
+ysum4 <- summarize(group_by(filter(ybig4, Pop == "B"),
+                            uniq_run, u_S1, u_S2, k, a_S1, a_S2,
+                            tau, b, z, f_a, f_b, d, h, g1, g2,
+                            init_S1, init_S2, init_moi, init_N, equil),
+                   peak_dens = max(Density),
+                   final_dens = Density[time == max(time)])
+ysum4 <- mutate(
+  ysum4,
+  extin_flag = ifelse(peak_dens >= 0.9*k, "neark", "none"))
+
 if(glob_make_statplots) {
-  png("./statplots/figTBD_run4_BvsNk.png", width = 6, height = 4,
+  fs24a <-
+    ggplot(
+      data = filter(ybig4, Pop == "B"),
+      aes(x = time/60, y = Density)) +
+    geom_line(aes(color = as.factor(b), group = interaction(b, f_b)),
+              lwd = 1, position = position_dodge(width = 4)) +
+    facet_grid(~ f_b, labeller = labeller(f_b = function(x) {paste("f =", x)})) +
+    labs(x = "Time (hr)", y = "Density\n(cfu/mL)") +
+    scale_x_continuous(limits = c(NA, 24), breaks = c(0, 12, 24)) +
+    scale_y_continuous(breaks = c(0, 5*10**8, 10**9),
+                       labels = c(0,
+                                  expression(5%*%10^8),
+                                  expression(10^9)),
+                       limits = c(0, 10**9)) +
+    scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
+                       name = "Burst size") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 18),
+          axis.text = element_text(size = 12),
+          legend.title = element_text(size = 16),
+          legend.text = element_text(size = 14),
+          strip.text = element_text(size = 13)) +
+    NULL
+  fs24b <- 
+    ggplot(
+      data = mutate(filter(ybig4, Pop == "N"),
+                    b_rate = 1 - f_b + f_b*(Density/k),
+                    b_rate = ifelse(b_rate < 0, 0, 100*b_rate)),
+      aes(x = time/60, y = b_rate)) +
+    geom_line(aes(color = as.factor(b), group = interaction(b, f_b)),
+              lwd = 1, position = position_dodge(width = 4)) +
+    facet_grid(~ f_b, labeller = labeller(f_b = function(x) {paste("f =", x)})) +
+    labs(x = "Time (hr)", y = "Burst size (%)") +
+    scale_x_continuous(limits = c(NA, 24), breaks = c(0, 12, 24)) +
+    scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
+                       name = "Burst size") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 18),
+          axis.text = element_text(size = 12),
+          legend.title = element_text(size = 16),
+          legend.text = element_text(size = 14),
+          strip.text = element_text(size = 13)) +
+    NULL
+  
+  fs24c <- ggplot(data = ysum4,
+                aes(x = log10(b/5), y = f_b)) +
+    geom_contour_filled(aes(z = final_dens), alpha = 0.5) +
+    geom_point(aes(color = final_dens), size = 3) +
+    scale_color_viridis_c(name = "Final density\n(cfu/mL)",
+                          breaks = c(0, 5*10**8, 10**9),
+                          labels = c(0,
+                                     expression(5%*%10^8),
+                                     expression(10^9)),
+                          limits = c(0, 10**9)) +
+    scale_x_continuous(breaks = c(0, 1, 2), labels = c(5, 50, 500)) +
+    xlab("Burst size") +
+    ylab("Degree of\nburst size plasticity") +
+    guides(fill = "none", shape = "none") +
+    theme(axis.title = element_text(size = 18),
+          axis.text = element_text(size = 14),
+          legend.title = element_text(
+            size = 16, margin = margin(0, 0, 0.07, 0, unit = "npc")),
+          legend.text = element_text(size = 14)) +
+    NULL
+  
+  png("./statplots/figS24_run4_Bcurve_contour.png", width = 13, height = 5,
+      units = "in", res = 300)
+  print(
+    cowplot::plot_grid(
+      cowplot::plot_grid(fs24a, fs24b, nrow = 2,
+                         align = "hv", axis = "tblr", labels = "AUTO"),
+      fs24c,
+      ncol = 2, labels = c("", "C"))
+  )
+  dev.off()
+  
+  png("./statplots/extrafigure_run4_BvsNk.png", width = 6, height = 4,
       units = "in", res = 300)
   print(ggplot(data = ybig4_wide,
                aes(x = (k-N)/k, y = Density, color = time/60)) +
@@ -3585,7 +3759,7 @@ run5 <- run_sims_filewrapper(
   b = 50,
   z = 1,
   d = 0,
-  f_tau = round(seq(from = 0, to = 3, length.out = 3), 2),
+  f_tau = round(seq(from = 0, to = 3, length.out = 5), 2),
   init_S1 = 10**6,
   init_moi = 10**-2,
   equil_cutoff_dens = 0.1,
@@ -3616,8 +3790,97 @@ ybig5_wide <- tidyr::pivot_longer(ybig5_wide,
 ybig5_wide <- filter(ybig5_wide,
                      time %% 20 == 0)
 
+#Summarize
+ysum5 <- summarize(group_by(filter(ybig5, Pop == "B"),
+                            uniq_run, u_S1, k, a_S1,
+                            tau, b, z, f_tau, d,
+                            init_S1, init_moi, init_N, equil),
+                   peak_dens = max(Density),
+                   final_dens = Density[time == max(time)])
+ysum5 <- mutate(
+  ysum5,
+  extin_flag = ifelse(peak_dens >= 0.9*k, "neark", "none"))
+
 if(glob_make_statplots) {
-  png("./statplots/figTBD_run5_BvsNk.png", width = 6, height = 4,
+  fs25a <-
+    ggplot(
+      data = filter(ybig5, Pop == "B", time %% 20 == 0),
+      aes(x = time/60, y = Density)) +
+    geom_line(aes(color = as.factor(tau), group = paste(tau, f_tau)),
+              lwd = 1, position = position_dodge(width = 4)) +
+    facet_grid(~ f_tau, labeller = labeller(f_tau = function(x) {paste("f =", x)})) +
+    labs(x = "Time (hr)", y = "Density\n(cfu/mL)") +
+    scale_x_continuous(limits = c(NA, 24), breaks = c(0, 12, 24)) +
+    scale_y_continuous(breaks = c(0, 5*10**8, 10**9),
+                       labels = c(0,
+                                  expression(5%*%10^8),
+                                  expression(10^9)),
+                       limits = c(0, 10**9)) +
+    scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
+                       name = "Lysis time (min)") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 18),
+          axis.text = element_text(size = 12),
+          legend.title = element_text(size = 16),
+          legend.text = element_text(size = 14),
+          strip.text = element_text(size = 11)) +
+    NULL
+  fs25b <- 
+    ggplot(
+      data = mutate(filter(ybig5, Pop == "N", time %% 20 == 0),
+                    tau_rate = 1 - f_tau + f_tau*(Density/k),
+                    tau_rate = ifelse(tau_rate < 0, 0, 100*tau_rate)),
+      aes(x = time/60, y = tau_rate)) +
+    geom_line(aes(color = as.factor(tau), group = interaction(tau, f_tau)),
+              lwd = 0.75, position = position_dodge(width = 4)) +
+    facet_grid(~ f_tau, labeller = labeller(f_tau = function(x) {paste("f =", x)})) +
+    labs(x = "Time (hr)", y = "1/Lysis time\n[Rate through\ninfected cell (%)]") +
+    scale_x_continuous(limits = c(NA, 24), breaks = c(0, 12, 24)) +
+    scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
+                       name = "Lysis time (min)") +
+    theme_bw() +
+    theme(axis.title.x = element_text(size = 18),
+          axis.title.y = element_text(size = 16),
+          axis.text = element_text(size = 12),
+          legend.title = element_text(size = 16),
+          legend.text = element_text(size = 14),
+          strip.text = element_text(size = 11)) +
+    NULL
+  
+  fs25c <- ggplot(data = ysum5,
+                  aes(x = log10(tau), y = f_tau)) +
+    geom_contour_filled(aes(z = final_dens), alpha = 0.5) +
+    geom_point(aes(color = final_dens), size = 3) +
+    scale_color_viridis_c(name = "Final density\n(cfu/mL)",
+                          breaks = c(0, 5*10**8, 10**9),
+                          labels = c(0,
+                                     expression(5%*%10^8),
+                                     expression(10^9)),
+                          limits = c(0, 10**9)) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    xlab("Lysis time (min)") +
+    ylab("Degree of\nlysis time plasticity") +
+    guides(fill = "none", shape = "none") +
+    theme(axis.title = element_text(size = 18),
+          axis.text = element_text(size = 14),
+          legend.title = element_text(
+            size = 16, margin = margin(0, 0, 0.07, 0, unit = "npc")),
+          legend.text = element_text(size = 14)) +
+    NULL
+  
+  png("./statplots/figS25_run5_Bcurve_contour.png", width = 13, height = 5,
+      units = "in", res = 300)
+  print(
+    cowplot::plot_grid(
+      cowplot::plot_grid(fs25a, fs25b, nrow = 2,
+                         align = "hv", axis = "tblr", labels = "AUTO"),
+      fs25c,
+      ncol = 2, labels = c("", "C"))
+  )
+  dev.off()
+  
+  
+  png("./statplots/extrafigure_run5_BvsNk.png", width = 6, height = 4,
       units = "in", res = 300)
   print(ggplot(data = ybig5_wide,
                aes(x = (k-N)/k, y = Density, color = time/60)) +
