@@ -4295,13 +4295,13 @@ if (glob_make_statplots) {
           legend.text = element_text(size = 13)) +
     NULL
   
-  p2 <- ggplot(data = filter(ysum7, init_P == 10**4), 
+  p2 <- ggplot(data = filter(ysum7, init_P > 10**3.9, init_P < 10**4.1), 
                aes(x = log10(a_S1), y = log10(init_S1))) +
     geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
     geom_point(aes(color = peak_time/60, shape = extin_flag),
                size = 3) +
     scale_color_viridis_c(name = "Time of\nPeak\nBacterial\nDensity (hr)",
-                          breaks = c(4, 8, 12, 16)) +
+                          breaks = c(3, 6, 9, 12)) +
     scale_shape_manual(breaks = c("neark", "noextin", "none"), 
                        values = c(4, 4, 16)) +
     scale_y_continuous(labels = math_format(10^.x)) +
