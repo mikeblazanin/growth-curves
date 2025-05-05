@@ -2178,7 +2178,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10") +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/min)",
+    labs(x = "Infection rate (/cfu/pfu/mL/min)",
          y = "Lysis time (min)",
          subtitle = "Burst Size") +
     guides(fill = "none", shape = "none") +
@@ -2195,7 +2195,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10", breaks = c(5, 50, 500)) +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/min)",
+    labs(x = "Infection rate (/cfu/pfu/mL/min)",
          y = "Burst Size",
          subtitle = "Lysis time (min)") +
     guides(fill = "none", shape = "none") +
@@ -2214,7 +2214,7 @@ if (glob_make_statplots) {
     scale_x_continuous(trans = "log10") +
     labs(x = "Lysis time (min)",
          y = "Burst Size",
-         subtitle = "Infection rate (/min)") +
+         subtitle = "Infection rate (/cfu/pfu/mL/min)") +
     guides(fill = "none", shape = "none") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
   
@@ -2241,7 +2241,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10") +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/min)",
+    labs(x = "Infection rate (/cfu/pfu/mL/min)",
          y = "Lysis time (min)",
          subtitle = "Burst Size") +
     guides(fill = "none", shape = "none") +
@@ -2258,7 +2258,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10", breaks = c(5, 50, 500)) +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/min)",
+    labs(x = "Infection rate (/cfu/pfu/mL/min)",
          y = "Burst Size",
          subtitle = "Lysis time (min)") +
     guides(fill = "none", shape = "none") +
@@ -2277,7 +2277,7 @@ if (glob_make_statplots) {
     scale_x_continuous(trans = "log10") +
     labs(x = "Lysis time (min)",
          y = "Burst Size",
-         subtitle = "Infection rate (/min)") +
+         subtitle = "Infection rate (/cfu/pfu/mL/min)") +
     guides(fill = "none", shape = "none") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
   
@@ -2305,7 +2305,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10") +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/min)",
+    labs(x = "Infection rate (/cfu/pfu/mL/min)",
          y = "Lysis time (min)",
          subtitle = "Burst Size") +
     guides(fill = "none", shape = "none") +
@@ -2323,7 +2323,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10", breaks = c(5, 50, 500)) +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/min)",
+    labs(x = "Infection rate (/cfu/pfu/mL/min)",
          y = "Burst Size",
          subtitle = "Lysis time (min)") +
     guides(fill = "none", shape = "none") +
@@ -2343,7 +2343,7 @@ if (glob_make_statplots) {
     scale_x_continuous(trans = "log10") +
     labs(x = "Lysis time (min)",
          y = "Burst Size",
-         subtitle = "Infection rate (/min)") +
+         subtitle = "Infection rate (/cfu/pfu/mL/min)") +
     guides(fill = "none", shape = "none") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
   
@@ -2373,7 +2373,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10") +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/min)",
+    labs(x = "Infection rate (/cfu/pfu/mL/min)",
          y = "Lysis time (min)",
          subtitle = "Burst Size") +
     guides(fill = "none", shape = "none") +
@@ -2393,7 +2393,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10", breaks = c(5, 50, 500)) +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/min)",
+    labs(x = "Infection rate (/cfu/pfu/mL/min)",
          y = "Burst Size",
          subtitle = "Lysis time (min)") +
     guides(fill = "none", shape = "none") +
@@ -2415,7 +2415,7 @@ if (glob_make_statplots) {
     scale_x_continuous(trans = "log10") +
     labs(x = "Lysis time (min)",
          y = "Burst Size",
-         subtitle = "Infection rate (/min)") +
+         subtitle = "Infection rate (/cfu/pfu/mL/min)") +
     guides(fill = "none", shape = "none") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
   
@@ -2441,7 +2441,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10") +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/min)",
+    labs(x = "Infection rate (/cfu/pfu/mL/min)",
          y = "Lysis time (min)",
          subtitle = "Burst Size") +
     guides(fill = "none", shape = "none") +
@@ -2457,7 +2457,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10", breaks = c(5, 50, 500)) +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/min)",
+    labs(x = "Infection rate (/cfu/pfu/mL/min)",
          y = "Burst Size",
          subtitle = "Lysis time (min)") +
     guides(fill = "none", shape = "none") +
@@ -2475,7 +2475,7 @@ if (glob_make_statplots) {
     scale_x_continuous(trans = "log10") +
     labs(x = "Lysis time (min)",
          y = "Burst Size",
-         subtitle = "Infection rate (/min)") +
+         subtitle = "Infection rate (/cfu/pfu/mL/min)") +
     guides(fill = "none", shape = "none") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
   
@@ -3407,7 +3407,11 @@ ysum3 <- summarize(group_by(filter(ybig3, Pop == "B"),
                              tau, b, z, f_a, f_b, d, h, g1, g2, m,
                              init_S1, init_S2, init_moi, init_N, equil),
                     peak_dens = max(Density),
-                   final_dens = Density[time == max(time)])
+                   peak_time = time[which.max(Density)],
+                   final_dens = Density[time == max(time)],
+                   extin_time_4 = 
+                     first_below(y = Density, x = time,
+                                 threshold = 10**4, return = "x"))
 
 ysum3 <- mutate(
   ysum3,
@@ -3481,6 +3485,65 @@ if(glob_make_statplots) {
             size = 16, margin = margin(0, 0, 0.07, 0, unit = "npc")),
           legend.text = element_text(size = 14)) +
     NULL
+  
+  fs29a <- ggplot(data = ysum3, aes(x = log10(a_S1), y = f_a)) +
+    geom_contour_filled(aes(z = peak_time/60), alpha = 0.5,
+                        breaks = c(0, 3, 6, 9, 12, 48)) +
+    geom_point(aes(color = peak_time/60, shape = extin_flag),
+               size = 4) +
+    scale_color_viridis_c(name = "Peak time (hr)",
+                          limits = c(0, 12),
+                          breaks = c(0, 6, 12),
+                          labels = c("0", "6", "12+")) +
+    scale_shape_manual(breaks = c("neark", "noextin", "none"), 
+                       values = c(4, 4, 16)) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    xlab("Infection rate\n(/cfu/pfu/mL/min)") +
+    ylab("Degree of infection rate plasticity") +
+    guides(fill = "none", shape = "none") +
+    theme(axis.title = element_text(size = 18),
+          axis.text = element_text(size = 14),
+          legend.title = element_text(
+            size = 16, margin = margin(0, 0, 0.07, 0, unit = "npc")),
+          legend.text = element_text(size = 14)) +
+    NULL
+  
+  fs29d <- ggplot(data = ysum3, aes(x = log10(a_S1), y = f_a)) +
+    geom_contour_filled(aes(z = log10(peak_dens)), alpha = 0.5) +
+    geom_point(aes(color = log10(peak_dens), shape = extin_flag),
+               size = 4) +
+    scale_color_viridis_c(name = "Peak density\n[log10(cfu/mL)]") +
+    scale_shape_manual(breaks = c("neark", "noextin", "none"), 
+                       values = c(4, 4, 16)) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    xlab("Infection rate\n(/cfu/pfu/mL/min)") +
+    ylab("Degree of infection rate plasticity") +
+    guides(fill = "none", shape = "none") +
+    theme(axis.title = element_text(size = 18),
+          axis.text = element_text(size = 14),
+          legend.title = element_text(
+            size = 16, margin = margin(0, 0, 0.07, 0, unit = "npc")),
+          legend.text = element_text(size = 14))
+  
+  fs29g <- ggplot(data = ysum3, aes(x = log10(a_S1), y = f_a)) +
+    geom_contour_filled(aes(z = log10(extin_time_4/60)), alpha = 0.5) +
+    geom_point(aes(color = log10(extin_time_4/60), shape = extin_flag),
+               size = 4) +
+    scale_color_viridis_c(name = "Extinction time (hr)",
+                          breaks = c(0.5, 0.75, 1, 1.25),
+                          labels = c(3.2, 5.62, 10, 17.78)) +
+    scale_shape_manual(breaks = c("neark", "noextin", "none"), 
+                       values = c(4, 4, 16)) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    xlab("Infection rate\n(/cfu/pfu/mL/min)") +
+    ylab("Degree of infection rate plasticity") +
+    guides(fill = "none", shape = "none") +
+    theme(axis.title = element_text(size = 18),
+          axis.text = element_text(size = 14),
+          legend.title = element_text(
+            size = 16, margin = margin(0, 0, 0.07, 0, unit = "npc")),
+          legend.text = element_text(size = 14))
+    
   
   fs23a <-
     ggplot(
@@ -3968,7 +4031,12 @@ ysum6 <- summarize(group_by(filter(ybig6, Pop == "B"),
                             init_S1, init_S2, init_moi, init_N, equil,
                             transition),
                    peak_dens = max(Density),
-                   final_dens = Density[time == max(time)])
+                   peak_time = time[which.max(Density)],
+                   final_dens = Density[time == max(time)],
+                   extin_time_6 = 
+                     first_below(y = Density, x = time,
+                                 threshold = 10**5.99, return = "x"))
+
 ysum6 <- mutate(
   ysum6,
   extin_flag = ifelse(peak_dens >= 0.9*k, "neark", "none"))
@@ -4019,6 +4087,70 @@ if(glob_make_statplots) {
             size = 16, margin = margin(0, 0, 0.07, 0, unit = "npc")),
           legend.text = element_text(size = 14)) +
     NULL
+  
+  fs29b <- 
+    ggplot(data = filter(ysum6, transition == "Constant", u_S2 == 0, h != 0,
+                                a_S1 %in% 10**c(-12, -11, -10, -9, -8)),
+                  aes(x = log10(a_S1), y = h)) +
+    geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
+    geom_point(aes(color = peak_time/60, shape = extin_flag),
+               size = 4) +
+    scale_color_viridis_c(name = "Peak time (hr)") +
+    scale_shape_manual(breaks = c("neark", "noextin", "none"), 
+                       values = c(4, 4, 16)) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    scale_y_log10() +
+    xlab("Infection rate\n(/cfu/pfu/mL/min)") +
+    ylab("Resistance Transition Rate") +
+    guides(fill = "none", shape = "none") +
+    theme(axis.title = element_text(size = 18),
+          axis.text = element_text(size = 14),
+          legend.title = element_text(
+            size = 16, margin = margin(0, 0, 0.07, 0, unit = "npc")),
+          legend.text = element_text(size = 14)) +
+    NULL
+  
+  fs29e <- 
+    ggplot(data = filter(ysum6, transition == "Constant", u_S2 == 0, h != 0,
+                                a_S1 %in% 10**c(-12, -11, -10, -9, -8)),
+                  aes(x = log10(a_S1), y = h)) +
+    geom_contour_filled(aes(z = log10(peak_dens)), alpha = 0.5) +
+    geom_point(aes(color = log10(peak_dens), shape = extin_flag),
+               size = 4) +
+    scale_color_viridis_c(name = "Peak density\n[log10(cfu/mL)]") +
+    scale_shape_manual(breaks = c("neark", "noextin", "none"), 
+                       values = c(4, 4, 16)) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    scale_y_log10() +
+    xlab("Infection rate\n(/cfu/pfu/mL/min)") +
+    ylab("Resistance Transition Rate") +
+    guides(fill = "none", shape = "none") +
+    theme(axis.title = element_text(size = 18),
+          axis.text = element_text(size = 14),
+          legend.title = element_text(
+            size = 16, margin = margin(0, 0, 0.07, 0, unit = "npc")),
+          legend.text = element_text(size = 14))
+  
+  fs29h <- 
+    ggplot(data = filter(ysum6, transition == "Constant", u_S2 == 0, h != 0,
+                         a_S1 %in% 10**c(-12, -11, -10, -9, -8)),
+           aes(x = log10(a_S1), y = h)) +
+    geom_contour_filled(aes(z = log10(extin_time_6/60)), alpha = 0.5) +
+    geom_point(aes(color = log10(extin_time_6/60), shape = extin_flag),
+               size = 4) +
+    scale_color_viridis_c(name = "Extinction time (hr)") +
+    scale_shape_manual(breaks = c("neark", "noextin", "none"), 
+                       values = c(4, 4, 16)) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    scale_y_log10() +
+    xlab("Infection rate\n(/cfu/pfu/mL/min)") +
+    ylab("Resistance Transition Rate") +
+    guides(fill = "none", shape = "none") +
+    theme(axis.title = element_text(size = 18),
+          axis.text = element_text(size = 14),
+          legend.title = element_text(
+            size = 16, margin = margin(0, 0, 0.07, 0, unit = "npc")),
+          legend.text = element_text(size = 14))
   
   fs26a <- 
     ggplot(data = filter(ybig6, Pop == "B", u_S2 == 0),
@@ -4287,7 +4419,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(labels = math_format(10^.x)) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    labs(x = "Infection rate (/min)",
+    labs(x = "Infection rate\n(/cfu/pfu/mL/min)",
          y = "Initial phage\ndensity (pfu/mL)") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 16),
@@ -4306,7 +4438,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(labels = math_format(10^.x)) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    labs(x = "Infection rate (/min)",
+    labs(x = "Infection rate\n(/cfu/pfu/mL/min)",
          y = "Initial bacterial\ndensity (cfu/mL)") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 16),
@@ -4336,6 +4468,26 @@ if (glob_make_statplots) {
                            rel_widths = c(1, 1, 0.5),
                      labels = "AUTO", align = "h", axis = "tb"))
   dev.off()
+  
+  ggplot(data = filter(ysum7, init_S1 == 10**6), 
+         aes(color = as.factor(log10(a_S1)), x = log10(init_P),
+             y = peak_dens)) +
+    geom_point(aes(shape = extin_flag),
+               size = 3) +
+    geom_line() +
+    # scale_color_viridis_c(name = "Time of\nPeak\nBacterial\nDensity (hr)",
+    #                       breaks = c(3, 6, 9, 12)) +
+    scale_shape_manual(breaks = c("neark", "noextin", "none"), 
+                       values = c(4, 4, 16)) +
+    # scale_y_continuous(labels = math_format(10^.x)) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    # labs(x = "Infection rate (/min)",
+    #      y = "Initial phage\ndensity (pfu/mL)") +
+    #guides(fill = "none", shape = "none") +
+    theme(axis.title = element_text(size = 16),
+          legend.title = element_text(size = 14),
+          legend.text = element_text(size = 13)) +
+    NULL
   
   png("./statplots/figS13_run7_maxtime_a_moiconst_contour_nobars.png", 
       width = 5, height = 3.2,
@@ -4385,7 +4537,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10") +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/min)",
+    labs(x = "Infection rate\n(/cfu/pfu/mL/min)",
          y = "Initial bacterial\ndensity (cfu/mL)") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 16),
@@ -4415,7 +4567,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10") +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/min)",
+    labs(x = "Infection rate\n(/cfu/pfu/mL/min)",
          y = "Initial phage\ndensity (pfu/mL)") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 16),
@@ -4443,7 +4595,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10") +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/min)",
+    labs(x = "Infection rate\n(/cfu/pfu/mL/min)",
          y = "Initial bacterial\ndensity (cfu/mL)") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 16),
@@ -4471,7 +4623,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10") +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/min)",
+    labs(x = "Infection rate\n(/cfu/pfu/mL/min)",
          y = "Initial phage\ndensity (pfu/mL)") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 16),
@@ -4501,7 +4653,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10") +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/min)",
+    labs(x = "Infection rate\n(/cfu/pfu/mL/min)",
          y = "Initial bacterial\ndensity (cfu/mL)") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 16),
@@ -4531,7 +4683,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10") +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/min)",
+    labs(x = "Infection rate\n(/cfu/pfu/mL/min)",
          y = "Initial phage\ndensity (pfu/mL)") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 16),
@@ -4540,7 +4692,7 @@ if (glob_make_statplots) {
     NULL
   
   png("./statplots/figS14_run7_othermetrics_a_initP_initS_contour.png", 
-      width = 10.5, height = 8,
+      width = 10.5, height = 8.5,
       units = "in", res = 300)
   print(cowplot::plot_grid(p1, p2, p3, p4, p5, p6, ncol = 2, 
                            labels = "AUTO", align = "hv", axis = "tblr"))
@@ -5269,7 +5421,9 @@ ysum11 <- summarize(group_by(filter(ybig11, Pop == "B"),
                              uniq_run, u_S1, u_S2, k, a_S1, a_S2,
                              tau, b, z, f_a, f_b, d, h, g1, g2,
                              init_S1, init_S2, init_moi, init_N, equil),
-                    peak_dens = max(Density),
+                    peak_dens = first_maxima(x = time, y = Density,
+                               window_width = 4*60,
+                               return = "y"),
                     extin_time = 
                       first_minima(y = Density, x = time,
                                    window_width = 2*60, return = "x",
@@ -5277,7 +5431,14 @@ ysum11 <- summarize(group_by(filter(ybig11, Pop == "B"),
                     emerg_time_6 =
                       first_above(y = Density[time > extin_time], 
                                   x = time[time > extin_time],
-                                  threshold = 10**6, return = "x"))
+                                  threshold = 10**6, return = "x"),
+                    peak_time = first_maxima(x = time, y = Density,
+                                           window_width = 4*60,
+                                           return = "x"),
+                    extin_time_4 = 
+                      first_below(y = Density, x = time,
+                                  threshold = 10**4, return = "x"))
+
 ysum11 <- mutate(
   ysum11,
   extin_flag = ifelse(peak_dens >= 0.9*k, "neark", "none"))
@@ -5317,7 +5478,7 @@ if(glob_make_statplots) {
            aes(x = log10(a_S1), y = log10(h))) +
     geom_contour_filled(aes(z = emerg_time_6/60), alpha = 0.5) +
     geom_point(aes(color = emerg_time_6/60), size = 3) +
-    scale_color_viridis_c(name = "Emergence\ntime (hr)",
+    scale_color_viridis_c(name = "Re-emergence\ntime (hr)",
                           breaks = c(0, 24, 48, 72)) +
     scale_x_continuous(labels = math_format(10^.x)) +
     scale_y_continuous(labels = math_format(10^.x)) +
@@ -5355,18 +5516,107 @@ if(glob_make_statplots) {
   )
   dev.off()
   
-  print(ggplot(data = ysum11, 
-               aes(x = a_S1, y = h)) +
-    geom_contour_filled(aes(z = extin_time/60), alpha = 0.5) +
-    geom_point(aes(color = extin_time/60),
-               size = 3) +
-    scale_color_viridis_c(name = "Extinction time (hr)",
-                          breaks = c(6, 12, 18, 24)) +
-    scale_y_continuous(trans = "log10") +
-    scale_x_continuous(trans = "log10") +
+  fs29c <- 
+    ggplot(data = ysum11, 
+           aes(x = log10(a_S1), y = log10(h))) +
+    geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
+    geom_point(aes(color = peak_time/60, shape = extin_flag),
+               size = 4) +
+    scale_color_viridis_c(name = "Peak time (hr)") +
+    scale_shape_manual(breaks = c("neark", "noextin", "none"), 
+                       values = c(4, 4, 16)) +
+    scale_y_continuous(labels = math_format(10^.x)) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    labs(x = "Infection rate (/cfu/pfu/mL/min)", 
+         y = "Resistance Mutation Rate") +
+    facet_grid(. ~ d,
+               labeller = labeller(
+                 d = c("0" = "No nutrients returned by cell lysis",
+                       "1" = "All nutrients returned by cell lysis"))) +
     guides(fill = "none", shape = "none") +
-      facet_grid(~d) +
-    NULL)
+    theme(axis.title = element_text(size = 18),
+          axis.text = element_text(size = 14),
+          legend.title = element_text(
+            size = 16, margin = margin(0, 0, 0.07, 0, unit = "npc")),
+          legend.text = element_text(size = 14),
+          strip.text = element_text(size = 14))
+  
+  fs29f <- 
+    ggplot(data = ysum11, 
+           aes(x = log10(a_S1), y = log10(h))) +
+    geom_contour_filled(aes(z = log10(peak_dens)), alpha = 0.5) +
+    geom_point(aes(color = log10(peak_dens), shape = extin_flag),
+               size = 4) +
+    scale_color_viridis_c(name = "Peak density\n[log10(cfu/mL)]") +
+    scale_shape_manual(breaks = c("neark", "noextin", "none"), 
+                       values = c(4, 4, 16)) +
+    scale_y_continuous(labels = math_format(10^.x)) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    labs(x = "Infection rate (/cfu/pfu/mL/min)", 
+         y = "Resistance Mutation Rate") +
+    facet_grid(. ~ d,
+               labeller = labeller(
+                 d = c("0" = "No nutrients returned by cell lysis",
+                       "1" = "All nutrients returned by cell lysis"))) +
+    guides(fill = "none", shape = "none") +
+    theme(axis.title = element_text(size = 18),
+          axis.text = element_text(size = 14),
+          legend.title = element_text(
+            size = 16, margin = margin(0, 0, 0.07, 0, unit = "npc")),
+          legend.text = element_text(size = 14),
+          strip.text = element_text(size = 14))
+  
+  fs29i <- 
+    ggplot(data = ysum11, 
+           aes(x = log10(a_S1), y = log10(h))) +
+    geom_contour_filled(aes(z = log10(extin_time_4/60)), alpha = 0.5) +
+    geom_point(aes(color = log10(extin_time_4/60), shape = extin_flag),
+               size = 4) +
+    scale_color_viridis_c(name = "Extinction time (hr)") +
+    scale_shape_manual(breaks = c("neark", "noextin", "none"), 
+                       values = c(4, 4, 16)) +
+    scale_y_continuous(labels = math_format(10^.x)) +
+    scale_x_continuous(labels = math_format(10^.x)) +
+    labs(x = "Infection rate (/cfu/pfu/mL/min)", 
+         y = "Resistance Mutation Rate") +
+    facet_grid(. ~ d,
+               labeller = labeller(
+                 d = c("0" = "No nutrients returned by cell lysis",
+                       "1" = "All nutrients returned by cell lysis"))) +
+    guides(fill = "none", shape = "none") +
+    theme(axis.title = element_text(size = 18),
+          axis.text = element_text(size = 14),
+          legend.title = element_text(
+            size = 16, margin = margin(0, 0, 0.07, 0, unit = "npc")),
+          legend.text = element_text(size = 14),
+          strip.text = element_text(size = 14))
+  
+  png("./statplots/figS29_runs3,6,11_contours.png", 
+      width = 22, height = 13, units = "in", res = 300)
+  print(
+    cowplot::plot_grid(
+        grid::grid.text("Plastic infection rate", x = unit(0.43, "npc"),
+                        gp = grid::gpar(fontsize = 24, fontface = "bold")),
+        grid::grid.text("Transitions to resistance", x = unit(0.43, "npc"),
+                        gp = grid::gpar(fontsize = 24, fontface = "bold")),
+        grid::grid.text("Evolving resistance", x = unit(0.43, "npc"),
+                        gp = grid::gpar(fontsize = 24, fontface = "bold")),
+        fs29a,
+        fs29b,
+        fs29c,
+        fs29d,
+        fs29e,
+        fs29f,
+        fs29g,
+        fs29h,
+        fs29i,
+        nrow = 4, 
+        labels = c("", "", "", LETTERS[1:9]),
+        align = "hv", axis = "tblr", label_size = 20, vjust = 0.8,
+        rel_heights = c(0.15, 1, 1, 1),
+        rel_widths = c(1, 1, 1.5)))
+  dev.off()
+  
   
   png("./statplots/figS28_run11_emergencetime_a_mutrate_contour.png", 
       width = 8, height = 4, units = "in", res = 300)
@@ -5379,7 +5629,8 @@ if(glob_make_statplots) {
                                 breaks = c(0, 24, 48, 72)) +
           scale_y_continuous(labels = math_format(10^.x)) +
           scale_x_continuous(labels = math_format(10^.x)) +
-          labs(x = "Infection rate (/min)", y = "Resistance Mutation Rate") +
+          labs(x = "Infection rate (/cfu/pfu/mL/min)", 
+               y = "Resistance Mutation Rate") +
           guides(fill = "none", shape = "none") +
           facet_grid(. ~ d,
                      labeller = labeller(
