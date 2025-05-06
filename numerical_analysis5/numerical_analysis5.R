@@ -1361,7 +1361,7 @@ if(glob_make_statplots) {
   f1a <-
     ggplot(data = filter(ybig1, Pop == "B", b == 50, tau == 31.6),
            aes(x = time/60, y = Density)) +
-    geom_line(aes(color = as.factor(a_S1), group = interaction(a_S1, b, tau)),
+    geom_line(aes(color = as.factor(log10(a_S1)), group = interaction(a_S1, b, tau)),
               lwd = 1.5) +
     labs(x = "Time (hr)", y = "Density (cfu/mL)") +
     scale_x_continuous(limits = c(NA, 24), breaks = c(0, 6, 12, 18, 24)) +
@@ -1370,7 +1370,8 @@ if(glob_make_statplots) {
                                                k = 10**9, times = 0:1440)),
               aes(x = x/60, y = y), lty = 2) +
     scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
-                       name = "Infection rate\n(/cfu/pfu/mL/min)") +
+                       name = "Infection rate\n(/cfu/pfu/mL/min)",
+                       labels = math_format(10^.x)) +
     theme_bw() +
     theme(axis.title = element_text(size = 17),
           legend.title = element_text(size = 14),
@@ -4423,6 +4424,7 @@ if (glob_make_statplots) {
     labs(x = "Initial phage\ndensity (pfu/mL)",
          y = "Time of Peak\nBacterial Density (hr)") +
     guides(shape = "none", color = "none") +
+    theme_bw() +
     theme(axis.title = element_text(size = 16),
           legend.title = element_text(size = 14),
           legend.text = element_text(size = 13)) +
@@ -4443,6 +4445,7 @@ if (glob_make_statplots) {
     labs(x = "Initial bacterial\ndensity (cfu/mL)",
          y = "Time of Peak\nBacterial Density (hr)") +
     guides(shape = "none") +
+    theme_bw() +
     theme(axis.title = element_text(size = 16),
           legend.title = element_text(size = 14),
           legend.text = element_text(size = 13)) +
