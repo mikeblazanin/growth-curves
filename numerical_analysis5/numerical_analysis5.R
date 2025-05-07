@@ -1350,7 +1350,7 @@ if(glob_make_statplots) {
       width = 4, height = 4, units = "in", res = 150)
   p1 <- p1 +
     geom_area(aes(y = Density+dens_offset),
-              fill = "red", alpha = 0.5)
+              fill = "red", alpha = 0.25)
   print(p1)
   dev.off()
 }
