@@ -1350,7 +1350,19 @@ if(glob_make_statplots) {
       width = 4, height = 4, units = "in", res = 150)
   p1 <- p1 +
     geom_area(aes(y = Density+dens_offset),
-              fill = "red", alpha = 0.25)
+              fill = "red", alpha = 0.25) + 
+    annotate("text", x = 2.2, y = 10**9.25,
+              label = "Peak density", color = "red",
+              size = 4) +
+    annotate("text", x = 6.4, y = 10**2.5,
+             label = "Time of peak density", color = "red",
+             size = 4, angle = 90) +
+    annotate("text", x = 7.9, y = 10**1.8,
+             label = "Extinction time", color = "red",
+             size = 4, angle = 90) +
+    annotate("text", x = 3, y = 10**3.5,
+             label = "AUC", color = "red",
+             size = 4)
   print(p1)
   dev.off()
 }
@@ -5490,6 +5502,7 @@ run11 <- run_sims_filewrapper(
   g1 = 1,
   g2 = 1,
   init_S1 = 10**6,
+  init_S2 = c(0, 10**c(0, 2, 4)),
   init_moi = 10**-2,
   equil_cutoff_dens = 0.1,
   init_time = 4*24*60,
@@ -5536,7 +5549,7 @@ ysum11 <- mutate(
 if(glob_make_statplots) {
   f8c <-
     ggplot(
-      data = filter(ybig11, Pop == "B", h == 10**-5, d == 0,
+      data = filter(ybig11, Pop == "B", h == 10**-5, d == 0, init_S2 == 0,
                     a_S1 %in% 10**c(-12, -11, -10, -9, -8)),
       aes(x = time/60, y = Density)) +
     geom_line(aes(color = as.factor(a_S1), group = a_S1),
@@ -5564,7 +5577,7 @@ if(glob_make_statplots) {
     NULL
   
   f8f <-
-    ggplot(data = filter(ysum11, d == 0, h != 0),
+    ggplot(data = filter(ysum11, d == 0, h != 0, init_S2 == 0),
            aes(x = log10(a_S1), y = log10(h))) +
     geom_contour_filled(aes(z = emerg_time_6/60), alpha = 0.5) +
     geom_point(aes(color = emerg_time_6/60), size = 3) +
@@ -5607,7 +5620,7 @@ if(glob_make_statplots) {
   dev.off()
   
   fs29c <- 
-    ggplot(data = ysum11, 
+    ggplot(data = filter(ysum11, init_S2 == 0), 
            aes(x = log10(a_S1), y = log10(h))) +
     geom_contour_filled(aes(z = peak_time/60), alpha = 0.5) +
     geom_point(aes(color = peak_time/60, shape = extin_flag),
@@ -5632,7 +5645,7 @@ if(glob_make_statplots) {
           strip.text = element_text(size = 14))
   
   fs29f <- 
-    ggplot(data = ysum11, 
+    ggplot(data = filter(ysum11, init_S2 == 0), 
            aes(x = log10(a_S1), y = log10(h))) +
     geom_contour_filled(aes(z = log10(peak_dens)), alpha = 0.5) +
     geom_point(aes(color = log10(peak_dens), shape = extin_flag),
@@ -5657,7 +5670,7 @@ if(glob_make_statplots) {
           strip.text = element_text(size = 14))
   
   fs29i <- 
-    ggplot(data = ysum11, 
+    ggplot(data = filter(ysum11, init_S2 == 0), 
            aes(x = log10(a_S1), y = log10(h))) +
     geom_contour_filled(aes(z = log10(extin_time_4/60)), alpha = 0.5) +
     geom_point(aes(color = log10(extin_time_4/60), shape = extin_flag),
@@ -5709,28 +5722,37 @@ if(glob_make_statplots) {
   
   
   png("./statplots/figS28_run11_emergencetime_a_mutrate_contour.png", 
-      width = 8, height = 4, units = "in", res = 300)
-  print(ggplot(data = ysum11, 
-               aes(x = log10(a_S1), y = log10(h))) +
-          geom_contour_filled(aes(z = emerg_time_6/60), alpha = 0.5) +
-          geom_point(aes(color = emerg_time_6/60),
-                     size = 3) +
-          scale_color_viridis_c(name = "Emergence\ntime (hr)",
-                                breaks = c(0, 24, 48, 72)) +
-          scale_y_continuous(labels = math_format(10^.x)) +
-          scale_x_continuous(labels = math_format(10^.x)) +
-          labs(x = "Infection rate (/cfu/pfu/mL/min)", 
-               y = "Resistance Mutation Rate") +
-          guides(fill = "none", shape = "none") +
-          facet_grid(. ~ d,
-                     labeller = labeller(
-                       d = c("0" = "No nutrients returned by cell lysis",
-                             "1" = "All nutrients returned by cell lysis"))) +
-          theme(axis.title = element_text(size = 14),
-                legend.title = element_text(size = 14),
-                legend.text = element_text(size = 12),
-                axis.text = element_text(size = 10)) +
-          NULL)
+      width = 14, height = 7, units = "in", res = 300)
+  print(ggplot(
+    data = mutate(ungroup(ysum11),
+                  init_R_freq = factor(init_S2/init_S1),
+                  init_R_freq = factor(init_R_freq,
+                                       labels = c(0, '10^-6', '10^-4', '10^-2'))), 
+    aes(x = log10(a_S1), y = log10(h))) +
+      geom_contour_filled(aes(z = emerg_time_6/60), alpha = 0.5) +
+      geom_point(aes(color = emerg_time_6/60),
+                 size = 3) +
+      scale_color_viridis_c(name = "Emergence\ntime (hr)",
+                            breaks = c(0, 24, 48, 72)) +
+      scale_y_continuous(labels = math_format(10^.x)) +
+      scale_x_continuous(labels = math_format(10^.x)) +
+      labs(x = "Infection rate (/cfu/pfu/mL/min)", 
+           y = "Resistance Mutation Rate",
+           subtitle = "Initial frequency of R") +
+      guides(fill = "none", shape = "none") +
+      facet_grid(
+        d ~ init_R_freq,
+        labeller = labeller(
+          d = c("0" = "No nutrients\nreturned by cell lysis",
+                "1" = "All nutrients\nreturned by cell lysis"),
+          init_R_freq = label_parsed)) +
+      theme(axis.title = element_text(size = 18),
+            legend.title = element_text(size = 18),
+            legend.text = element_text(size = 14),
+            axis.text = element_text(size = 12),
+            strip.text = element_text(size = 18),
+            plot.subtitle = element_text(size = 18)) +
+      NULL)
   dev.off()
 }
 
