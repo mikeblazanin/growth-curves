@@ -1365,6 +1365,11 @@ if(glob_make_statplots) {
               lwd = 1.5) +
     labs(x = "Time (hr)", y = "Density (cfu/mL)") +
     scale_x_continuous(limits = c(NA, 24), breaks = c(0, 6, 12, 18, 24)) +
+    scale_y_continuous(breaks = c(0, 5*10**8, 10**9),
+                       labels = c(0,
+                                  expression(5%*%10^8),
+                                  expression(10^9)),
+                       limits = c(0, 10**9)) +
     geom_line(data = data.frame(x = 0:1440,
                                 y = logis_func(S_0 = 10**6, u_S = 0.0179,
                                                k = 10**9, times = 0:1440)),
@@ -1374,6 +1379,7 @@ if(glob_make_statplots) {
                        labels = math_format(10^.x)) +
     theme_bw() +
     theme(axis.title = element_text(size = 17),
+          axis.text = element_text(size = 11),
           legend.title = element_text(size = 14),
           legend.text = element_text(size = 12)) +
     NULL
@@ -1385,6 +1391,11 @@ if(glob_make_statplots) {
               lwd = 1.5) +
     labs(x = "Time (hr)", y = "Density (cfu/mL)") +
     scale_x_continuous(limits = c(NA, 12), breaks = c(0, 6, 12)) +
+    scale_y_continuous(breaks = c(0, 5*10**8, 10**9),
+                       labels = c(0,
+                                  expression(5%*%10^8),
+                                  expression(10^9)),
+                       limits = c(0, 10**9)) +
     geom_line(data = data.frame(x = 0:1440,
                                 y = logis_func(S_0 = 10**6, u_S = 0.0179,
                                                k = 10**9, times = 0:1440)),
@@ -1393,6 +1404,7 @@ if(glob_make_statplots) {
                        name = "Burst size") +
     theme_bw() +
     theme(axis.title = element_text(size = 17),
+          axis.text = element_text(size = 11),
           legend.title = element_text(size = 14),
           legend.text = element_text(size = 12))
   
@@ -1404,6 +1416,11 @@ if(glob_make_statplots) {
     theme_bw() +
     labs(x = "Time (hr)", y = "Density (cfu/mL)") +
     scale_x_continuous(limits = c(NA, 13), breaks = c(0, 6, 12)) +
+    scale_y_continuous(breaks = c(0, 5*10**8, 10**9),
+                       labels = c(0,
+                                  expression(5%*%10^8),
+                                  expression(10^9)),
+                       limits = c(0, 10**9)) +
     geom_line(data = data.frame(x = 0:1440,
                                 y = logis_func(S_0 = 10**6, u_S = 0.0179,
                                                k = 10**9, times = 0:1440)),
@@ -1412,13 +1429,14 @@ if(glob_make_statplots) {
                        name = "Lysis time (min)") +
     theme_bw() +
     theme(axis.title = element_text(size = 17),
+          axis.text = element_text(size = 11),
           legend.title = element_text(size = 14),
           legend.text = element_text(size = 12))
   
   png("./statplots/fig1_run1_Bcurves_a_b_tau.png",
       width = 5.25, height = 9, units = "in", res = 150)
   print(plot_grid(f1a, f1b, f1c, ncol = 1, labels = "AUTO",
-                  label_size = 20, align = "hv", axis = "tb"))
+                  label_size = 20, align = "hv", axis = "tblr"))
   dev.off()
 }
 
@@ -1764,9 +1782,7 @@ if(glob_make_statplots) {
   
 # Run 1: stat v stat plots ----
 if(glob_make_statplots) {  
-  png("./statplots/fig3_run1_allmetricsvmetrics_subset.png",
-      width = 9, height = 9, units = "in", res = 150)
-  print(
+  f3 <- 
     GGally::ggpairs(
       data = mutate(ungroup(filter(ybig1_PCA_wide, extin_flag != "noextin")),
                     peak_time_hr = peak_time/60,
@@ -1782,8 +1798,47 @@ if(glob_make_statplots) {
       diag = list(continuous = "autopointDiag")) +
       theme_bw() +
       theme(strip.text = element_text(size = 14),
-            axis.text.x = element_text(size = 12, angle = 45, hjust = 1))
-  )
+            axis.text.x = element_text(size = 12, angle = 45, hjust = 1),
+            axis.text.y = element_text(size = 12))
+  #adjust axis labels
+  for (i in 1:5) {
+    f3[1, i] <- f3[1, i] + 
+      scale_y_continuous(breaks = c(0, 5*10**8, 10**9),
+                         labels = c(0,
+                                    expression(5%*%10^8),
+                                    expression(10^9)),
+                         limits = c(0, 10**9))
+    f3[i, 1] <- f3[i, 1] + 
+      scale_x_continuous(breaks = c(0, 5*10**8, 10**9),
+                         labels = c(0,
+                                    expression(5%*%10^8),
+                                    expression(10^9)),
+                         limits = c(0, 10**9))
+    f3[2, i] <- f3[2, i] + 
+      scale_y_continuous(breaks = c(0, 6, 12))
+    f3[i, 2] <- f3[i, 2] + 
+      scale_x_continuous(breaks = c(0, 6, 12))
+    f3[3, i] <- f3[3, i] + 
+      scale_y_continuous(breaks = c(0, 24, 48))
+    f3[i, 3] <- f3[i, 3] + 
+      scale_x_continuous(breaks = c(0, 24, 48))
+    f3[4, i] <- f3[4, i] + 
+      scale_y_continuous(breaks = 0:2*10**10,
+                         labels = c(0,
+                                    expression(10^10),
+                                    expression(2%*%10^10)))
+      
+    f3[i, 4] <- f3[i, 4]  + 
+      scale_x_continuous(breaks = 0:2*10**10,
+                         labels = c(0,
+                                    expression(10^10),
+                                    expression(2%*%10^10)))
+  }
+  
+  
+  png("./statplots/fig3_run1_allmetricsvmetrics_subset.png",
+      width = 9, height = 9, units = "in", res = 150)
+  print(f3)
   dev.off()
   
   png("./statplots/figS4_run1_allmetricsvmetrics_alldata.png",
@@ -1907,7 +1962,8 @@ if (glob_make_statplots) {
          y = "Peak Bacterial\nDensity (cfu/mL)") +
     theme_bw() +
     guides(shape = "none") +
-    theme(axis.title = element_text(size = 16))
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12))
   
   f4b <- 
     ggplot(data = filter(ysum1, extin_flag == "none"),
@@ -1919,7 +1975,8 @@ if (glob_make_statplots) {
          y = "Time of Peak\nBacterial Density (hr)") +
     theme_bw() +
     guides(shape = "none") +
-    theme(axis.title = element_text(size = 16))
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12))
   
   f4c <- 
     ggplot(data = filter(ysum1, extin_flag == "none"),
@@ -1931,7 +1988,8 @@ if (glob_make_statplots) {
          y = "Extinction time (hr)") +
     theme_bw() +
     guides(shape = "none") +
-    theme(axis.title = element_text(size = 16))
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12))
   png("./statplots/extrafigure_run1_phager_extintime_subset_nocol.png", width = 5, height = 4,
       units = "in", res = 300)
   print(f4c)
@@ -1947,7 +2005,8 @@ if (glob_make_statplots) {
          y = "Area Under the\nCurve (hr cfu/mL)") +
     theme_bw() +
     guides(shape = "none") +
-    theme(axis.title = element_text(size = 16))
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12))
   
   f4e <- 
     ggplot(data = filter(ysum1, extin_flag == "none"),
@@ -1958,7 +2017,8 @@ if (glob_make_statplots) {
          y = "PC1") +
     theme_bw() +
     guides(shape = "none") +
-    theme(axis.title = element_text(size = 16))
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12))
   
   png("./statplots/fig4_run1_phager_metrics_subset.png", 
       width = 11, height = 7, units = "in", res = 300)
@@ -2083,6 +2143,7 @@ if (glob_make_statplots) {
     ylab("Lysis time (min)") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 20),
+          axis.text = element_text(size = 13),
           legend.title = element_text(size = 14, 
                                       margin = margin(0, 0, 0.07, 0, unit = "npc")),
           legend.text = element_text(size = 13)) +
@@ -2103,6 +2164,7 @@ if (glob_make_statplots) {
     ylab("Burst size") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 20),
+          axis.text = element_text(size = 13),
           legend.title = element_text(size = 14, 
                                       margin = margin(0, 0, 0.07, 0, unit = "npc")),
           legend.text = element_text(size = 13)) +
@@ -2123,6 +2185,7 @@ if (glob_make_statplots) {
     ylab("Lysis time (min)") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 20),
+          axis.text = element_text(size = 13),
           legend.title = element_text(size = 14, 
                                       margin = margin(0, 0, 0.07, 0, unit = "npc")),
           legend.text = element_text(size = 13)) +
@@ -4426,6 +4489,7 @@ if (glob_make_statplots) {
     guides(shape = "none", color = "none") +
     theme_bw() +
     theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 11),
           legend.title = element_text(size = 14),
           legend.text = element_text(size = 13)) +
     NULL
@@ -4447,6 +4511,7 @@ if (glob_make_statplots) {
     guides(shape = "none") +
     theme_bw() +
     theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 11),
           legend.title = element_text(size = 14),
           legend.text = element_text(size = 13)) +
     NULL
@@ -4465,7 +4530,8 @@ if (glob_make_statplots) {
                                 "Initial bacterial density", 
                                 "Infection rate")) +
     theme_bw() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    theme(axis.text.x = element_text(size = 11, angle = 45, hjust = 1),
+          axis.text.y = element_text(size = 11))
 
   png("./statplots/fig6_run7_inocdensity_a.png", width = 10, height = 3.5,
       units = "in", res = 300)
