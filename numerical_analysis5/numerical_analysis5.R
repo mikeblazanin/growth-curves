@@ -1796,10 +1796,11 @@ if(glob_make_statplots) {
 if(glob_make_statplots) {  
   f3 <- 
     GGally::ggpairs(
-      data = mutate(ungroup(filter(ybig1_PCA_wide, extin_flag != "noextin")),
+      data = mutate(ungroup(filter(ybig1_PCA_wide, extin_flag == "none")),
                     peak_time_hr = peak_time/60,
                     extin_time_4_hr = extin_time_4/60,
                     auc_hr = auc/60),
+      mapping = aes(shape = extin_flag),
       columns = c("peak_dens", "peak_time_hr", "extin_time_4_hr", "auc_hr", "PC1"),
       columnLabels = c("Peak Bacterial\nDensity (cfu/mL)",
                        "Time of Peak\nBacterial\nDensity (hr)",
@@ -1808,6 +1809,8 @@ if(glob_make_statplots) {
                        "PC1"),
       upper = list(continuous = "points"), lower = list(continuous = "points"),
       diag = list(continuous = "autopointDiag")) +
+    scale_shape_manual(breaks = c("none", "neark", "noextin"),
+                       values = c(16, 4, 3)) +
       theme_bw() +
       theme(strip.text = element_text(size = 14),
             axis.text.x = element_text(size = 12, angle = 45, hjust = 1),
@@ -1827,24 +1830,25 @@ if(glob_make_statplots) {
                                     expression(10^9)),
                          limits = c(0, 10**9))
     f3[2, i] <- f3[2, i] + 
-      scale_y_continuous(breaks = c(0, 6, 12))
+      scale_y_continuous(breaks = c(0, 3, 6, 9), limits = c(0, 9))
     f3[i, 2] <- f3[i, 2] + 
-      scale_x_continuous(breaks = c(0, 6, 12))
+      scale_x_continuous(breaks = c(0, 3, 6, 9), limits = c(0, 9))
     f3[3, i] <- f3[3, i] + 
-      scale_y_continuous(breaks = c(0, 24, 48))
+      scale_y_continuous(breaks = c(0, 6, 12), limits = c(0, NA))
     f3[i, 3] <- f3[i, 3] + 
-      scale_x_continuous(breaks = c(0, 24, 48))
+      scale_x_continuous(breaks = c(0, 6, 12), limits = c(0, NA))
     f3[4, i] <- f3[4, i] + 
-      scale_y_continuous(breaks = 0:2*10**10,
+      scale_y_continuous(breaks = 0:3*10**9,
                          labels = c(0,
-                                    expression(10^10),
-                                    expression(2%*%10^10)))
-      
+                                    expression(10^9),
+                                    expression(2%*%10^9),
+                                    expression(3%*%10^9)))
     f3[i, 4] <- f3[i, 4]  + 
-      scale_x_continuous(breaks = 0:2*10**10,
+      scale_x_continuous(breaks = 0:3*10**9,
                          labels = c(0,
-                                    expression(10^10),
-                                    expression(2%*%10^10)))
+                                    expression(10^9),
+                                    expression(2%*%10^9),
+                                    expression(3%*%10^9)))
   }
   
   
