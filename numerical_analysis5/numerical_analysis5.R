@@ -1387,7 +1387,7 @@ if(glob_make_statplots) {
                                                k = 10**9, times = 0:1440)),
               aes(x = x/60, y = y), lty = 2) +
     scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
-                       name = "Infection rate\n(/cfu/pfu/mL/min)",
+                       name = "Adsorption rate\n(/cfu/pfu/mL/min)",
                        labels = math_format(10^.x)) +
     theme_bw() +
     theme(axis.title = element_text(size = 17),
@@ -1462,7 +1462,7 @@ if(glob_make_statplots) {
               position = position_jitter(width = 0.05, height = 0.0001, seed = 1)) +
     scale_y_continuous(limits = c(0, 0.018), breaks = c(0, 0.009, 0.018)) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    labs(x = "Infection rate\n(/cfu/pfu/mL/min)", 
+    labs(x = "Adsorption rate\n(/cfu/pfu/mL/min)", 
          y = "Maximum cellular\ngrowth rate (/min)") +
     #geom_hline(yintercept = 0.0179, lty = 2) +
     theme_bw() +
@@ -1476,7 +1476,7 @@ if(glob_make_statplots) {
               position = position_jitter(width = 0.05, height = 0.2, seed = 1)) +
     ylim(0, NA) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    labs(x = "Infection rate\n(/cfu/pfu/mL/min)", 
+    labs(x = "Adsorption rate\n(/cfu/pfu/mL/min)", 
          y = expression(atop("Time to reach",
                              paste("1.5×", 10^6, " cfu/mL (min)")))) +
     theme_bw() +
@@ -1492,7 +1492,7 @@ if(glob_make_statplots) {
                                   "5×10<sup>8</sup>",
                                   "7.5×10<sup>8</sup>", 
                                   "10<sup>9</sup>")) +
-    labs(x = "Infection rate\n(/cfu/pfu/mL/min)", 
+    labs(x = "Adsorption rate\n(/cfu/pfu/mL/min)", 
          y = "Peak Bacterial\nDensity (cfu/mL)") +
     theme_bw() +
     theme(axis.title = element_text(size = 16),
@@ -1503,7 +1503,7 @@ if(glob_make_statplots) {
          aes(x = log10(a_S1), y = peak_time/60)) +
     geom_line(aes(group = paste(b, tau))) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    labs(x = "Infection rate\n(/cfu/pfu/mL/min)", 
+    labs(x = "Adsorption rate\n(/cfu/pfu/mL/min)", 
          y = "Time of Peak\nBacterial Density (hr)") +
     theme_bw() +
     theme(axis.title = element_text(size = 16),
@@ -1515,7 +1515,7 @@ if(glob_make_statplots) {
     scale_x_continuous(labels = math_format(10^.x)) +
     scale_y_continuous(breaks = c(0, -5*10**8, -10**9, -1.5*10**9),
                        labels = c(0, -5, -10, -15)) +
-    labs(x = "Infection rate\n(/cfu/pfu/mL/min)", 
+    labs(x = "Adsorption rate\n(/cfu/pfu/mL/min)", 
          y = expression(atop("Maximum rate of",
                              paste("decline (", 10^8, " cfu/hr)")))) +
     theme_bw() +
@@ -1526,7 +1526,7 @@ if(glob_make_statplots) {
          aes(x = log10(a_S1), y = extin_time_4/60)) +
     geom_line(aes(group = paste(b, tau))) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    labs(x = "Infection rate\n(/cfu/pfu/mL/min)", 
+    labs(x = "Adsorption rate\n(/cfu/pfu/mL/min)", 
          y = "Extinction Time (hr)") +
     theme_bw() +
     theme(axis.title = element_text(size = 16),
@@ -1542,7 +1542,7 @@ if(glob_make_statplots) {
                                   "2×10<sup>10</sup>",
                                   "3×10<sup>10</sup>",
                                   "4×10<sup>10</sup>")) +
-    labs(x = "Infection rate\n(/cfu/pfu/mL/min)", 
+    labs(x = "Adsorption rate\n(/cfu/pfu/mL/min)", 
          y = "Area Under the\nCurve (hr cfu/mL)") +
     theme_bw() +
     theme(axis.title = element_text(size = 16),
@@ -1553,7 +1553,7 @@ if(glob_make_statplots) {
          aes(x = log10(a_S1), y = PC1)) +
     geom_line(aes(group = paste(b, tau))) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    labs(x = "Infection rate\n(/cfu/pfu/mL/min)", 
+    labs(x = "Adsorption rate\n(/cfu/pfu/mL/min)", 
          y = "PC1") +
     theme_bw() +
     theme(axis.title = element_text(size = 16),
@@ -1902,7 +1902,7 @@ if(glob_make_statplots) {
                    color = as.factor(a_S1), shape = extin_flag)) +
           geom_point() +
           scale_color_viridis_d(
-            name = "Infection rate\n(/min)", end = 0.85,
+            name = "Adsorption rate\n(/min)", end = 0.85,
             labels = c(expression(10^-12),
                        expression(10^-11), expression(10^-10),
                        expression(10^-9), expression(10^-8))) +
@@ -1922,7 +1922,7 @@ if(glob_make_statplots) {
                      color = as.factor(a_S1), shape = extin_flag)) +
     geom_point() +
     scale_color_viridis_d(
-      name = "Infection rate\n(/min)", end = 0.85,
+      name = "Adsorption rate\n(/min)", end = 0.85,
       labels = c(expression(10^-12),
                  expression(10^-11), expression(10^-10),
                  expression(10^-9), expression(10^-8))) +
@@ -1941,7 +1941,7 @@ if(glob_make_statplots) {
                      color = as.factor(a_S1), shape = extin_flag)) +
     geom_point() +
     scale_color_viridis_d(
-      name = "Infection rate\n(/min)", end = 0.85,
+      name = "Adsorption rate\n(/min)", end = 0.85,
       labels = c(expression(10^-12),
                  expression(10^-11), expression(10^-10),
                  expression(10^-9), expression(10^-8))) +
@@ -2155,7 +2155,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10", breaks = c(10, 32, 100)) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    xlab("Infection rate\n(/cfu/pfu/mL/min)") +
+    xlab("Adsorption rate\n(/cfu/pfu/mL/min)") +
     ylab("Lysis time (min)") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 20),
@@ -2176,7 +2176,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10", breaks = c(5, 50, 500)) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    xlab("Infection rate\n(/cfu/pfu/mL/min)") +
+    xlab("Adsorption rate\n(/cfu/pfu/mL/min)") +
     ylab("Burst size") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 20),
@@ -2217,7 +2217,7 @@ if (glob_make_statplots) {
     labs(y = "Magnitude of derivative\nof peak time (hr/10-fold change)", 
          x = "With respect to") +
     scale_x_discrete(breaks = c("a", "b", "tau"),
-                     labels = c("Infection rate", "Burst size", "Lysis time")) +
+                     labels = c("Adsorption rate", "Burst size", "Lysis time")) +
     theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
   
@@ -2231,7 +2231,7 @@ if (glob_make_statplots) {
     labs(y = "Magnitude of derivative\nof peak time (hr/full range)", 
          x = "With respect to") +
     scale_x_discrete(breaks = c("a", "b", "tau"),
-                     labels = c("Infection rate", "Burst size", "Lysis time")) +
+                     labels = c("Adsorption rate", "Burst size", "Lysis time")) +
     theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
   
@@ -2258,7 +2258,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10") +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/cfu/pfu/mL/min)",
+    labs(x = "Adsorption rate (/cfu/pfu/mL/min)",
          y = "Lysis time (min)",
          subtitle = "Burst Size") +
     guides(fill = "none", shape = "none") +
@@ -2275,7 +2275,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10", breaks = c(5, 50, 500)) +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/cfu/pfu/mL/min)",
+    labs(x = "Adsorption rate (/cfu/pfu/mL/min)",
          y = "Burst Size",
          subtitle = "Lysis time (min)") +
     guides(fill = "none", shape = "none") +
@@ -2294,7 +2294,7 @@ if (glob_make_statplots) {
     scale_x_continuous(trans = "log10") +
     labs(x = "Lysis time (min)",
          y = "Burst Size",
-         subtitle = "Infection rate (/cfu/pfu/mL/min)") +
+         subtitle = "Adsorption rate (/cfu/pfu/mL/min)") +
     guides(fill = "none", shape = "none") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
   
@@ -2321,7 +2321,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10") +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/cfu/pfu/mL/min)",
+    labs(x = "Adsorption rate (/cfu/pfu/mL/min)",
          y = "Lysis time (min)",
          subtitle = "Burst Size") +
     guides(fill = "none", shape = "none") +
@@ -2338,7 +2338,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10", breaks = c(5, 50, 500)) +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/cfu/pfu/mL/min)",
+    labs(x = "Adsorption rate (/cfu/pfu/mL/min)",
          y = "Burst Size",
          subtitle = "Lysis time (min)") +
     guides(fill = "none", shape = "none") +
@@ -2357,7 +2357,7 @@ if (glob_make_statplots) {
     scale_x_continuous(trans = "log10") +
     labs(x = "Lysis time (min)",
          y = "Burst Size",
-         subtitle = "Infection rate (/cfu/pfu/mL/min)") +
+         subtitle = "Adsorption rate (/cfu/pfu/mL/min)") +
     guides(fill = "none", shape = "none") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
   
@@ -2385,7 +2385,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10") +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/cfu/pfu/mL/min)",
+    labs(x = "Adsorption rate (/cfu/pfu/mL/min)",
          y = "Lysis time (min)",
          subtitle = "Burst Size") +
     guides(fill = "none", shape = "none") +
@@ -2403,7 +2403,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10", breaks = c(5, 50, 500)) +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/cfu/pfu/mL/min)",
+    labs(x = "Adsorption rate (/cfu/pfu/mL/min)",
          y = "Burst Size",
          subtitle = "Lysis time (min)") +
     guides(fill = "none", shape = "none") +
@@ -2423,7 +2423,7 @@ if (glob_make_statplots) {
     scale_x_continuous(trans = "log10") +
     labs(x = "Lysis time (min)",
          y = "Burst Size",
-         subtitle = "Infection rate (/cfu/pfu/mL/min)") +
+         subtitle = "Adsorption rate (/cfu/pfu/mL/min)") +
     guides(fill = "none", shape = "none") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
   
@@ -2453,7 +2453,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10") +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/cfu/pfu/mL/min)",
+    labs(x = "Adsorption rate (/cfu/pfu/mL/min)",
          y = "Lysis time (min)",
          subtitle = "Burst Size") +
     guides(fill = "none", shape = "none") +
@@ -2473,7 +2473,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10", breaks = c(5, 50, 500)) +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/cfu/pfu/mL/min)",
+    labs(x = "Adsorption rate (/cfu/pfu/mL/min)",
          y = "Burst Size",
          subtitle = "Lysis time (min)") +
     guides(fill = "none", shape = "none") +
@@ -2495,7 +2495,7 @@ if (glob_make_statplots) {
     scale_x_continuous(trans = "log10") +
     labs(x = "Lysis time (min)",
          y = "Burst Size",
-         subtitle = "Infection rate (/cfu/pfu/mL/min)") +
+         subtitle = "Adsorption rate (/cfu/pfu/mL/min)") +
     guides(fill = "none", shape = "none") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
   
@@ -2521,7 +2521,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10") +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/cfu/pfu/mL/min)",
+    labs(x = "Adsorption rate (/cfu/pfu/mL/min)",
          y = "Lysis time (min)",
          subtitle = "Burst Size") +
     guides(fill = "none", shape = "none") +
@@ -2537,7 +2537,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10", breaks = c(5, 50, 500)) +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/cfu/pfu/mL/min)",
+    labs(x = "Adsorption rate (/cfu/pfu/mL/min)",
          y = "Burst Size",
          subtitle = "Lysis time (min)") +
     guides(fill = "none", shape = "none") +
@@ -2555,7 +2555,7 @@ if (glob_make_statplots) {
     scale_x_continuous(trans = "log10") +
     labs(x = "Lysis time (min)",
          y = "Burst Size",
-         subtitle = "Infection rate (/cfu/pfu/mL/min)") +
+         subtitle = "Adsorption rate (/cfu/pfu/mL/min)") +
     guides(fill = "none", shape = "none") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
   
@@ -2582,7 +2582,7 @@ if (glob_make_statplots) {
   for(metric_i in 1:length(metrics)) {
     metric <- metrics[metric_i]
     against_vals <- c("a", "b", "tau")
-    against_labels <- c("infection rate", "burst size", "lysis time")
+    against_labels <- c("adsorption rate", "burst size", "lysis time")
     against_units <- c("/cfu/pfu/mL/min", "pfu/cfu", "min")
     for(against_i in 1:length(against_vals)) {
       against <- against_vals[against_i]
@@ -2654,7 +2654,7 @@ if (glob_make_statplots) {
                         form_labels[form_i]),
              x = "With respect to") +
         scale_x_discrete(breaks = c("a", "b", "tau"),
-                         labels = c("Infection rate", "Burst size", "Lysis time")) +
+                         labels = c("Adsorption rate", "Burst size", "Lysis time")) +
         theme_bw() +
         theme(axis.text.x = element_text(angle = 45, hjust = 1))
       
@@ -3070,7 +3070,7 @@ if(glob_make_statplots) {
                                   "5×10<sup>8</sup>",
                                   "7.5×10<sup>8</sup>", 
                                   "10<sup>9</sup>")) +
-    labs(x = "Infection rate\n(/cfu/pfu/mL/min)", 
+    labs(x = "Adsorption rate\n(/cfu/pfu/mL/min)", 
          y = "Peak Bacterial\nDensity (cfu/mL)") +
     theme_bw() +
     theme(axis.title = element_text(size = 16),
@@ -3081,7 +3081,7 @@ if(glob_make_statplots) {
                 aes(x = log10(a_S1), y = peak_time/60)) +
     geom_line(aes(group = paste(u_S1, k))) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    labs(x = "Infection rate\n(/cfu/pfu/mL/min)", 
+    labs(x = "Adsorption rate\n(/cfu/pfu/mL/min)", 
          y = "Time of Peak\nBacterial Density (hr)") +
     theme_bw() +
     theme(axis.title = element_text(size = 16),
@@ -3091,7 +3091,7 @@ if(glob_make_statplots) {
                 aes(x = log10(a_S1), y = extin_time_4/60)) +
     geom_line(aes(group = paste(u_S1, k))) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    labs(x = "Infection rate\n(/cfu/pfu/mL/min)", 
+    labs(x = "Adsorption rate\n(/cfu/pfu/mL/min)", 
          y = "Extinction Time (hr)") +
     theme_bw() +
     theme(axis.title = element_text(size = 16),
@@ -3107,7 +3107,7 @@ if(glob_make_statplots) {
                                   "2×10<sup>10</sup>",
                                   "3×10<sup>10</sup>",
                                   "4×10<sup>10</sup>")) +
-    labs(x = "Infection rate\n(/cfu/pfu/mL/min)", 
+    labs(x = "Adsorption rate\n(/cfu/pfu/mL/min)", 
          y = "Area Under the\nCurve (hr cfu/mL)") +
     theme_bw() +
     theme(axis.title = element_text(size = 16),
@@ -3118,7 +3118,7 @@ if(glob_make_statplots) {
                   aes(x = log10(a_S1), y = rel_auc)) +
     geom_line(aes(group = paste(u_S1, k))) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    labs(x = "Infection rate\n(/cfu/pfu/mL/min)", 
+    labs(x = "Adsorption rate\n(/cfu/pfu/mL/min)", 
          y = "Relative Area\nUnder the Curve (%)") +
     theme_bw() +
     theme(axis.title = element_text(size = 16),
@@ -3130,7 +3130,7 @@ if(glob_make_statplots) {
                 aes(x = log10(a_S1), y = PC1)) +
     geom_line(aes(group = paste(u_S1, k))) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    labs(x = "Infection rate\n(/cfu/pfu/mL/min)", 
+    labs(x = "Adsorption rate\n(/cfu/pfu/mL/min)", 
          y = "PC1") +
     theme_bw() +
     theme(axis.title = element_text(size = 16),
@@ -3140,7 +3140,7 @@ if(glob_make_statplots) {
                   aes(x = log10(a_S1), y = norm_PC1)) +
     geom_line(aes(group = paste(u_S1, k))) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    labs(x = "Infection rate\n(/cfu/pfu/mL/min)", 
+    labs(x = "Adsorption rate\n(/cfu/pfu/mL/min)", 
          y = "Relative PC1") +
     theme_bw() +
     theme(axis.title = element_text(size = 16),
@@ -3232,7 +3232,7 @@ if(glob_make_statplots) {
                          end = 0.9) +
     theme_bw() +
     labs(x = "Time (hr)", y = "Density (cfu/mL)",
-         subtitle = "Infection rate (/cfu/pfu/min)") +
+         subtitle = "Adsorption rate (/cfu/pfu/min)") +
     theme(axis.text.y = element_blank(),
           axis.title.y = element_blank())
   
@@ -3313,13 +3313,13 @@ if(glob_make_statplots) {
     lims(y = log10(c(min(ysum2$auc, ysum2$ref_auc), 
                      max(ysum2$auc, ysum2$ref_auc)))) +
     #geom_smooth(method = "lm", se = FALSE) +
-    scale_fill_manual(name = "Infection rate (/min)",
+    scale_fill_manual(name = "Adsorption rate (/min)",
                       breaks = 10**(-12:-8),
                       values = mycolors[1:6],
                       labels = c(expression(10^-12),
                                  expression(10^-11), expression(10^-10),
                                  expression(10^-9), expression(10^-8))) +
-    scale_color_manual(name = "Infection rate (/min)",
+    scale_color_manual(name = "Adsorption rate (/min)",
                        breaks = 10**(-12:-8),
                        values = mycolors[1:6],
                        labels = c(expression(10^-12),
@@ -3342,13 +3342,13 @@ if(glob_make_statplots) {
     geom_abline(lty = 3, lwd = 0.5, color = "gray50",
                 slope = -0.5, intercept = seq(0, 8, 0.5)) +
     #geom_smooth(method = "lm", se = FALSE) +
-    scale_fill_manual(name = "Infection rate (/min)",
+    scale_fill_manual(name = "Adsorption rate (/min)",
                       breaks = 10**(-12:-8),
                       values = mycolors[1:6],
                       labels = c(expression(10^-12),
                                  expression(10^-11), expression(10^-10),
                                  expression(10^-9), expression(10^-8))) +
-    scale_color_manual(name = "Infection rate (/min)",
+    scale_color_manual(name = "Adsorption rate (/min)",
                        breaks = 10**(-12:-8),
                        values = mycolors[1:6],
                        labels = c(expression(10^-12),
@@ -3388,7 +3388,7 @@ if(glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10") +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/min)",
+    labs(x = "Adsorption rate (/min)",
          y = "Bacterial growth\nrate (/hr)",
          subtitle = "Carrying capacity (cfu/mL)") +
     guides(fill = "none", shape = "none") +
@@ -3405,7 +3405,7 @@ if(glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10") +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/min)",
+    labs(x = "Adsorption rate (/min)",
          y = "Carrying capacity\n(cfu/mL)",
          subtitle = "Bacterial growth rate (/hr)") +
     guides(fill = "none", shape = "none") +
@@ -3424,7 +3424,7 @@ if(glob_make_statplots) {
     scale_x_continuous(trans = "log10") +
     labs(x = "Bacterial growth rate (/hr)",
          y = "Carrying capacity\ncfu/mL)",
-         subtitle = "Infection rate (/min)") +
+         subtitle = "Adsorption rate (/min)") +
     guides(fill = "none", shape = "none") +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
   
@@ -3513,7 +3513,7 @@ if(glob_make_statplots) {
                                   expression(10^9)),
                        limits = c(0, 10**9)) +
     scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
-                       name = "Infection rate\n(/cfu/pfu/mL/min)",
+                       name = "Adsorption rate\n(/cfu/pfu/mL/min)",
                        labels = c(expression(10^-12),
                                   expression(10^-11),
                                   expression(10^-10),
@@ -3534,7 +3534,7 @@ if(glob_make_statplots) {
       aes(x = time/60, y = a_rate)) +
     geom_line(aes(color = as.factor(a_S1), group = interaction(a_S1, f_a)),
               lwd = 1, position = position_dodge(width = 2)) +
-    labs(x = "Time (hr)", y = "Infection rate %") +
+    labs(x = "Time (hr)", y = "Adsorption rate %") +
     scale_x_continuous(limits = c(NA, 12), breaks = c(0, 6, 12, 18, 24)) +
     scale_y_continuous(breaks = c(0, 50, 100)) +
     scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5)) +
@@ -3560,8 +3560,8 @@ if(glob_make_statplots) {
                                      expression(10^9)),
                           limits = c(0, 10**9)) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    xlab("Infection rate\n(/cfu/pfu/mL/min)") +
-    ylab("Degree of\ninfection rate plasticity") +
+    xlab("Adsorption rate\n(/cfu/pfu/mL/min)") +
+    ylab("Degree of\nadsorption rate plasticity") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 22),
           axis.text = element_text(size = 16),
@@ -3582,8 +3582,8 @@ if(glob_make_statplots) {
     scale_shape_manual(breaks = c("neark", "noextin", "none"), 
                        values = c(4, 4, 16)) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    xlab("Infection rate\n(/cfu/pfu/mL/min)") +
-    ylab("Degree of infection rate plasticity") +
+    xlab("Adsorption rate\n(/cfu/pfu/mL/min)") +
+    ylab("Degree of adsorption rate plasticity") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 18),
           axis.text = element_text(size = 14),
@@ -3600,8 +3600,8 @@ if(glob_make_statplots) {
     scale_shape_manual(breaks = c("neark", "noextin", "none"), 
                        values = c(4, 4, 16)) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    xlab("Infection rate\n(/cfu/pfu/mL/min)") +
-    ylab("Degree of infection rate plasticity") +
+    xlab("Adsorption rate\n(/cfu/pfu/mL/min)") +
+    ylab("Degree of adsorption rate plasticity") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 18),
           axis.text = element_text(size = 14),
@@ -3619,8 +3619,8 @@ if(glob_make_statplots) {
     scale_shape_manual(breaks = c("neark", "noextin", "none"), 
                        values = c(4, 4, 16)) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    xlab("Infection rate\n(/cfu/pfu/mL/min)") +
-    ylab("Degree of infection rate plasticity") +
+    xlab("Adsorption rate\n(/cfu/pfu/mL/min)") +
+    ylab("Degree of adsorption rate plasticity") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 18),
           axis.text = element_text(size = 14),
@@ -3644,7 +3644,7 @@ if(glob_make_statplots) {
                                   expression(10^9)),
                        limits = c(0, 10**9)) +
     scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
-                       name = "Infection rate\n(/cfu/pfu/mL/min)",
+                       name = "Adsorption rate\n(/cfu/pfu/mL/min)",
                        labels = c(expression(10^-12),
                                   expression(10^-11),
                                   expression(10^-10),
@@ -3667,10 +3667,10 @@ if(glob_make_statplots) {
     geom_line(aes(color = as.factor(a_S1), group = interaction(a_S1, f_a)),
               lwd = 1, position = position_dodge(width = 4)) +
     facet_grid(~ f_a, labeller = labeller(f_a = function(x) {paste("f =", x)})) +
-    labs(x = "Time (hr)", y = "Infection rate (%)") +
+    labs(x = "Time (hr)", y = "Adsorption rate (%)") +
     scale_x_continuous(limits = c(NA, 24), breaks = c(0, 12, 24)) +
     scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
-                       name = "Infection rate\n(/cfu/pfu/mL/min)",
+                       name = "Adsorption rate\n(/cfu/pfu/mL/min)",
                        labels = c(expression(10^-12),
                                   expression(10^-11),
                                   expression(10^-10),
@@ -3696,8 +3696,8 @@ if(glob_make_statplots) {
                                      expression(10^9)),
                           limits = c(0, 10**9)) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    xlab("Infection rate\n(/cfu/pfu/mL/min)") +
-    ylab("Degree of\ninfection rate plasticity") +
+    xlab("Adsorption rate\n(/cfu/pfu/mL/min)") +
+    ylab("Degree of\nadsorption rate plasticity") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 18),
           axis.text = element_text(size = 14),
@@ -3732,7 +3732,7 @@ if(glob_make_statplots) {
                              values = c(19, 4),
                              labels = c("Bacteria", "Phages")) +
           labs(x = "Fraction of N consumed", y = "Density (cfu/mL or pfu/mL)",
-               subtitle = "Infection rate (/min)") +
+               subtitle = "Adsorption rate (/min)") +
           scale_y_log10() +
           geom_vline(data = filter(ybig3_wide, f_a >= 1), 
                      aes(xintercept = 1/f_a), lty = 2) +
@@ -4137,7 +4137,7 @@ if(glob_make_statplots) {
     scale_x_continuous(limits = c(NA, 12), breaks = c(0, 6, 12, 18, 24)) +
     scale_y_continuous(labels = math_format(10^.x)) +
     scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
-                       name = "Infection rate\n(/cfu/pfu/mL/min)",
+                       name = "Adsorption rate\n(/cfu/pfu/mL/min)",
                        labels = c(expression(10^-12),
                                   expression(10^-11),
                                   expression(10^-10),
@@ -4162,7 +4162,7 @@ if(glob_make_statplots) {
                           labels = math_format(10^.x)) +
     scale_x_continuous(labels = math_format(10^.x)) +
     scale_y_log10() +
-    xlab("Infection rate\n(/cfu/pfu/mL/min)") +
+    xlab("Adsorption rate\n(/cfu/pfu/mL/min)") +
     ylab("Resistance\nTransition Rate") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 22),
@@ -4184,7 +4184,7 @@ if(glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_x_continuous(labels = math_format(10^.x)) +
     scale_y_log10() +
-    xlab("Infection rate\n(/cfu/pfu/mL/min)") +
+    xlab("Adsorption rate\n(/cfu/pfu/mL/min)") +
     ylab("Resistance Transition Rate") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 18),
@@ -4206,7 +4206,7 @@ if(glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_x_continuous(labels = math_format(10^.x)) +
     scale_y_log10() +
-    xlab("Infection rate\n(/cfu/pfu/mL/min)") +
+    xlab("Adsorption rate\n(/cfu/pfu/mL/min)") +
     ylab("Resistance Transition Rate") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 18),
@@ -4227,7 +4227,7 @@ if(glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_x_continuous(labels = math_format(10^.x)) +
     scale_y_log10() +
-    xlab("Infection rate\n(/cfu/pfu/mL/min)") +
+    xlab("Adsorption rate\n(/cfu/pfu/mL/min)") +
     ylab("Resistance Transition Rate") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 18),
@@ -4248,7 +4248,7 @@ if(glob_make_statplots) {
     scale_x_continuous(breaks = c(0, 12, 24)) +
     theme_bw() +
     scale_color_gradient(low = "gray70", high = "darkblue",
-                         name = "Infection rate\n(/cfu/pfu/mL/min)",
+                         name = "Adsorption rate\n(/cfu/pfu/mL/min)",
                          labels = math_format(10^.x)) +
     labs(x = "Time (hr)", y = "Density (cfu/mL)",
          subtitle = "Resistance Transition Rate") +
@@ -4272,7 +4272,7 @@ if(glob_make_statplots) {
                           limits = c(NA, 9)) +
     scale_x_continuous(labels = math_format(10^.x)) +
     scale_y_continuous(trans = "log10") +
-    xlab("Infection rate\n(/cfu/pfu/mL/min)") +
+    xlab("Adsorption rate\n(/cfu/pfu/mL/min)") +
     ylab("Resistance transition rate") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 18),
@@ -4381,7 +4381,7 @@ ysum7 <-
 ##harder to follow than the new version written above:
 
 #At each point in the grid, we know how much a 10-fold change in initial
-# bacterial density or in infection rate will shift the peak time
+# bacterial density or in adsorption rate will shift the peak time
 #We can calculate the amount of error up or down (at 95% confidence interval)
 # we could expect based on a given number of colonies counted
 #So we take the amount of e.g. upper error, calculate the amount that
@@ -4499,7 +4499,7 @@ if (glob_make_statplots) {
                size = 3) +
     geom_line() +
     scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
-                       name = "Infection rate\n(/cfu/pfu/mL/min)",
+                       name = "Adsorption rate\n(/cfu/pfu/mL/min)",
                        labels = math_format(10^.x)) +
     scale_shape_manual(breaks = c("neark", "noextin", "none"), 
                        values = c(4, 4, 16)) +
@@ -4521,7 +4521,7 @@ if (glob_make_statplots) {
                size = 3) +
     geom_line() +
     scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
-                       name = "Infection rate\n(/cfu/pfu/mL/min)",
+                       name = "Adsorption rate\n(/cfu/pfu/mL/min)",
                        labels = math_format(10^.x)) +
     scale_shape_manual(breaks = c("neark", "noextin", "none"), 
                        values = c(4, 4, 16)) +
@@ -4548,7 +4548,7 @@ if (glob_make_statplots) {
     scale_x_discrete(limits = c("P", "S1", "a"),
                      labels = c("Initial phage density", 
                                 "Initial bacterial density", 
-                                "Infection rate")) +
+                                "Adsorption rate")) +
     theme_bw() +
     theme(axis.text.x = element_text(size = 11, angle = 45, hjust = 1),
           axis.text.y = element_text(size = 11))
@@ -4578,7 +4578,7 @@ if (glob_make_statplots) {
                                         expression(10^7 * ":" * 10^5), 
                                         expression(10^8 * ":" * 10^6))) +
           scale_x_continuous(labels = math_format(10^.x)) +
-          labs(x = "Infection rate (/cfu/pfu/mL/min)",
+          labs(x = "Adsorption rate (/cfu/pfu/mL/min)",
                y = "Initial bacterial:initial phage density\n(cfu/mL):(pfu/mL)") +
           guides(fill = "none", shape = "none") +
           theme(axis.title = element_text(size = 12),
@@ -4598,7 +4598,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(labels = math_format(10^.x)) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    labs(x = "Infection rate\n(/cfu/pfu/mL/min)",
+    labs(x = "Adsorption rate\n(/cfu/pfu/mL/min)",
          y = "Initial bacterial\ndensity (cfu/mL)") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 16),
@@ -4617,7 +4617,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(labels = math_format(10^.x)) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    labs(x = "Infection rate\n(/cfu/pfu/mL/min)",
+    labs(x = "Adsorption rate\n(/cfu/pfu/mL/min)",
          y = "Initial phage\ndensity (pfu/mL)") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 16),
@@ -4647,7 +4647,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(labels = math_format(10^.x)) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    labs(x = "Infection rate\n(/cfu/pfu/mL/min)",
+    labs(x = "Adsorption rate\n(/cfu/pfu/mL/min)",
          y = "Initial bacterial\ndensity (cfu/mL)") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 16),
@@ -4677,7 +4677,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(labels = math_format(10^.x)) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    labs(x = "Infection rate\n(/cfu/pfu/mL/min)",
+    labs(x = "Adsorption rate\n(/cfu/pfu/mL/min)",
          y = "Initial phage\ndensity (pfu/mL)") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 16),
@@ -4705,7 +4705,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(labels = math_format(10^.x)) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    labs(x = "Infection rate\n(/cfu/pfu/mL/min)",
+    labs(x = "Adsorption rate\n(/cfu/pfu/mL/min)",
          y = "Initial bacterial\ndensity (cfu/mL)") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 16),
@@ -4733,7 +4733,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(labels = math_format(10^.x)) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    labs(x = "Infection rate\n(/cfu/pfu/mL/min)",
+    labs(x = "Adsorption rate\n(/cfu/pfu/mL/min)",
          y = "Initial phage\ndensity (pfu/mL)") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 16),
@@ -4763,7 +4763,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(labels = math_format(10^.x)) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    labs(x = "Infection rate\n(/cfu/pfu/mL/min)",
+    labs(x = "Adsorption rate\n(/cfu/pfu/mL/min)",
          y = "Initial bacterial\ndensity (cfu/mL)") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 16),
@@ -4793,7 +4793,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(labels = math_format(10^.x)) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    labs(x = "Infection rate\n(/cfu/pfu/mL/min)",
+    labs(x = "Adsorption rate\n(/cfu/pfu/mL/min)",
          y = "Initial phage\ndensity (pfu/mL)") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 16),
@@ -4840,7 +4840,7 @@ if (glob_make_statplots) {
       scale_x_discrete(limits = c("P", "S1", "a"),
                        labels = c("Initial phage density", 
                                   "Initial bacterial density", 
-                                  "Infection rate")) +
+                                  "Adsorption rate")) +
       theme_bw() +
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
     
@@ -4872,7 +4872,7 @@ if (glob_make_statplots) {
                                    "S" = "Initial bacterial density"))) +
       scale_x_log10() +
       labs(x = "Number of colonies/plaques counted (cfu or pfu)",
-           y = "Fold-change in infection\nrate obscured by noise",
+           y = "Fold-change in adsorption\nrate obscured by noise",
            subtitle = "Number of replicate plates/spots") +
       theme_bw() +
       theme(axis.title = element_text(size = 18),
@@ -4894,7 +4894,7 @@ if (glob_make_statplots) {
     scale_x_continuous(labels = math_format(10^.x),
                        breaks = c(6.5, 7, 7.5)) +
     labs(x = "Target initial density (cfu/mL)",
-         y = "Fold-change in infection\nrate obscured by noise") +
+         y = "Fold-change in adsorption\nrate obscured by noise") +
     theme_bw() +
     theme(axis.title = element_text(size = 18),
           axis.text = element_text(size = 12),
@@ -4911,7 +4911,7 @@ if (glob_make_statplots) {
     scale_x_continuous(labels = math_format(10^.x),
                        breaks = c(4.5, 5, 5.5)) +
     labs(x = "Target initial density (pfu/mL)",
-         y = "Fold-change in infection\nrate obscured by noise") +
+         y = "Fold-change in adsorption\nrate obscured by noise") +
     theme_bw() +
     theme(axis.title = element_text(size = 18),
           axis.text = element_text(size = 12),
@@ -4942,7 +4942,7 @@ if (glob_make_statplots) {
                              values = c(4, 4, 16)) +
           scale_y_continuous(trans = "log10") +
           scale_x_continuous(trans = "log10") +
-          labs(x = "Infection rate (/min)",
+          labs(x = "Adsorption rate (/min)",
                y = "Initial phage\ndensity (pfu/mL)") +
           guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 18),
@@ -4968,7 +4968,7 @@ if (glob_make_statplots) {
                              values = c(4, 4, 16)) +
           scale_y_continuous(trans = "log10") +
           scale_x_continuous(trans = "log10") +
-          labs(x = "Infection rate (/min)",
+          labs(x = "Adsorption rate (/min)",
                y = "Initial bacterial\ndensity (cfu/mL)") +
           guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 18),
@@ -4992,7 +4992,7 @@ if (glob_make_statplots) {
                              values = c(4, 4, 16)) +
           scale_y_continuous(trans = "log10") +
           scale_x_continuous(trans = "log10") +
-          labs(x = "Infection rate (/min)",
+          labs(x = "Adsorption rate (/min)",
                y = "Initial bacterial\ndensity (cfu/mL)") +
           guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 18),
@@ -5015,7 +5015,7 @@ if (glob_make_statplots) {
                              values = c(4, 4, 16)) +
           scale_y_continuous(trans = "log10") +
           scale_x_continuous(trans = "log10") +
-          labs(x = "Infection rate (/min)",
+          labs(x = "Adsorption rate (/min)",
                y = "Initial phage]\ndensity (pfu/mL)") +
           guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 18),
@@ -5042,7 +5042,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10") +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/min)",
+    labs(x = "Adsorption rate (/min)",
          y = "Initial bacterial\ndensity (cfu/mL)") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 18),
@@ -5068,7 +5068,7 @@ if (glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(trans = "log10") +
     scale_x_continuous(trans = "log10") +
-    labs(x = "Infection rate (/min)",
+    labs(x = "Adsorption rate (/min)",
          y = "Initial phage\ndensity (pfu/mL)") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 18),
@@ -5420,10 +5420,10 @@ if(glob_make_statplots) {
                aes(x = log10(init_moi), y = 1-rel_auc, color = as.factor(log10(a_S1)))) +
           geom_point(alpha = 0.7) +
           #scale_x_log10() +
-          facet_nested("k (cfu/mL)" * signif(k, 2) ~ 
-                         "u_S1 (/hr)" * signif(60*u_S1, 2)) +
+          facet_nested("Bacterial stationary phase density (cfu/mL)" * signif(k, 2) ~ 
+                         "Bacterial growth rate (/hr)" * signif(60*u_S1, 2)) +
           labs(x = "log10(initial MOI)", y = "Virulence Index") +
-          scale_color_viridis_d(name = "log10(infection rate)",
+          scale_color_viridis_d(name = "log10(adsorption rate)",
                                 direction = 1,
                                 guide = guide_legend(reverse = TRUE)) +
           theme_bw() +
@@ -5442,7 +5442,7 @@ if(glob_make_statplots) {
     ggplot(data = ybig10_B_wide,
            aes(x = PC1, y = PC2)) +
     geom_point(aes(color = as.factor(a_S1)), alpha = 0.7) +
-    # scale_color_viridis_d(name = "Infection rate\n(/min)", end = 0.85,
+    # scale_color_viridis_d(name = "Adsorption rate\n(/min)", end = 0.85,
     #                       labels = c("NA", expression(10^-12),
     #                                  expression(10^-11), expression(10^-10),
     #                                  expression(10^-9), expression(10^-8))) +
@@ -5464,7 +5464,7 @@ if(glob_make_statplots) {
     ggplot(data = ybig10_B_wide,
            aes(x = norm_PC1, y = norm_PC2)) +
     geom_point(aes(color = as.factor(k)), alpha = 0.7) +
-    # scale_color_viridis_d(name = "Infection rate\n(/min)", end = 0.85,
+    # scale_color_viridis_d(name = "Adsorption rate\n(/min)", end = 0.85,
     #                       labels = c("NA", expression(10^-12),
     #                                  expression(10^-11), expression(10^-10),
     #                                  expression(10^-9), expression(10^-8))) +
@@ -5570,7 +5570,7 @@ if(glob_make_statplots) {
                                   expression(10^9)),
                        limits = c(0, 10**9)) +
     scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
-                       name = "Infection rate\n(/cfu/pfu/mL/min)",
+                       name = "Adsorption rate\n(/cfu/pfu/mL/min)",
                        labels = c(expression(10^-12),
                                   expression(10^-11),
                                   expression(10^-10),
@@ -5593,7 +5593,7 @@ if(glob_make_statplots) {
                           breaks = c(0, 24, 48, 72)) +
     scale_x_continuous(labels = math_format(10^.x)) +
     scale_y_continuous(labels = math_format(10^.x)) +
-    xlab("Infection rate\n(/cfu/pfu/mL/min)") +
+    xlab("Adsorption rate\n(/cfu/pfu/mL/min)") +
     ylab("Resistance\nMutation Rate") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 22),
@@ -5608,7 +5608,7 @@ if(glob_make_statplots) {
   print(
     ggdraw(
       cowplot::plot_grid(
-        grid::grid.text("Plastic infection rate", x = unit(0.43, "npc"),
+        grid::grid.text("Plastic adsorption rate", x = unit(0.43, "npc"),
                         gp = grid::gpar(fontsize = 24, fontface = "bold")),
         grid::grid.text("Transitions to resistance", x = unit(0.43, "npc"),
                         gp = grid::gpar(fontsize = 24, fontface = "bold")),
@@ -5639,7 +5639,7 @@ if(glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(labels = math_format(10^.x)) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    labs(x = "Infection rate (/cfu/pfu/mL/min)", 
+    labs(x = "Adsorption rate (/cfu/pfu/mL/min)", 
          y = "Resistance Mutation Rate") +
     facet_grid(. ~ d,
                labeller = labeller(
@@ -5664,7 +5664,7 @@ if(glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(labels = math_format(10^.x)) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    labs(x = "Infection rate (/cfu/pfu/mL/min)", 
+    labs(x = "Adsorption rate (/cfu/pfu/mL/min)", 
          y = "Resistance Mutation Rate") +
     facet_grid(. ~ d,
                labeller = labeller(
@@ -5689,7 +5689,7 @@ if(glob_make_statplots) {
                        values = c(4, 4, 16)) +
     scale_y_continuous(labels = math_format(10^.x)) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    labs(x = "Infection rate (/cfu/pfu/mL/min)", 
+    labs(x = "Adsorption rate (/cfu/pfu/mL/min)", 
          y = "Resistance Mutation Rate") +
     facet_grid(. ~ d,
                labeller = labeller(
@@ -5707,7 +5707,7 @@ if(glob_make_statplots) {
       width = 22, height = 13, units = "in", res = 300)
   print(
     cowplot::plot_grid(
-        grid::grid.text("Plastic infection rate", x = unit(0.43, "npc"),
+        grid::grid.text("Plastic adsorption rate", x = unit(0.43, "npc"),
                         gp = grid::gpar(fontsize = 24, fontface = "bold")),
         grid::grid.text("Transitions to resistance", x = unit(0.43, "npc"),
                         gp = grid::gpar(fontsize = 24, fontface = "bold")),
@@ -5745,7 +5745,7 @@ if(glob_make_statplots) {
                             breaks = c(0, 24, 48, 72)) +
       scale_y_continuous(labels = math_format(10^.x)) +
       scale_x_continuous(labels = math_format(10^.x)) +
-      labs(x = "Infection rate (/cfu/pfu/mL/min)", 
+      labs(x = "Adsorption rate (/cfu/pfu/mL/min)", 
            y = "Resistance Mutation Rate",
            subtitle = "Initial frequency of R") +
       guides(fill = "none", shape = "none") +
@@ -5835,7 +5835,7 @@ if(glob_make_statplots) {
     scale_shape_manual(breaks = c("neark", "noextin", "none"), 
                        values = c(4, 4, 16)) +
     scale_x_continuous(labels = math_format(10^.x)) +
-    xlab("Infection rate\n(/cfu/pfu/mL/min)") +
+    xlab("Adsorption rate\n(/cfu/pfu/mL/min)") +
     ylab("Conversion to Debris") +
     guides(fill = "none", shape = "none") +
     theme(axis.title = element_text(size = 16),
