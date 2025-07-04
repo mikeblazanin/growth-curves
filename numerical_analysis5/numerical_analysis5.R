@@ -5852,3 +5852,150 @@ if(glob_make_statplots) {
   )
   dev.off()
 }
+
+## Run 13: superinfection across phage traits ----
+run13 <- run_sims_filewrapper(
+  name = "run13",
+  u_S1 = signif(0.04*10**-0.35, 3), u_S2 = 0,
+  k = 10**9,
+  a_S1 = 10**seq(from = -12, to = -8, length.out = 5),
+  a_S2 = 0,
+  tau = signif(10**seq(from = 1, to = 2, length.out = 5), 3),
+  b = signif(5*10**seq(from = 0, to = 2, length.out = 5), 3),
+  z = c(0, 0.5, 1),
+  d = 0,
+  init_S1 = 10**6,
+  init_moi = 10**-2,
+  equil_cutoff_dens = 0.1,
+  init_time = 12*60,
+  max_time = 48*60,
+  init_stepsize = 5,
+  print_info = TRUE, read_file = glob_read_files)
+
+ybig13 <- run13[[1]]
+
+#Set below 0 values to 0
+ybig13 <- mutate(group_by(ybig13, uniq_run, Pop),
+                Density = ifelse(Density < 0, 0, Density))
+
+#Main summarization
+ysum13 <- summarize(group_by(filter(ybig13, Pop == "B"),
+                             uniq_run, u_S1, u_S2, k, a_S1, a_S2,
+                             tau, b, z, f_a, f_b, d, h, g1, g2,
+                             init_S1, init_S2, init_moi, init_N, equil),
+                    peak_dens = max(Density),
+                    peak_time = time[which.max(Density)],
+                    auc = auc(x = time, y = Density),
+                    extin_time_4 = 
+                      first_below(y = Density, x = time,
+                                  threshold = 10**4, return = "x"),
+                    extin_flag = ifelse(is.na(extin_time_4), "noextin",
+                                        ifelse(peak_dens >= 0.9*k, "neark", "none")))
+
+#Run PCA
+ybig13_PCA <- filter(ybig13, Pop == "B")
+ybig13_PCA <- interp_data(df = ybig13_PCA,
+                         x = "time", y = "Density",
+                         subset_by = ybig13_PCA$uniq_run)
+ybig13_PCA <- filter(ybig13_PCA, time %% 20 == 0)
+
+ybig13_PCA_wide <- tidyr::pivot_wider(ybig13_PCA,
+                                     names_from = time,
+                                     names_prefix = "t_",
+                                     values_from = Density)
+
+mypca <- prcomp(
+  ybig13_PCA_wide[, grep("^t_", colnames(ybig13_PCA_wide))[-1]],
+  center = TRUE, scale = TRUE, retx = TRUE)
+
+#Merge PCA with orig data
+ybig13_PCA_wide <- cbind(ybig13_PCA_wide,
+                        as.data.frame(mypca$x))
+ybig13_PCA_wide <- inner_join(ybig13_PCA_wide,
+                             ysum13)
+
+ysum13 <- left_join(
+  ysum13,
+  select(ybig13_PCA_wide, 
+         !starts_with("t_") & !(PC6:PC144)))
+
+if(glob_make_statplots) {  
+  fs30 <- 
+    GGally::ggpairs(
+      data = mutate(ungroup(filter(ybig13_PCA_wide, extin_flag == "none")),
+                    peak_time_hr = peak_time/60,
+                    extin_time_4_hr = extin_time_4/60,
+                    auc_hr = auc/60),
+      mapping = aes(color = as.factor(z)),
+      columns = c("peak_dens", "peak_time_hr", "extin_time_4_hr", "auc_hr", "PC1"),
+      columnLabels = c("Peak Bacterial\nDensity (cfu/mL)",
+                       "Time of Peak\nBacterial\nDensity (hr)",
+                       "Extinction\nTime (hr)",
+                       "Area Under\nthe Curve\n(hr cfu/mL)",
+                       "PC1"),
+      upper = list(continuous = "points"), lower = list(continuous = "points"),
+      diag = list(continuous = "autopointDiag")) +
+    scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
+                       name = "Relative rate of\nsuperinfection") +
+    theme_bw() +
+    theme(strip.text = element_text(size = 14),
+          axis.text.x = element_text(size = 12, angle = 45, hjust = 1),
+          axis.text.y = element_text(size = 12))
+  #adjust axis labels
+  for (i in 1:5) {
+    fs30[1, i] <- fs30[1, i] + 
+      scale_y_continuous(breaks = c(0, 5*10**8, 10**9),
+                         labels = c(0,
+                                    expression(5%*%10^8),
+                                    expression(10^9)),
+                         limits = c(0, 10**9))
+    fs30[i, 1] <- fs30[i, 1] + 
+      scale_x_continuous(breaks = c(0, 5*10**8, 10**9),
+                         labels = c(0,
+                                    expression(5%*%10^8),
+                                    expression(10^9)),
+                         limits = c(0, 10**9))
+    fs30[2, i] <- fs30[2, i] + 
+      scale_y_continuous(breaks = c(0, 3, 6, 9), limits = c(0, 9))
+    fs30[i, 2] <- fs30[i, 2] + 
+      scale_x_continuous(breaks = c(0, 3, 6, 9), limits = c(0, 9))
+    fs30[3, i] <- fs30[3, i] + 
+      scale_y_continuous(breaks = c(0, 6, 12), limits = c(0, NA))
+    fs30[i, 3] <- fs30[i, 3] + 
+      scale_x_continuous(breaks = c(0, 6, 12), limits = c(0, NA))
+    fs30[4, i] <- fs30[4, i] + 
+      scale_y_continuous(breaks = 0:3*10**9,
+                         labels = c(0,
+                                    expression(10^9),
+                                    expression(2%*%10^9),
+                                    expression(3%*%10^9)))
+    fs30[i, 4] <- fs30[i, 4]  + 
+      scale_x_continuous(breaks = 0:3*10**9,
+                         labels = c(0,
+                                    expression(10^9),
+                                    expression(2%*%10^9),
+                                    expression(3%*%10^9)))
+  }
+  
+  fs30_legend <- cowplot::get_legend(
+    ggplot(data = ybig13_PCA_wide,
+           aes(x = peak_time, y = peak_dens, color = as.factor(z))) +
+      geom_point() +
+      scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
+                         name = "Relative rate of\nsuperinfection"))
+  
+  
+  png("./statplots/figS30_run13_superinfection_allmetricsvmetrics_subset.png",
+      width = 9, height = 9, units = "in", res = 150)
+  print(fs30)
+  # cowplot::plot_grid(
+  #   ,
+  #   #fs30_legend,
+  #   nrow = 1,
+  #   rel_widths = c(1, 0.1)
+  # )
+  dev.off()
+  
+  
+
+}
