@@ -5890,7 +5890,8 @@ ysum13 <- summarize(group_by(filter(ybig13, Pop == "B"),
                       first_below(y = Density, x = time,
                                   threshold = 10**4, return = "x"),
                     extin_flag = ifelse(is.na(extin_time_4), "noextin",
-                                        ifelse(peak_dens >= 0.9*k, "neark", "none")))
+                                        ifelse(peak_dens >= 0.9*k, "neark", "none")),
+                    extin_time_4 = ifelse(extin_flag == "noextin", 48*60, extin_time_4))
 
 #Run PCA
 ybig13_PCA <- filter(ybig13, Pop == "B")
@@ -5920,82 +5921,73 @@ ysum13 <- left_join(
          !starts_with("t_") & !(PC6:PC144)))
 
 if(glob_make_statplots) {  
-  fs30 <- 
-    GGally::ggpairs(
-      data = mutate(ungroup(filter(ybig13_PCA_wide, extin_flag == "none")),
-                    peak_time_hr = peak_time/60,
-                    extin_time_4_hr = extin_time_4/60,
-                    auc_hr = auc/60),
-      mapping = aes(color = as.factor(z)),
-      columns = c("peak_dens", "peak_time_hr", "extin_time_4_hr", "auc_hr", "PC1"),
-      columnLabels = c("Peak Bacterial\nDensity (cfu/mL)",
-                       "Time of Peak\nBacterial\nDensity (hr)",
-                       "Extinction\nTime (hr)",
-                       "Area Under\nthe Curve\n(hr cfu/mL)",
-                       "PC1"),
-      upper = list(continuous = "points"), lower = list(continuous = "points"),
-      diag = list(continuous = "autopointDiag")) +
-    scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
-                       name = "Relative rate of\nsuperinfection") +
+  fs30a <- ggplot(data = ysum13,
+                aes(x = z, y = peak_dens/10**8)) +
+    geom_line(aes(group = paste(a_S1, b, tau)),
+              alpha = 0.5) +
+    scale_y_continuous(labels = c("0", 
+                                  "2.5×10<sup>8</sup>", 
+                                  "5×10<sup>8</sup>",
+                                  "7.5×10<sup>8</sup>", 
+                                  "10<sup>9</sup>")) +
+    labs(x = "Superinfection rate", 
+         y = "Peak Bacterial\nDensity (cfu/mL)") +
     theme_bw() +
-    theme(strip.text = element_text(size = 14),
-          axis.text.x = element_text(size = 12, angle = 45, hjust = 1),
-          axis.text.y = element_text(size = 12))
-  #adjust axis labels
-  for (i in 1:5) {
-    fs30[1, i] <- fs30[1, i] + 
-      scale_y_continuous(breaks = c(0, 5*10**8, 10**9),
-                         labels = c(0,
-                                    expression(5%*%10^8),
-                                    expression(10^9)),
-                         limits = c(0, 10**9))
-    fs30[i, 1] <- fs30[i, 1] + 
-      scale_x_continuous(breaks = c(0, 5*10**8, 10**9),
-                         labels = c(0,
-                                    expression(5%*%10^8),
-                                    expression(10^9)),
-                         limits = c(0, 10**9))
-    fs30[2, i] <- fs30[2, i] + 
-      scale_y_continuous(breaks = c(0, 3, 6, 9), limits = c(0, 9))
-    fs30[i, 2] <- fs30[i, 2] + 
-      scale_x_continuous(breaks = c(0, 3, 6, 9), limits = c(0, 9))
-    fs30[3, i] <- fs30[3, i] + 
-      scale_y_continuous(breaks = c(0, 6, 12), limits = c(0, NA))
-    fs30[i, 3] <- fs30[i, 3] + 
-      scale_x_continuous(breaks = c(0, 6, 12), limits = c(0, NA))
-    fs30[4, i] <- fs30[4, i] + 
-      scale_y_continuous(breaks = 0:3*10**9,
-                         labels = c(0,
-                                    expression(10^9),
-                                    expression(2%*%10^9),
-                                    expression(3%*%10^9)))
-    fs30[i, 4] <- fs30[i, 4]  + 
-      scale_x_continuous(breaks = 0:3*10**9,
-                         labels = c(0,
-                                    expression(10^9),
-                                    expression(2%*%10^9),
-                                    expression(3%*%10^9)))
-  }
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12),
+          axis.text.y = element_markdown())
   
-  fs30_legend <- cowplot::get_legend(
-    ggplot(data = ybig13_PCA_wide,
-           aes(x = peak_time, y = peak_dens, color = as.factor(z))) +
-      geom_point() +
-      scale_color_manual(values = colorRampPalette(c("gray70", "darkblue"))(5),
-                         name = "Relative rate of\nsuperinfection"))
+  fs30b <- ggplot(data = ysum13,
+                  aes(x = z, y = peak_time/60)) +
+    geom_line(aes(group = paste(a_S1, b, tau)),
+              alpha = 0.5) +
+    labs(x = "Superinfection rate", 
+         y = "Time of Peak\nBacterial Density (hr)") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12))
   
+  fs30c <- ggplot(data = ysum13,
+                  aes(x = z, y = extin_time_4/60)) +
+    geom_line(aes(group = paste(a_S1, b, tau)),
+              alpha = 0.5) +
+    labs(x = "Superinfection rate", 
+         y = "Extinction Time (hr)") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12))
   
-  png("./statplots/figS30_run13_superinfection_allmetricsvmetrics_subset.png",
-      width = 9, height = 9, units = "in", res = 150)
-  print(fs30)
-  # cowplot::plot_grid(
-  #   ,
-  #   #fs30_legend,
-  #   nrow = 1,
-  #   rel_widths = c(1, 0.1)
-  # )
+  fs30d <- ggplot(data = ysum13,
+                  aes(x = z, y = auc/60)) +
+    geom_line(aes(group = paste(a_S1, b, tau)),
+              alpha = 0.5) +
+    scale_y_continuous(breaks = 0:4*10**10,
+                       labels = c("0",
+                                  "1×10<sup>10</sup>",
+                                  "2×10<sup>10</sup>",
+                                  "3×10<sup>10</sup>",
+                                  "4×10<sup>10</sup>")) +
+    labs(x = "Superinfection rate", 
+         y = "Area Under the\nCurve (hr cfu/mL)") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12),
+          axis.text.y = element_markdown())
+  
+  fs30e <- ggplot(data = ysum13,
+                  aes(x = z, y = PC1)) +
+    geom_line(aes(group = paste(a_S1, b, tau)),
+              alpha = 0.5) +
+    labs(x = "Superinfection rate", 
+         y = "PC1") +
+    theme_bw() +
+    theme(axis.title = element_text(size = 16),
+          axis.text = element_text(size = 12))
+  
+  png("./statplots/figS30_run13_superinfection.png",
+      width = 9, height = 11, units = "in", res = 150)
+  print(plot_grid(fs30a, fs30b, fs30c, fs30d, fs30e,
+                  ncol = 2, align = 'hv', axis = 'lr',
+                  labels = "AUTO", label_size = 16))
   dev.off()
-  
-  
-
 }
